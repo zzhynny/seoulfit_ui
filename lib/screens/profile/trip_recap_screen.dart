@@ -434,39 +434,47 @@ class _LowDataRecapBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF8F0),
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Container(width: 3, height: 70, color: AppColors.primary),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+          ClipRRect(
+            // Clips the accent bar's square corners to match the card's own
+            // rounding — needed now that the bar stretches full-height
+            // instead of stopping short at a fixed 70px.
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8F0),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(width: 3, color: AppColors.primary),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.auto_awesome, size: 14, color: AppColors.textPrimary),
-                            const SizedBox(width: 6),
-                            Text('Next Time in Seoul', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
+                            Row(
+                              children: [
+                                const Icon(Icons.auto_awesome, size: 14, color: AppColors.textPrimary),
+                                const SizedBox(width: 6),
+                                Text('Next Time in Seoul', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Enable check-ins from the start to unlock your full stamp collection and trip completion stats!',
+                              style: AppTextStyles.caption.copyWith(height: 1.5),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Enable check-ins from the start to unlock your full stamp collection and trip completion stats!',
-                          style: AppTextStyles.caption.copyWith(height: 1.5),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
