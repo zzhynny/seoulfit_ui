@@ -15,6 +15,7 @@ import 'providers/companion_provider.dart';
 import 'providers/trip_provider.dart';
 import 'routes/app_routes.dart';
 import 'theme/theme.dart';
+import 'widgets/figma_chrome.dart';
 
 void main() {
   runApp(const SeoulFitApp());
@@ -45,6 +46,14 @@ class SeoulFitApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
             routerConfig: router,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  ?child,
+                  const FigmaChromeToggleButton(),
+                ],
+              );
+            },
           );
         },
       ),

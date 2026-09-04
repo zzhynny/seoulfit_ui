@@ -118,7 +118,7 @@ class DayCheckInScreen extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: PrimaryButton(label: 'Complete Check-in', onPressed: onComplete),
         ),
       ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/companion_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/primary_button.dart';
@@ -20,7 +19,6 @@ class DayCompleteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trip = context.watch<TripProvider>();
-    final companion = context.watch<CompanionProvider>().selected;
     final day = trip.itinerary!.days.firstWhere((d) => d.dayNumber == dayNumber);
     final total = day.activities.length;
     final visited = day.visitedCount;
@@ -45,10 +43,12 @@ class DayCompleteScreen extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 32),
-                SizedBox(height: 130, child: Image.asset(companion.completeAsset, fit: BoxFit.contain)),
+                // 15_Day-Complete has no mascot illustration in the source
+                // Figma frame (verified via Dev Mode MCP) — just this
+                // spacer above the text block.
+                const SizedBox(height: 163),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -56,9 +56,9 @@ class DayCompleteScreen extends StatelessWidget {
                         '${day.date.toUpperCase()} · ${day.areaName.toUpperCase()}',
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 24),
                       Text('$visited of $total places visited', style: AppTextStyles.headingMedium.copyWith(fontSize: 28)),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
@@ -68,7 +68,7 @@ class DayCompleteScreen extends StatelessWidget {
                           valueColor: const AlwaysStoppedAnimation(AppColors.primary),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
@@ -98,7 +98,7 @@ class DayCompleteScreen extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: PrimaryButton(label: 'Continue', onPressed: onContinue),
         ),
       ],

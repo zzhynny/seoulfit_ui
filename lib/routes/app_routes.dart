@@ -183,6 +183,7 @@ GoRouter buildAppRouter() {
               path: AppRoutes.trip,
               builder: (context, state) => TripBranchRoot(
                 onStartPlanning: () => context.go(AppRoutes.chat),
+                onEditTrip: () => context.go(AppRoutes.makeTripYours),
                 onCheckInToday: () {
                   // One-time opt-in: ask via 13_Stamp-Book-OptIn the first
                   // time, then skip straight to Day Check-in afterwards.

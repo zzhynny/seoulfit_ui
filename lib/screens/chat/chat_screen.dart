@@ -98,7 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(4),
-                    child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
+                    child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -190,7 +190,7 @@ class _PlanView extends StatelessWidget {
   });
 
   final List<ChatMessage> messages;
-  final dynamic companion;
+  final Companion companion;
   final int travelerCount;
   final ValueChanged<int> onTravelerChange;
   final TextEditingController composerController;
@@ -243,7 +243,7 @@ class _PlanView extends StatelessWidget {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(2),
-                      child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
+                      child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
                     ),
                   ),
                   const SizedBox(width: 8),

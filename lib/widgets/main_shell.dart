@@ -15,30 +15,35 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          if (AppConfig.showFigmaMockupChrome) const FakeStatusBar() else SizedBox(height: MediaQuery.of(context).padding.top),
-          Expanded(child: navigationShell),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BottomNavBar(
-              currentIndex: navigationShell.currentIndex,
-              onTap: (index) => navigationShell.goBranch(
-                index,
-                initialLocation: index == navigationShell.currentIndex,
-              ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppConfig.showFigmaMockupChromeNotifier,
+      builder: (context, showChrome, _) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: Column(
+            children: [
+              if (showChrome) const FakeStatusBar() else SizedBox(height: MediaQuery.of(context).padding.top),
+              Expanded(child: navigationShell),
+            ],
+          ),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                BottomNavBar(
+                  currentIndex: navigationShell.currentIndex,
+                  onTap: (index) => navigationShell.goBranch(
+                    index,
+                    initialLocation: index == navigationShell.currentIndex,
+                  ),
+                ),
+                if (showChrome) const FakeHomeIndicator(),
+              ],
             ),
-            if (AppConfig.showFigmaMockupChrome) const FakeHomeIndicator(),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

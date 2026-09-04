@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../core/config.dart';
 import '../theme/theme.dart';
@@ -95,19 +96,67 @@ class FigmaDeviceFrameWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!AppConfig.showFigmaMockupChrome) {
-      return SafeArea(child: child);
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadii.deviceFrame),
-      child: Container(
-        color: backgroundColor ?? AppColors.background,
-        child: Column(
-          children: [
-            FakeStatusBar(style: statusBarStyle),
-            Expanded(child: child),
-            if (showHomeIndicator) FakeHomeIndicator(color: homeIndicatorColor),
-          ],
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppConfig.showFigmaMockupChromeNotifier,
+      builder: (context, showChrome, _) {
+        if (!showChrome) {
+          return SafeArea(child: child);
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadii.deviceFrame),
+          child: Container(
+            color: backgroundColor ?? AppColors.background,
+            child: Column(
+              children: [
+                FakeStatusBar(style: statusBarStyle),
+                Expanded(child: child),
+                if (showHomeIndicator) FakeHomeIndicator(color: homeIndicatorColor),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A small floating button (debug builds only) that lets you flip
+/// [AppConfig.showFigmaMockupChrome] live while testing — handy on web,
+/// where there's no real device status bar/home indicator to compare
+/// against Figma's baked-in mockup chrome.
+class FigmaChromeToggleButton extends StatelessWidget {
+  const FigmaChromeToggleButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!kDebugMode) return const SizedBox.shrink();
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: AppConfig.showFigmaMockupChromeNotifier,
+            builder: (context, showChrome, _) {
+              return Material(
+                elevation: 4,
+                shape: const CircleBorder(),
+                color: showChrome ? AppColors.primary : Colors.black54,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: AppConfig.toggleFigmaMockupChrome,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      showChrome ? Icons.phone_iphone : Icons.crop_free,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

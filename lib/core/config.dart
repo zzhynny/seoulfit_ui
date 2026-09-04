@@ -1,4 +1,6 @@
-/// App-wide static configuration flags.
+import 'package:flutter/foundation.dart';
+
+/// App-wide runtime configuration flags.
 class AppConfig {
   AppConfig._();
 
@@ -8,5 +10,17 @@ class AppConfig {
   ///
   /// When false (default), screens use the real device SafeArea / system UI
   /// instead.
-  static const bool showFigmaMockupChrome = false;
+  ///
+  /// This is a [ValueNotifier] (not a plain const) specifically so it can be
+  /// flipped live at runtime — see [FigmaChromeToggleButton] — without a
+  /// hot restart, which matters when testing on web where there's no real
+  /// device status bar/home indicator to compare against.
+  static final ValueNotifier<bool> showFigmaMockupChromeNotifier =
+      ValueNotifier<bool>(false);
+
+  static bool get showFigmaMockupChrome => showFigmaMockupChromeNotifier.value;
+
+  static void toggleFigmaMockupChrome() {
+    showFigmaMockupChromeNotifier.value = !showFigmaMockupChromeNotifier.value;
+  }
 }

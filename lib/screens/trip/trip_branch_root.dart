@@ -14,10 +14,15 @@ class TripBranchRoot extends StatefulWidget {
     super.key,
     required this.onStartPlanning,
     required this.onCheckInToday,
+    required this.onEditTrip,
   });
 
   final VoidCallback onStartPlanning;
   final VoidCallback onCheckInToday;
+
+  /// Final Route's back arrow — per the Figma frame, returns to
+  /// 09_Make-Trip-Yours to adjust the trip further.
+  final VoidCallback onEditTrip;
 
   @override
   State<TripBranchRoot> createState() => _TripBranchRootState();
@@ -54,6 +59,7 @@ class _TripBranchRootState extends State<TripBranchRoot> {
                 widget.onStartPlanning();
               }
             },
+            onBack: widget.onEditTrip,
           ),
         ),
         SafeArea(

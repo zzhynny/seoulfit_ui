@@ -7,10 +7,12 @@ class FinalRouteScreen extends StatefulWidget {
     super.key,
     required this.itinerary,
     required this.onResetItinerary,
+    required this.onBack,
   });
 
   final Itinerary itinerary;
   final VoidCallback onResetItinerary;
+  final VoidCallback onBack;
 
   @override
   State<FinalRouteScreen> createState() => _FinalRouteScreenState();
@@ -26,31 +28,46 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Column(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Your Route', style: AppTextStyles.headingMedium.copyWith(fontSize: 24, color: const Color(0xFF2D2A26))),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF5E836A)),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '${stops.length + 4} stops planned',
-                      style: AppTextStyles.caption.copyWith(color: const Color(0xFF5E836A), fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
+              GestureDetector(
+                onTap: widget.onBack,
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(Icons.chevron_left, size: 24, color: Color(0xFF2D2A26)),
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Curated walking & transit guidance for your day',
-                style: AppTextStyles.bodySmall.copyWith(color: const Color(0xFF8A857D)),
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Your Route', style: AppTextStyles.headingMedium.copyWith(fontSize: 24, color: const Color(0xFF2D2A26))),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFF5E836A)),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${stops.length + 4} stops planned',
+                            style: AppTextStyles.caption.copyWith(color: const Color(0xFF5E836A), fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Curated walking & transit guidance for your day',
+                      style: AppTextStyles.bodySmall.copyWith(color: const Color(0xFF8A857D)),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 24),
             ],
           ),
         ),
