@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/profile.dart';
@@ -70,11 +71,10 @@ class TripRecapScreen extends StatelessWidget {
 }
 
 /// Derives a short display name + "Day N • X/Y Visited" (or "Planned")
-/// label for a trip day, matching 17_Trip-Recap-Main's stop labels. The
-/// map's own stamp ellipses in Figma are binary (a solid "stamp-paw-green"
-/// once any activity is checked in, otherwise the dashed empty stamp) —
-/// unlike the low-data stamp-book grid below, this view has no separate
-/// "partial" asset.
+/// label for a trip day, matching 17_Trip-Recap-Main's stop labels. Stamp
+/// state is the same 80%/50% Spec_Unrecorded-Day-Legend thresholding used
+/// by the low-data stamp-book grid, so the map's 3-state legend below
+/// actually matches what's rendered on the track.
 RecapStop _stopFor(TripDay day) {
   final name = day.areaName.replaceAll(' Area', '');
   final total = day.activities.length;
@@ -84,11 +84,7 @@ RecapStop _stopFor(TripDay day) {
       : visited == total
           ? 'Day ${day.dayNumber} • All Visited'
           : 'Day ${day.dayNumber} • $visited/$total Visited';
-  return RecapStop(
-    name: name,
-    dayLabel: label,
-    state: visited > 0 ? StampState.visited : StampState.empty,
-  );
+  return RecapStop(name: name, dayLabel: label, state: _stateFor(day));
 }
 
 /// Derives a stamp-book state ("Stamped" / "Started" / "Empty") for a trip
@@ -147,14 +143,22 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
 
   static const _slamStep = 0.15;
   static const _slamSpan = 0.35;
+  static const _slamDurationMs = 900;
+  static const _initialDelayMs = 180;
 
   late final AnimationController _controller;
   late final List<Animation<double>> _slamAnims;
+  // One player per stop so overlapping/staggered impacts don't cut each
+  // other off — a single shared AudioPlayer would restart (and truncate)
+  // on every play() call, which happens well before the previous stamp's
+  // clip has finished given the ~135ms stagger step.
+  late final List<AudioPlayer> _sfxPlayers;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: _slamDurationMs));
+    _sfxPlayers = List.generate(_stopLayouts.length, (_) => AudioPlayer());
     _slamAnims = List.generate(_stopLayouts.length, (i) {
       final start = _slamStep * i;
       final end = (start + _slamSpan).clamp(0.0, 1.0);
@@ -167,15 +171,38 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
     // starting forward() inside initState/build itself can get dropped by
     // Flutter Web's first paint.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 180), () {
-        if (mounted) _controller.forward(from: 0.0);
+      Future.delayed(const Duration(milliseconds: _initialDelayMs), () {
+        if (!mounted) return;
+        _controller.forward(from: 0.0);
+        for (var i = 0; i < _stopLayouts.length; i++) {
+          final end = (_slamStep * i + _slamSpan).clamp(0.0, 1.0);
+          final impactMs = (end * _slamDurationMs).round();
+          Future.delayed(Duration(milliseconds: impactMs), () => _playImpactSfx(i));
+        }
       });
     });
+  }
+
+  Future<void> _playImpactSfx(int index) async {
+    if (!mounted) return;
+    try {
+      // Fire-and-forget: never awaited by the animation itself, so a slow
+      // or blocked decode can't stall the UI thread or delay the next
+      // stamp's slam.
+      await _sfxPlayers[index].play(AssetSource('cute-peta-stamp.mp3'));
+    } catch (_) {
+      // Browsers can block audio autoplay until the user has interacted
+      // with the page at least once — swallow that rather than let a
+      // sound-effect failure break the recap screen.
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    for (final player in _sfxPlayers) {
+      player.dispose();
+    }
     super.dispose();
   }
 
@@ -260,9 +287,11 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
                                 animation: _slamAnims[i],
                                 builder: (context, child) => Transform.scale(scale: _slamAnims[i].value, child: child),
                                 child: Image.asset(
-                                  stops[i].state == StampState.visited
-                                      ? 'assets/images/stamp-paw-green.png'
-                                      : 'assets/images/stamp-paw-empty.png',
+                                  switch (stops[i].state) {
+                                    StampState.visited => 'assets/images/stamp-paw-green.png',
+                                    StampState.partial => 'assets/images/stamp-paw-partial.png',
+                                    StampState.empty => 'assets/images/stamp-paw-empty.png',
+                                  },
                                   width: _stampSize,
                                   height: _stampSize,
                                   fit: BoxFit.contain,
@@ -287,12 +316,18 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              _legendDot(AppColors.primary, 'Visited'),
-              const SizedBox(width: 16),
-              _legendDot(AppColors.border, 'Planned'),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _legendItem(_solidDot(AppColors.primary), 'Completed'),
+                const SizedBox(width: 12),
+                _legendItem(_solidDot(AppColors.primary.withValues(alpha: 0.35)), 'Partial'),
+                const SizedBox(width: 12),
+                _legendItem(_dashedDot(), 'Planned'),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           Center(
@@ -307,16 +342,51 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
     );
   }
 
-  Widget _legendDot(Color color, String label) {
+  Widget _legendItem(Widget dot, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        dot,
         const SizedBox(width: 5),
         Text(label, style: AppTextStyles.caption),
       ],
     );
   }
+
+  Widget _solidDot(Color color) {
+    return Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+  }
+
+  Widget _dashedDot() {
+    return const SizedBox(width: 10, height: 10, child: CustomPaint(painter: _DashedCirclePainter()));
+  }
+}
+
+/// A small dashed-outline circle for the "Planned" (not recorded) legend
+/// swatch — matches Spec_Unrecorded-Day-Legend's neutral gray dashed paw
+/// outline treatment, scaled down to a plain dot for the legend row.
+class _DashedCirclePainter extends CustomPainter {
+  const _DashedCirclePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF9CA3AF)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final radius = size.width / 2;
+    final center = Offset(radius, radius);
+    const dashCount = 8;
+    const dashDegrees = 360 / dashCount * 0.6;
+    for (var i = 0; i < dashCount; i++) {
+      final startAngle = (360 / dashCount * i) * (3.1415926535 / 180);
+      final sweepAngle = dashDegrees * (3.1415926535 / 180);
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius - 0.6), startAngle, sweepAngle, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _StopLabel extends StatelessWidget {
