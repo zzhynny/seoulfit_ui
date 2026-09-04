@@ -26,99 +26,106 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: FigmaDeviceFrameWrapper(
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                const SizedBox(height: 44),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: widget.onBack,
-                      icon: const Icon(Icons.chevron_left, size: 28),
+            const SizedBox(height: 44),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: widget.onBack,
+                  icon: const Icon(Icons.chevron_left, size: 28),
+                ),
+              ),
+            ),
+            // Scrollable middle section: on shorter viewports the header +
+            // three permission cards can exceed the available height, so
+            // this scrolls internally instead of overflowing past the
+            // fixed CTA buttons below.
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: 60,
+                            child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Customize Your Adventure',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.headingMedium,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Allow SeoulFit access to personalize recommendations and keep your trip running smoothly.',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          _PermissionCard(
+                            icon: Icons.location_on_outlined,
+                            title: 'Location Access',
+                            description:
+                                'Find hidden local spots, culinary gems, and step-by-step subway routes near you.',
+                            value: _location,
+                            onChanged: (v) => setState(() => _location = v),
+                          ),
+                          const SizedBox(height: 14),
+                          _PermissionCard(
+                            icon: Icons.camera_alt_outlined,
+                            title: 'Camera',
+                            description:
+                                'Instantly scan and translate Korean food menus, signs, and subway maps on the go.',
+                            value: _camera,
+                            onChanged: (v) => setState(() => _camera = v),
+                          ),
+                          const SizedBox(height: 14),
+                          _PermissionCard(
+                            icon: Icons.notifications_none,
+                            title: 'Smart Notifications',
+                            description:
+                                'Receive dynamic schedule reminders, boarding alerts, and local weather updates.',
+                            value: _notifications,
+                            onChanged: (v) => setState(() => _notifications = v),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  PrimaryButton(label: 'Allow Access & Continue', onPressed: widget.onContinue),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: widget.onContinue,
+                    child: Text(
+                      'Skip for now',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 60,
-                        child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Customize Your Adventure',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.headingMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Allow SeoulFit access to personalize recommendations and keep your trip running smoothly.',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      _PermissionCard(
-                        icon: Icons.location_on_outlined,
-                        title: 'Location Access',
-                        description:
-                            'Find hidden local spots, culinary gems, and step-by-step subway routes near you.',
-                        value: _location,
-                        onChanged: (v) => setState(() => _location = v),
-                      ),
-                      const SizedBox(height: 14),
-                      _PermissionCard(
-                        icon: Icons.camera_alt_outlined,
-                        title: 'Camera',
-                        description:
-                            'Instantly scan and translate Korean food menus, signs, and subway maps on the go.',
-                        value: _camera,
-                        onChanged: (v) => setState(() => _camera = v),
-                      ),
-                      const SizedBox(height: 14),
-                      _PermissionCard(
-                        icon: Icons.notifications_none,
-                        title: 'Smart Notifications',
-                        description:
-                            'Receive dynamic schedule reminders, boarding alerts, and local weather updates.',
-                        value: _notifications,
-                        onChanged: (v) => setState(() => _notifications = v),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      PrimaryButton(label: 'Allow Access & Continue', onPressed: widget.onContinue),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: widget.onContinue,
-                        child: Text(
-                          'Skip for now',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

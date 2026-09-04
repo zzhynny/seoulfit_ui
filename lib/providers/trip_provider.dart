@@ -23,6 +23,18 @@ class TripProvider extends ChangeNotifier {
   bool _hasRespondedToStampOptIn = false;
   bool get hasRespondedToStampOptIn => _hasRespondedToStampOptIn;
 
+  /// True once the user has gone through 16_Trip-Finish-Confirm and chosen
+  /// to see their recap — takes priority over the stamp opt-in check on
+  /// Final Route's "Check in for today's places" button, since there's
+  /// nothing left to check in once the trip is wrapped up.
+  bool _tripCompleted = false;
+  bool get isTripCompleted => _tripCompleted;
+
+  void markTripCompleted() {
+    _tripCompleted = true;
+    notifyListeners();
+  }
+
   final Map<String, MissedReason> _missedReasons = {};
 
   bool _loading = false;
@@ -91,6 +103,7 @@ class TripProvider extends ChangeNotifier {
     _missedReasons.clear();
     _stampCollectionEnabled = false;
     _hasRespondedToStampOptIn = false;
+    _tripCompleted = false;
     notifyListeners();
   }
 

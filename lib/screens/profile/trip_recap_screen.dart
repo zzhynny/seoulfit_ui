@@ -77,13 +77,20 @@ class _FullRecapBody extends StatelessWidget {
 
   final List<RecapStop> stops;
 
-  static const _positions = [
-    Alignment(0.0, -0.85), // 1
-    Alignment(-0.7, -0.5), // 2
-    Alignment(0.3, -0.05), // 3
-    Alignment(-0.5, 0.4), // 4
-    Alignment(0.4, 0.7), // 5
+  /// Exact top-left offsets of each stamp, as fractions of the map card's
+  /// Figma bounding box (354x444), taken directly from the 17_Trip-Recap-Main
+  /// frame's node coordinates via Dev Mode MCP:
+  ///  1) left:120 top:18   2) left:21  top:141  3) left:169 top:242
+  ///  4) left:42  top:304  5) left:228 top:383
+  static const _cardAspectRatio = 354 / 444;
+  static const _stampOffsets = [
+    Offset(120 / 354, 18 / 444),
+    Offset(21 / 354, 141 / 444),
+    Offset(169 / 354, 242 / 444),
+    Offset(42 / 354, 304 / 444),
+    Offset(228 / 354, 383 / 444),
   ];
+  static const _stampSize = 60.0;
 
   @override
   Widget build(BuildContext context) {
@@ -96,40 +103,48 @@ class _FullRecapBody extends StatelessWidget {
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Container(
-              height: 444,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF8F0),
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset('assets/images/recap-railway-bg.png', fit: BoxFit.cover),
-                  ),
-                  Positioned(
-                    left: 24,
-                    top: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'YOUR SEOUL JOURNEY',
-                        style: AppTextStyles.caption.copyWith(color: const Color(0xFF5E836A), fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  for (var i = 0; i < stops.length && i < _positions.length; i++)
-                    Align(
-                      alignment: _positions[i],
-                      child: _RecapStopMarker(stop: stops[i]),
-                    ),
-                ],
+            child: AspectRatio(
+              aspectRatio: _cardAspectRatio,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8F0),
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final h = constraints.maxHeight;
+                    return Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Image.asset('assets/images/recap-railway-bg.png', fit: BoxFit.cover),
+                        ),
+                        Positioned(
+                          left: 24,
+                          top: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'YOUR SEOUL JOURNEY',
+                              style: AppTextStyles.caption.copyWith(color: const Color(0xFF5E836A), fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                        for (var i = 0; i < stops.length && i < _stampOffsets.length; i++)
+                          Positioned(
+                            left: _stampOffsets[i].dx * w,
+                            top: _stampOffsets[i].dy * h,
+                            child: _RecapStopMarker(stop: stops[i], stampSize: _stampSize),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -167,19 +182,23 @@ class _FullRecapBody extends StatelessWidget {
 }
 
 class _RecapStopMarker extends StatelessWidget {
-  const _RecapStopMarker({required this.stop});
+  const _RecapStopMarker({required this.stop, required this.stampSize});
 
   final RecapStop stop;
+  final double stampSize;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      // start (not center): the stamp's own top-left is the exact Figma
+      // anchor point — a wider label below it must not re-center the stamp.
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Image.asset(
           stop.visited ? 'assets/images/stamp-paw-green.png' : 'assets/images/stamp-paw-empty.png',
-          width: 48,
-          height: 48,
+          width: stampSize,
+          height: stampSize,
           fit: BoxFit.contain,
         ),
         const SizedBox(height: 4),

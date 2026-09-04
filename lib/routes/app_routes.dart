@@ -48,10 +48,9 @@ class AppRoutes {
   static const chooseBuddy = '/choose-buddy';
   static const permissions = '/permissions';
 
-  static const confirmSlots = '/confirm-slots';
+  // Auto-advancing loaders only — standalone, no bottom nav, since they're
+  // brief full-screen transitions rather than places to switch tabs from.
   static const craftingItinerary = '/crafting-itinerary';
-  static const initialItinerary = '/initial-itinerary';
-  static const makeTripYours = '/make-trip-yours';
   static const reoptimizing = '/reoptimizing';
 
   static const error = '/error';
@@ -61,6 +60,11 @@ class AppRoutes {
   static const lens = '/lens';
   static const events = '/events';
   static const profile = '/profile';
+
+  // Nested under the Trip tab (see below) so the bottom nav stays visible.
+  static const confirmSlots = '$trip/confirm-slots';
+  static const initialItinerary = '$trip/initial-itinerary';
+  static const makeTripYours = '$trip/make-trip-yours';
 }
 
 GoRouter buildAppRouter() {
@@ -97,52 +101,17 @@ GoRouter buildAppRouter() {
         ),
       ),
 
-      // Trip wizard — standalone, full-screen, no bottom nav until Final Route.
-      // Forward taps push (so each screen's back arrow can pop to its real
-      // entry point); auto-advancing loaders pushReplacement themselves off
-      // the stack since they have no back arrow of their own.
-      GoRoute(
-        path: AppRoutes.confirmSlots,
-        builder: (context, state) {
-          final trip = context.read<TripProvider>();
-          final preferences = trip.itinerary?.preferences ?? _kDefaultPreferences;
-          return ConfirmSlotsScreen(
-            preferences: preferences,
-            onGenerate: () => context.push(AppRoutes.craftingItinerary),
-            onBack: () => context.pop(),
-          );
-        },
-      ),
+      // Auto-advancing loaders — standalone, full-screen, no bottom nav (no
+      // back arrow of their own either). Pushed as a top-level route over
+      // the whole shell, then `go()` back into a nested Trip-tab screen when
+      // done, so the shell's bottom nav is showing again immediately.
       GoRoute(
         path: AppRoutes.craftingItinerary,
         builder: (context, state) => CraftingItineraryScreen(
           onDone: () async {
             await context.read<TripProvider>().generateItinerary();
-            if (context.mounted) context.pushReplacement(AppRoutes.initialItinerary);
+            if (context.mounted) context.go(AppRoutes.initialItinerary);
           },
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.initialItinerary,
-        builder: (context, state) {
-          final itinerary = context.watch<TripProvider>().itinerary;
-          if (itinerary == null) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          return InitialItineraryScreen(
-            itinerary: itinerary,
-            onStartExploring: () => context.push(AppRoutes.makeTripYours),
-            // Crafting was pushReplaced off the stack, so back lands on
-            // Confirm Slots — the real prior decision point.
-            onBack: () => context.pop(),
-          );
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.makeTripYours,
-        builder: (context, state) => MakeTripYoursScreen(
-          onOptimize: () => context.push(AppRoutes.reoptimizing),
-          onBack: () => context.pop(),
         ),
       ),
       GoRoute(
@@ -150,8 +119,6 @@ GoRouter buildAppRouter() {
         builder: (context, state) => ReoptimizingScreen(
           onDone: () async {
             await context.read<TripProvider>().reoptimize();
-            // Terminal wizard step: replace the whole wizard stack with the
-            // Trip tab (Final Route) — no back-into-wizard from there.
             if (context.mounted) context.go(AppRoutes.trip);
           },
         ),
@@ -174,7 +141,10 @@ GoRouter buildAppRouter() {
               path: AppRoutes.chat,
               builder: (context, state) => ChatScreen(
                 onOpenHelpTopic: (title) => _showHelpTopicSheet(context, title),
-                onBuildItinerary: () => context.push(AppRoutes.confirmSlots),
+                // Cross-branch jump into the Trip tab's wizard — go(), not
+                // push(), since Confirm Slots now lives inside the Trip
+                // branch's own nested Navigator, not this one.
+                onBuildItinerary: () => context.go(AppRoutes.confirmSlots),
               ),
             ),
           ]),
@@ -185,17 +155,57 @@ GoRouter buildAppRouter() {
                 onStartPlanning: () => context.go(AppRoutes.chat),
                 onEditTrip: () => context.go(AppRoutes.makeTripYours),
                 onCheckInToday: () {
-                  // One-time opt-in: ask via 13_Stamp-Book-OptIn the first
-                  // time, then skip straight to Day Check-in afterwards.
-                  final answered = context.read<TripProvider>().hasRespondedToStampOptIn;
-                  if (answered) {
-                    context.push('${AppRoutes.trip}/day-checkin/1');
-                  } else {
+                  final trip = context.read<TripProvider>();
+                  // Priority order: a fully-completed trip always jumps to
+                  // the recap; otherwise the one-time stamp opt-in gates
+                  // the first tap, and every tap after that goes straight
+                  // to today's check-in.
+                  if (trip.isTripCompleted) {
+                    context.go('${AppRoutes.profile}/recap');
+                  } else if (!trip.hasRespondedToStampOptIn) {
                     context.push('${AppRoutes.trip}/stamp-book-optin');
+                  } else {
+                    context.push('${AppRoutes.trip}/day-checkin/1');
                   }
                 },
               ),
               routes: [
+                GoRoute(
+                  path: 'confirm-slots',
+                  builder: (context, state) {
+                    final trip = context.read<TripProvider>();
+                    final preferences = trip.itinerary?.preferences ?? _kDefaultPreferences;
+                    return ConfirmSlotsScreen(
+                      preferences: preferences,
+                      onGenerate: () => context.push(AppRoutes.craftingItinerary),
+                      onBack: () => context.go(AppRoutes.chat),
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'initial-itinerary',
+                  builder: (context, state) {
+                    final itinerary = context.watch<TripProvider>().itinerary;
+                    if (itinerary == null) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    return InitialItineraryScreen(
+                      itinerary: itinerary,
+                      onStartExploring: () => context.push('${AppRoutes.trip}/make-trip-yours'),
+                      // The Crafting loader replaced itself via go(), so
+                      // there's no stack entry to pop back to — go directly
+                      // to Confirm Slots, the real prior decision point.
+                      onBack: () => context.go(AppRoutes.confirmSlots),
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'make-trip-yours',
+                  builder: (context, state) => MakeTripYoursScreen(
+                    onOptimize: () => context.push(AppRoutes.reoptimizing),
+                    onBack: () => context.pop(),
+                  ),
+                ),
                 GoRoute(
                   path: 'stamp-book-optin',
                   builder: (context, state) => StampBookOptInScreen(
@@ -248,7 +258,10 @@ GoRouter buildAppRouter() {
                 GoRoute(
                   path: 'trip-finish-confirm',
                   builder: (context, state) => TripFinishConfirmScreen(
-                    onSeeRecap: () => context.go('${AppRoutes.profile}/recap'),
+                    onSeeRecap: () {
+                      context.read<TripProvider>().markTripCompleted();
+                      context.go('${AppRoutes.profile}/recap');
+                    },
                     onNotYet: () => context.go(AppRoutes.trip),
                     onBack: () => context.pop(),
                   ),
