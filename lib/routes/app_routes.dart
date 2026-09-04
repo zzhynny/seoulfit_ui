@@ -313,27 +313,43 @@ GoRouter buildAppRouter() {
                 // collide with whatever's on the Profile branch's own
                 // nested stack (e.g. a still-open Recap route).
                 onChangeCompanion: () => context.push('${AppRoutes.chooseBuddy}?from=profile'),
-                onViewStampBook: () => context.push('${AppRoutes.profile}/recap'),
+                onViewStampBook: () => context.push('${AppRoutes.profile}/recap?from=profile'),
               ),
               routes: [
                 GoRoute(
                   path: 'recap',
-                  builder: (context, state) => TripRecapScreen(
-                    onDone: () {
-                      context.read<TripProvider>().markTripCompleted();
-                      // Defensively unwind this branch's own stack back to
-                      // its Profile root (so a later Profile-tab visit
-                      // shows 12-5_Profile, not this Recap screen), then
-                      // land on bare '/trip' — Final Route, not any stale
-                      // nested check-in-wizard screen left over from before
-                      // the cross-branch jump into this Recap screen.
-                      while (context.canPop()) {
-                        context.pop();
-                      }
-                      context.go(AppRoutes.trip);
-                    },
-                    onBack: () => context.pop(),
-                  ),
+                  builder: (context, state) {
+                    // Two distinct entry points share this one route:
+                    // Profile's "View Stamp Book & Recaps" (?from=profile,
+                    // pushed within this same branch) vs. the check-in
+                    // flow's Trip-Finish-Confirm "See My Trip Recap"
+                    // (cross-branch go(), no query param). Done/back must
+                    // behave differently for each.
+                    final fromProfile = state.uri.queryParameters['from'] == 'profile';
+                    return TripRecapScreen(
+                      onDone: () {
+                        if (fromProfile) {
+                          // Just close back to Profile — the trip isn't
+                          // necessarily finished, the user was only
+                          // Browse-ing their stamp book.
+                          context.pop();
+                          return;
+                        }
+                        context.read<TripProvider>().markTripCompleted();
+                        // Defensively unwind this branch's own stack back to
+                        // its Profile root (so a later Profile-tab visit
+                        // shows 12-5_Profile, not this Recap screen), then
+                        // land on bare '/trip' — Final Route, not any stale
+                        // nested check-in-wizard screen left over from before
+                        // the cross-branch jump into this Recap screen.
+                        while (context.canPop()) {
+                          context.pop();
+                        }
+                        context.go(AppRoutes.trip);
+                      },
+                      onBack: () => context.pop(),
+                    );
+                  },
                 ),
               ],
             ),

@@ -30,11 +30,74 @@ class _EnterNameScreenState extends State<EnterNameScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: FigmaDeviceFrameWrapper(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Figma's 02_Enter-Name stacks a fixed 22px name-top spacer
+                // + a fixed 206px spacer-top before the content block (not a
+                // centering flex) — 228px total from the top of this column,
+                // landing the title at ~33% down the frame. The back-button
+                // row below is an absolute overlay (see Positioned), not a
+                // flow child, so it doesn't add extra height on top of this.
+                const SizedBox(height: 228),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Column(
+                        children: [
+                          Text(
+                            "Hi there!\nWhat's your name?",
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.headingLarge,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            "We'll use it to personalize your Seoul itinerary.",
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('FIRST NAME', style: AppTextStyles.labelUppercase),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _controller,
+                            decoration: const InputDecoration(hintText: 'Alex'),
+                            style: AppTextStyles.bodyLarge,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Expanded(child: SizedBox()),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: PrimaryButton(
+                    label: 'Continue',
+                    onPressed: () {
+                      final name = _controller.text.trim();
+                      context
+                          .read<CompanionProvider>()
+                          .setUserName(name.isEmpty ? 'Alex' : name);
+                      widget.onContinue();
+                    },
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              right: 20,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -44,62 +107,6 @@ class _EnterNameScreenState extends State<EnterNameScreen> {
                   ),
                   const ProgressDots(step: 1),
                 ],
-              ),
-            ),
-            // Figma's 02_Enter-Name stacks a fixed 22px name-top spacer +
-            // a fixed 206px spacer-top before the content block (not a
-            // centering flex), then a flexible spacer-bottom before the
-            // button — so the title sits at a fixed height, not hugging
-            // the top bar.
-            const SizedBox(height: 228),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Column(
-                    children: [
-                      Text(
-                        "Hi there!\nWhat's your name?",
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.headingLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        "We'll use it to personalize your Seoul itinerary.",
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('FIRST NAME', style: AppTextStyles.labelUppercase),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _controller,
-                        decoration: const InputDecoration(hintText: 'Alex'),
-                        style: AppTextStyles.bodyLarge,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const Expanded(child: SizedBox()),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: PrimaryButton(
-                label: 'Continue',
-                onPressed: () {
-                  final name = _controller.text.trim();
-                  context
-                      .read<CompanionProvider>()
-                      .setUserName(name.isEmpty ? 'Alex' : name);
-                  widget.onContinue();
-                },
               ),
             ),
           ],

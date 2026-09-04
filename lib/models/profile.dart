@@ -36,10 +36,10 @@ class RecapStop {
   const RecapStop({
     required this.name,
     required this.dayLabel,
-    required this.visited,
+    required this.state,
   });
 
   final String name;
   final String dayLabel;
-  final bool visited;
+  final StampState state;
 }
