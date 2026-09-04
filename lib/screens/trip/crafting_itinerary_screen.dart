@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/companion_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/figma_chrome.dart';
 import '../../widgets/loading_log_panel.dart';
@@ -22,6 +24,7 @@ class _CraftingItineraryScreenState extends State<CraftingItineraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final companion = context.watch<CompanionProvider>().selected;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: FigmaDeviceFrameWrapper(
@@ -34,7 +37,11 @@ class _CraftingItineraryScreenState extends State<CraftingItineraryScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const SizedBox(width: 36),
+                    SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
+                    ),
                     Text('SeoulFit', style: AppTextStyles.headingSmall.copyWith(fontSize: 20)),
                     const SizedBox(width: 36),
                   ],

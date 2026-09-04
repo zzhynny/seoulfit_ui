@@ -24,16 +24,12 @@ class ChooseBuddyScreen extends StatefulWidget {
 }
 
 class _ChooseBuddyScreenState extends State<ChooseBuddyScreen> {
-  late CompanionId _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = context.read<CompanionProvider>().selected.id;
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Live shared state: tapping a card below writes straight into
+    // CompanionProvider (in-memory only, no backend), so every other
+    // screen watching it updates immediately — no confirm step needed.
+    final selected = context.watch<CompanionProvider>().selected.id;
     return Scaffold(
       backgroundColor: AppColors.backgroundAlt,
       body: FigmaDeviceFrameWrapper(
@@ -77,8 +73,8 @@ class _ChooseBuddyScreenState extends State<ChooseBuddyScreen> {
                 for (final companion in kCompanionGridOrder)
                   _BuddyCard(
                     companion: companion,
-                    selected: companion.id == _selected,
-                    onTap: () => setState(() => _selected = companion.id),
+                    selected: companion.id == selected,
+                    onTap: () => context.read<CompanionProvider>().selectCompanion(companion.id),
                   ),
               ],
             ),
@@ -87,10 +83,9 @@ class _ChooseBuddyScreenState extends State<ChooseBuddyScreen> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: PrimaryButton(
                 label: 'Select & Continue',
-                onPressed: () {
-                  context.read<CompanionProvider>().selectCompanion(_selected);
-                  widget.onContinue();
-                },
+                // The selection was already committed to CompanionProvider
+                // on tap, above — this just proceeds.
+                onPressed: widget.onContinue,
               ),
             ),
           ],
