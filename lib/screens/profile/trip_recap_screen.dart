@@ -30,17 +30,33 @@ StampState _stateFor(TripDay day) {
 }
 
 class TripRecapScreen extends StatelessWidget {
-  const TripRecapScreen({super.key, required this.onDone, required this.onBack});
+  const TripRecapScreen({
+    super.key,
+    required this.onDone,
+    required this.onBack,
+    this.requireCompletedForFullRecap = false,
+  });
 
   final VoidCallback onDone;
   final VoidCallback onBack;
 
+  /// Profile's "View Stamp Book & Recaps" entry sets this — it's reachable
+  /// at any time, including with no completed (or even in-progress) trip
+  /// at all, so it must only ever show the full railway map for a trip
+  /// that was actually finished (isTripCompleted), never merely because
+  /// enough days happen to have stamps. The Trip-flow's own recap route
+  /// (reached only once a trip already has enough check-ins to matter)
+  /// leaves this false and keeps deciding on stamped-day count alone.
+  final bool requireCompletedForFullRecap;
+
   @override
   Widget build(BuildContext context) {
-    final itinerary = context.watch<TripProvider>().itinerary;
+    final trip = context.watch<TripProvider>();
+    final itinerary = trip.itinerary;
     final days = itinerary?.days ?? const <TripDay>[];
     final stampedDays = itinerary?.stampedDays ?? 0;
-    final fullRecap = stampedDays >= kFullRecapStampThreshold;
+    final hasEnoughStamps = stampedDays >= kFullRecapStampThreshold;
+    final fullRecap = requireCompletedForFullRecap ? (trip.isTripCompleted && hasEnoughStamps) : hasEnoughStamps;
 
     return Column(
       children: [

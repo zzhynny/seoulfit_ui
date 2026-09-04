@@ -348,6 +348,11 @@ GoRouter buildAppRouter() {
                   builder: (context, state) => TripRecapScreen(
                     onDone: () => context.pop(),
                     onBack: () => context.pop(),
+                    // Reachable from Profile at any time, including before
+                    // a trip is ever finished — only show the full railway
+                    // map for a trip that was actually completed, never
+                    // just because enough days happen to have stamps.
+                    requireCompletedForFullRecap: true,
                   ),
                 ),
               ],
