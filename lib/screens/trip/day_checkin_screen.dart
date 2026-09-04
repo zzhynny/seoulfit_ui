@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/companion_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/activity_card.dart';
@@ -21,6 +22,7 @@ class DayCheckInScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trip = context.watch<TripProvider>();
+    final companion = context.watch<CompanionProvider>().selected;
     final itinerary = trip.itinerary!;
     final day = itinerary.days.firstWhere((d) => d.dayNumber == dayNumber);
     final stampedDays = itinerary.stampedDays;
@@ -37,11 +39,12 @@ class DayCheckInScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Image.asset(
-                          'assets/images/stamp-paw-green.png',
+                        Container(
                           width: 30,
                           height: 30,
-                          fit: BoxFit.contain,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: const BoxDecoration(shape: BoxShape.circle),
+                          child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
                         ),
                         const SizedBox(width: 8),
                         Text('Day $dayNumber Check-in', style: AppTextStyles.headingMedium.copyWith(fontSize: 24)),

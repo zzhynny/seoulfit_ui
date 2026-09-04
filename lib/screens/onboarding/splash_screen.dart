@@ -22,7 +22,12 @@ class SplashScreen extends StatelessWidget {
             Container(color: Colors.black.withValues(alpha: 0.4)),
             Column(
               children: [
-                const Spacer(),
+                // The Figma frame lays out status-bar / brand-section /
+                // action-section with justify-between, splitting the
+                // leftover height into two roughly-equal gaps around the
+                // title block — NOT a single bottom-heavy spacer, which
+                // was clumping the title right above the button.
+                const Expanded(child: SizedBox()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
@@ -42,7 +47,7 @@ class SplashScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 48),
+                const Expanded(child: SizedBox()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: PrimaryButton(label: 'Get Started', onPressed: onGetStarted),

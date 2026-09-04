@@ -233,18 +233,10 @@ class _PlanView extends StatelessWidget {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: AppColors.composerBackground,
-                      border: Border.all(color: AppColors.borderAlt),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
-                    ),
+                  SizedBox(
+                    width: 38,
+                    height: 38,
+                    child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
                   ),
                   const SizedBox(width: 8),
                   Flexible(

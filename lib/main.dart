@@ -47,11 +47,21 @@ class SeoulFitApp extends StatelessWidget {
             theme: AppTheme.light,
             routerConfig: router,
             builder: (context, child) {
-              return Stack(
-                children: [
-                  ?child,
-                  const FigmaChromeToggleButton(),
-                ],
+              return ColoredBox(
+                // Neutral backdrop for the letterboxed area on wide desktop
+                // viewports, so the constrained app column reads clearly.
+                color: const Color(0xFFE5E1D8),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 430),
+                        child: child ?? const SizedBox.shrink(),
+                      ),
+                    ),
+                    const FigmaChromeToggleButton(),
+                  ],
+                ),
               );
             },
           );

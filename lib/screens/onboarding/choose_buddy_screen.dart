@@ -119,6 +119,11 @@ class _BuddyCard extends StatelessWidget {
           ),
         ),
         child: Stack(
+          // The selected badge below is deliberately positioned partly
+          // outside this Stack's bounds (top:-4, right:-4) to sit on the
+          // card's corner — Stack's default Clip.hardEdge was cutting it
+          // off.
+          clipBehavior: Clip.none,
           children: [
             Center(
               child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),

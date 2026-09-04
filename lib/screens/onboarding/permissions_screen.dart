@@ -47,7 +47,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     children: [
                       SizedBox(
                         height: 60,
-                        child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
+                        child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
                       ),
                       const SizedBox(height: 24),
                       Text(
