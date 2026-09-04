@@ -1,4 +1,3 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/profile.dart';
@@ -143,22 +142,14 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
 
   static const _slamStep = 0.15;
   static const _slamSpan = 0.35;
-  static const _slamDurationMs = 900;
-  static const _initialDelayMs = 180;
 
   late final AnimationController _controller;
   late final List<Animation<double>> _slamAnims;
-  // One player per stop so overlapping/staggered impacts don't cut each
-  // other off — a single shared AudioPlayer would restart (and truncate)
-  // on every play() call, which happens well before the previous stamp's
-  // clip has finished given the ~135ms stagger step.
-  late final List<AudioPlayer> _sfxPlayers;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: _slamDurationMs));
-    _sfxPlayers = List.generate(_stopLayouts.length, (_) => AudioPlayer());
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     _slamAnims = List.generate(_stopLayouts.length, (i) {
       final start = _slamStep * i;
       final end = (start + _slamSpan).clamp(0.0, 1.0);
@@ -171,38 +162,15 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
     // starting forward() inside initState/build itself can get dropped by
     // Flutter Web's first paint.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: _initialDelayMs), () {
-        if (!mounted) return;
-        _controller.forward(from: 0.0);
-        for (var i = 0; i < _stopLayouts.length; i++) {
-          final end = (_slamStep * i + _slamSpan).clamp(0.0, 1.0);
-          final impactMs = (end * _slamDurationMs).round();
-          Future.delayed(Duration(milliseconds: impactMs), () => _playImpactSfx(i));
-        }
+      Future.delayed(const Duration(milliseconds: 180), () {
+        if (mounted) _controller.forward(from: 0.0);
       });
     });
-  }
-
-  Future<void> _playImpactSfx(int index) async {
-    if (!mounted) return;
-    try {
-      // Fire-and-forget: never awaited by the animation itself, so a slow
-      // or blocked decode can't stall the UI thread or delay the next
-      // stamp's slam.
-      await _sfxPlayers[index].play(AssetSource('cute-peta-stamp.mp3'));
-    } catch (_) {
-      // Browsers can block audio autoplay until the user has interacted
-      // with the page at least once — swallow that rather than let a
-      // sound-effect failure break the recap screen.
-    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    for (final player in _sfxPlayers) {
-      player.dispose();
-    }
     super.dispose();
   }
 
