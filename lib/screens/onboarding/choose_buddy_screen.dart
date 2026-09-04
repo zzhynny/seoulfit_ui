@@ -49,7 +49,13 @@ class _ChooseBuddyScreenState extends State<ChooseBuddyScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 40),
+            // Figma's 03_Choose-Buddy has a fixed 155px spacer-top below
+            // the status bar before the header copy; the back-button/dots
+            // row above is an absolute overlay there, not a block that
+            // pushes content down — since ours instead flows normally,
+            // giving it the fixed gap directly (rather than the smaller
+            // 40px used before) keeps the title from hugging the top bar.
+            const SizedBox(height: 96),
             Column(
               children: [
                 Text(

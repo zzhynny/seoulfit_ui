@@ -1,48 +1,29 @@
 import 'package:flutter/material.dart';
-import '../../data/repositories/profile_repository.dart';
+import 'package:provider/provider.dart';
 import '../../models/profile.dart';
+import '../../models/trip.dart';
+import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/primary_button.dart';
 
-class TripRecapScreen extends StatefulWidget {
-  const TripRecapScreen({super.key, required this.repository, required this.onDone, required this.onBack});
+/// Minimum number of days with at least one check-in for the full
+/// railway-map recap (17_Trip-Recap-Main) to show; below this, the
+/// low-data variant (17-1_Trip-Recap-LowData) shows instead.
+const kFullRecapStampThreshold = 2;
 
-  final ProfileRepository repository;
+class TripRecapScreen extends StatelessWidget {
+  const TripRecapScreen({super.key, required this.onDone, required this.onBack});
+
   final VoidCallback onDone;
   final VoidCallback onBack;
 
   @override
-  State<TripRecapScreen> createState() => _TripRecapScreenState();
-}
-
-class _TripRecapScreenState extends State<TripRecapScreen> {
-  bool? _fullRecap;
-  List<RecapStop> _stops = [];
-  List<RecapStampDay> _stampDays = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final fullRecap = await widget.repository.hasEnoughDataForFullRecap();
-    final stops = await widget.repository.fetchRecapStops();
-    final stampDays = await widget.repository.fetchStampDays();
-    if (!mounted) return;
-    setState(() {
-      _fullRecap = fullRecap;
-      _stops = stops;
-      _stampDays = stampDays;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_fullRecap == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final itinerary = context.watch<TripProvider>().itinerary;
+    final days = itinerary?.days ?? const <TripDay>[];
+    final stampedDays = itinerary?.stampedDays ?? 0;
+    final fullRecap = stampedDays >= kFullRecapStampThreshold;
+
     return Column(
       children: [
         Container(
@@ -50,7 +31,7 @@ class _TripRecapScreenState extends State<TripRecapScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Row(
             children: [
-              GestureDetector(onTap: widget.onBack, child: const Icon(Icons.chevron_left, size: 20)),
+              GestureDetector(onTap: onBack, child: const Icon(Icons.chevron_left, size: 20)),
               Expanded(
                 child: Text('SeoulFit', textAlign: TextAlign.center, style: AppTextStyles.headingSmall.copyWith(fontSize: 20)),
               ),
@@ -59,23 +40,53 @@ class _TripRecapScreenState extends State<TripRecapScreen> {
           ),
         ),
         Expanded(
-          child: _fullRecap!
-              ? _FullRecapBody(stops: _stops)
-              : _LowDataRecapBody(stampDays: _stampDays),
+          child: fullRecap ? _FullRecapBody(days: days) : _LowDataRecapBody(days: days),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: PrimaryButton(label: 'Done', onPressed: widget.onDone),
+          child: PrimaryButton(label: 'Done', onPressed: onDone),
         ),
       ],
     );
   }
 }
 
-class _FullRecapBody extends StatelessWidget {
-  const _FullRecapBody({required this.stops});
+/// Derives a short display name + "Day N • X/Y Visited" (or "Planned")
+/// label for a trip day, matching 17_Trip-Recap-Main's stop labels.
+RecapStop _stopFor(TripDay day) {
+  final name = day.areaName.replaceAll(' Area', '');
+  final total = day.activities.length;
+  final visited = day.visitedCount;
+  final label = visited == 0
+      ? 'Day ${day.dayNumber} • Planned'
+      : visited == total
+          ? 'Day ${day.dayNumber} • All Visited'
+          : 'Day ${day.dayNumber} • $visited/$total Visited';
+  return RecapStop(name: name, dayLabel: label, visited: visited > 0);
+}
 
-  final List<RecapStop> stops;
+/// Derives a stamp-book state ("Stamped" / "Started" / "Empty") for a trip
+/// day, matching 17-1_Trip-Recap-LowData's stamp grid.
+RecapStampDay _stampDayFor(TripDay day) {
+  final total = day.activities.length;
+  final visited = day.visitedCount;
+  final state = visited == 0
+      ? StampState.empty
+      : visited == total
+          ? StampState.visited
+          : StampState.partial;
+  final label = switch (state) {
+    StampState.visited => 'Stamped',
+    StampState.partial => 'Started',
+    StampState.empty => 'Empty',
+  };
+  return RecapStampDay(dayNumber: day.dayNumber, state: state, label: label);
+}
+
+class _FullRecapBody extends StatelessWidget {
+  const _FullRecapBody({required this.days});
+
+  final List<TripDay> days;
 
   /// Exact top-left offsets of each stamp, as fractions of the map card's
   /// Figma bounding box (354x444), taken directly from the 17_Trip-Recap-Main
@@ -90,10 +101,11 @@ class _FullRecapBody extends StatelessWidget {
     Offset(42 / 354, 304 / 444),
     Offset(228 / 354, 383 / 444),
   ];
-  static const _stampSize = 60.0;
+  static const _stampSize = 38.0;
 
   @override
   Widget build(BuildContext context) {
+    final stops = days.map(_stopFor).toList();
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
       child: Column(
@@ -116,9 +128,16 @@ class _FullRecapBody extends StatelessWidget {
                     final w = constraints.maxWidth;
                     final h = constraints.maxHeight;
                     return Stack(
+                      // Labels are allowed to sit slightly outside a stop's
+                      // own anchor box (e.g. above the stamp for the last
+                      // stop, see labelAbove below) — never hard-clip them.
+                      clipBehavior: Clip.none,
                       children: [
                         Positioned.fill(
-                          child: Image.asset('assets/images/recap-railway-bg.png', fit: BoxFit.cover),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.asset('assets/images/recap-railway-bg.png', fit: BoxFit.cover),
+                          ),
                         ),
                         Positioned(
                           left: 24,
@@ -139,7 +158,14 @@ class _FullRecapBody extends StatelessWidget {
                           Positioned(
                             left: _stampOffsets[i].dx * w,
                             top: _stampOffsets[i].dy * h,
-                            child: _RecapStopMarker(stop: stops[i], stampSize: _stampSize),
+                            // The last stop sits close to the card's bottom
+                            // edge — its label renders above the stamp
+                            // instead of below so it can't get clipped.
+                            child: _RecapStopMarker(
+                              stop: stops[i],
+                              stampSize: _stampSize,
+                              labelAbove: i == _stampOffsets.length - 1,
+                            ),
                           ),
                       ],
                     );
@@ -182,52 +208,55 @@ class _FullRecapBody extends StatelessWidget {
 }
 
 class _RecapStopMarker extends StatelessWidget {
-  const _RecapStopMarker({required this.stop, required this.stampSize});
+  const _RecapStopMarker({required this.stop, required this.stampSize, this.labelAbove = false});
 
   final RecapStop stop;
   final double stampSize;
+  final bool labelAbove;
 
   @override
   Widget build(BuildContext context) {
+    final stamp = Image.asset(
+      stop.visited ? 'assets/images/stamp-paw-green.png' : 'assets/images/stamp-paw-empty.png',
+      width: stampSize,
+      height: stampSize,
+      fit: BoxFit.contain,
+    );
+    final label = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        border: Border.all(color: const Color(0xFF5E836A).withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(stop.name, style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFF2D2A26))),
+          Text(stop.dayLabel, style: AppTextStyles.caption.copyWith(fontSize: 9, color: const Color(0xFF5E836A))),
+        ],
+      ),
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       // start (not center): the stamp's own top-left is the exact Figma
-      // anchor point — a wider label below it must not re-center the stamp.
+      // anchor point — a wider label must not re-center the stamp.
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Image.asset(
-          stop.visited ? 'assets/images/stamp-paw-green.png' : 'assets/images/stamp-paw-empty.png',
-          width: stampSize,
-          height: stampSize,
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.85),
-            border: Border.all(color: const Color(0xFF5E836A).withValues(alpha: 0.2)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              Text(stop.name, style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFF2D2A26))),
-              Text(stop.dayLabel, style: AppTextStyles.caption.copyWith(fontSize: 9, color: const Color(0xFF5E836A))),
-            ],
-          ),
-        ),
-      ],
+      children: labelAbove
+          ? [label, const SizedBox(height: 4), stamp]
+          : [stamp, const SizedBox(height: 4), label],
     );
   }
 }
 
 class _LowDataRecapBody extends StatelessWidget {
-  const _LowDataRecapBody({required this.stampDays});
+  const _LowDataRecapBody({required this.days});
 
-  final List<RecapStampDay> stampDays;
+  final List<TripDay> days;
 
   @override
   Widget build(BuildContext context) {
+    final stampDays = days.map(_stampDayFor).toList();
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Column(

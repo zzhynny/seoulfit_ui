@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../data/repositories/events_repository.dart';
 import '../data/repositories/lens_repository.dart';
-import '../data/repositories/profile_repository.dart';
 import '../models/lens.dart';
 import '../models/trip.dart';
 import '../providers/trip_provider.dart';
@@ -86,10 +85,18 @@ GoRouter buildAppRouter() {
       ),
       GoRoute(
         path: AppRoutes.chooseBuddy,
-        builder: (context, state) => ChooseBuddyScreen(
-          onContinue: () => context.push(AppRoutes.permissions),
-          onBack: () => context.pop(),
-        ),
+        builder: (context, state) {
+          // Reused for two entry points: the linear onboarding flow, and
+          // Profile's "Change" link (?from=profile) — both push() here, so
+          // onBack always just pops back to whichever screen opened it.
+          // Only onContinue's destination differs.
+          final fromProfile = state.uri.queryParameters['from'] == 'profile';
+          return ChooseBuddyScreen(
+            showProgress: !fromProfile,
+            onContinue: fromProfile ? () => context.pop() : () => context.push(AppRoutes.permissions),
+            onBack: () => context.pop(),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.permissions,
@@ -258,10 +265,10 @@ GoRouter buildAppRouter() {
                 GoRoute(
                   path: 'trip-finish-confirm',
                   builder: (context, state) => TripFinishConfirmScreen(
-                    onSeeRecap: () {
-                      context.read<TripProvider>().markTripCompleted();
-                      context.go('${AppRoutes.profile}/recap');
-                    },
+                    // isTripCompleted is set on the Recap screen's own
+                    // "Done" button, not here — merely viewing the recap
+                    // shouldn't count as finishing the trip.
+                    onSeeRecap: () => context.go('${AppRoutes.profile}/recap'),
                     onNotYet: () => context.go(AppRoutes.trip),
                     onBack: () => context.pop(),
                   ),
@@ -301,31 +308,30 @@ GoRouter buildAppRouter() {
             GoRoute(
               path: AppRoutes.profile,
               builder: (context, state) => ProfileScreen(
-                onChangeCompanion: () => context.push('${AppRoutes.profile}/choose-buddy'),
+                // Top-level route (shared with onboarding), not nested under
+                // /profile — a plain push()/pop() pair that can never
+                // collide with whatever's on the Profile branch's own
+                // nested stack (e.g. a still-open Recap route).
+                onChangeCompanion: () => context.push('${AppRoutes.chooseBuddy}?from=profile'),
                 onViewStampBook: () => context.push('${AppRoutes.profile}/recap'),
               ),
               routes: [
                 GoRoute(
                   path: 'recap',
                   builder: (context, state) => TripRecapScreen(
-                    repository: context.read<ProfileRepository>(),
                     onDone: () {
-                      // Pop this branch's own stack back to its Profile root
-                      // first, so switching back to the Profile tab later
-                      // (StatefulShellRoute restores each branch's last
-                      // location) lands on 12-5_Profile, not this recap
-                      // screen.
-                      if (context.canPop()) context.pop();
+                      context.read<TripProvider>().markTripCompleted();
+                      // Defensively unwind this branch's own stack back to
+                      // its Profile root (so a later Profile-tab visit
+                      // shows 12-5_Profile, not this Recap screen), then
+                      // land on bare '/trip' — Final Route, not any stale
+                      // nested check-in-wizard screen left over from before
+                      // the cross-branch jump into this Recap screen.
+                      while (context.canPop()) {
+                        context.pop();
+                      }
                       context.go(AppRoutes.trip);
                     },
-                    onBack: () => context.pop(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'choose-buddy',
-                  builder: (context, state) => ChooseBuddyScreen(
-                    showProgress: false,
-                    onContinue: () => context.pop(),
                     onBack: () => context.pop(),
                   ),
                 ),
