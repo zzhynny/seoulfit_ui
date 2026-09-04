@@ -140,10 +140,10 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
     _StopLayout(stampCenter: Offset(259 / 345, 414 / 444), labelCenter: Offset(259 / 345, 367.5 / 444)), // 5) Yeouido
   ];
 
-  // Exact Figma spec: the stamp ellipse is 60x60 — FractionalTranslation's
-  // -0.5/-0.5 centering means growing this from the old 38px expands
-  // symmetrically around the same track coordinate, no re-anchoring needed.
-  static const _stampSize = 60.0;
+  // 70x70 per spec — FractionalTranslation's -0.5/-0.5 centering means this
+  // expands symmetrically around the same track coordinate regardless of
+  // size, so no re-anchoring is needed when this value changes.
+  static const _stampSize = 70.0;
 
   static const _slamStep = 0.15;
   static const _slamSpan = 0.35;

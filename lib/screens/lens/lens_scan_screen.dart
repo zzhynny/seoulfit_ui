@@ -3,10 +3,23 @@ import '../../theme/theme.dart';
 
 enum LensPhotoSource { camera, gallery }
 
-class LensScanScreen extends StatelessWidget {
+class LensScanScreen extends StatefulWidget {
   const LensScanScreen({super.key, required this.onScan});
 
   final ValueChanged<LensPhotoSource> onScan;
+
+  @override
+  State<LensScanScreen> createState() => _LensScanScreenState();
+}
+
+class _LensScanScreenState extends State<LensScanScreen> {
+  bool _scanning = false;
+
+  void _selectSource(LensPhotoSource source) {
+    if (_scanning) return;
+    setState(() => _scanning = true);
+    widget.onScan(source);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +62,7 @@ class LensScanScreen extends StatelessWidget {
                   for (final alignment in [Alignment.topLeft, Alignment.topRight, Alignment.bottomLeft, Alignment.bottomRight])
                     Align(alignment: alignment, child: _cornerBracket(alignment)),
                   GestureDetector(
-                    onTap: () => _showSourcePicker(context),
+                    onTap: () => _selectSource(LensPhotoSource.camera),
                     child: Container(
                       width: 64,
                       height: 64,
@@ -80,9 +93,80 @@ class LensScanScreen extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            // 12-1_Lens-Scan's "bottom-sheet" — a persistent card docked
+            // above the bottom nav (not a tap-triggered modal), visible by
+            // default whenever this tab is open.
+            _photoSourceSheet(),
           ],
         ),
+        if (_scanning)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.55),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text('Identifying landmark…', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _photoSourceSheet() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          Text('Seoul Lens', style: AppTextStyles.headingSmall.copyWith(fontSize: 24)),
+          const SizedBox(height: 4),
+          Text('Choose a photo source', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: _sourceButton('📷 Camera', LensPhotoSource.camera)),
+              const SizedBox(width: 12),
+              Expanded(child: _sourceButton('🖼️ Gallery', LensPhotoSource.gallery)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sourceButton(String label, LensPhotoSource source) {
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton(
+        onPressed: () => _selectSource(source),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFE8EFEB),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        child: Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+      ),
     );
   }
 
@@ -91,67 +175,6 @@ class LensScanScreen extends StatelessWidget {
       width: 24,
       height: 24,
       child: CustomPaint(painter: _BracketPainter(alignment: alignment)),
-    );
-  }
-
-  void _showSourcePicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            Text('Seoul Lens', style: AppTextStyles.headingSmall.copyWith(fontSize: 24)),
-            const SizedBox(height: 4),
-            Text('Choose a photo source', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _sourceButton(context, '📷 Camera', LensPhotoSource.camera),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _sourceButton(context, '🖼️ Gallery', LensPhotoSource.gallery),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sourceButton(BuildContext context, String label, LensPhotoSource source) {
-    return SizedBox(
-      height: 48,
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.of(context).pop();
-          onScan(source);
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFE8EFEB),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        child: Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
-      ),
     );
   }
 }
