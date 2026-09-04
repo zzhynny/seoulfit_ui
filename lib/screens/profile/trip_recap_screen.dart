@@ -387,9 +387,23 @@ class _LowDataRecapBody extends StatelessWidget {
 
   final List<TripDay> days;
 
+  // 17-1_Trip-Recap-LowData is reachable with no active itinerary at all
+  // (e.g. Profile's "View Stamp Book & Recaps" before any trip has been
+  // generated), which left this card's stamp row with zero children —
+  // visibly blank instead of matching Figma's own mock layout. This
+  // mirrors that mock exactly (Day 1 stamped, Day 3 started, the rest
+  // empty) so the card always shows something Figma-accurate.
+  static const _fallbackStampDays = [
+    RecapStampDay(dayNumber: 1, state: StampState.visited, label: 'Stamped'),
+    RecapStampDay(dayNumber: 2, state: StampState.empty, label: 'Empty'),
+    RecapStampDay(dayNumber: 3, state: StampState.partial, label: 'Started'),
+    RecapStampDay(dayNumber: 4, state: StampState.empty, label: 'Empty'),
+    RecapStampDay(dayNumber: 5, state: StampState.empty, label: 'Empty'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final stampDays = days.map(_stampDayFor).toList();
+    final stampDays = days.isEmpty ? _fallbackStampDays : days.map(_stampDayFor).toList();
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Column(
