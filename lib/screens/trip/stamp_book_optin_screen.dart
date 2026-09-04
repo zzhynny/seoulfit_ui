@@ -27,7 +27,12 @@ class _StampBookOptInScreenState extends State<StampBookOptInScreen> {
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
           child: Row(
             children: [
-              Image.asset('assets/images/stamp-paw-green.png', width: 26, height: 30),
+              Image.asset(
+                'assets/images/stamp-paw-green.png',
+                width: 30,
+                height: 30,
+                fit: BoxFit.contain,
+              ),
               const SizedBox(width: 12),
               Text('SeoulFit', style: AppTextStyles.headingSmall.copyWith(fontSize: 20)),
             ],
@@ -148,7 +153,7 @@ class _StampBookOptInScreenState extends State<StampBookOptInScreen> {
   Widget _stampColumn(String asset, String label, String? date) {
     return Column(
       children: [
-        Image.asset(asset, width: 68, height: 68),
+        Image.asset(asset, width: 68, height: 68, fit: BoxFit.contain),
         const SizedBox(height: 8),
         Text(label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w700)),
         if (date != null) Text(date, style: AppTextStyles.caption),

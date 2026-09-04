@@ -19,7 +19,7 @@ class _ReoptimizingScreenState extends State<ReoptimizingScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(milliseconds: 1600), widget.onDone);
+    Timer(const Duration(milliseconds: 2000), widget.onDone);
   }
 
   @override

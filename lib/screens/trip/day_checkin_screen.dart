@@ -37,7 +37,12 @@ class DayCheckInScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Image.asset('assets/images/stamp-paw-green.png', width: 26, height: 30),
+                        Image.asset(
+                          'assets/images/stamp-paw-green.png',
+                          width: 30,
+                          height: 30,
+                          fit: BoxFit.contain,
+                        ),
                         const SizedBox(width: 8),
                         Text('Day $dayNumber Check-in', style: AppTextStyles.headingMedium.copyWith(fontSize: 24)),
                       ],

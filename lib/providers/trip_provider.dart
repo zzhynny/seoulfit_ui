@@ -14,8 +14,14 @@ class TripProvider extends ChangeNotifier {
   int _selectedDay = 1;
   int get selectedDay => _selectedDay;
 
-  bool _stampCollectionEnabled = true;
+  bool _stampCollectionEnabled = false;
   bool get stampCollectionEnabled => _stampCollectionEnabled;
+
+  /// Whether the user has already answered the 13_Stamp-Book-OptIn prompt
+  /// this trip. Once true, the "Check in for today's places" button on
+  /// Final Route skips straight to Day Check-in instead of re-asking.
+  bool _hasRespondedToStampOptIn = false;
+  bool get hasRespondedToStampOptIn => _hasRespondedToStampOptIn;
 
   final Map<String, MissedReason> _missedReasons = {};
 
@@ -72,8 +78,10 @@ class TripProvider extends ChangeNotifier {
 
   MissedReason? reasonFor(String activityId) => _missedReasons[activityId];
 
-  void setStampCollectionEnabled(bool value) {
-    _stampCollectionEnabled = value;
+  /// Records the user's answer to the 13_Stamp-Book-OptIn prompt.
+  void respondToStampOptIn(bool enabled) {
+    _stampCollectionEnabled = enabled;
+    _hasRespondedToStampOptIn = true;
     notifyListeners();
   }
 
@@ -81,6 +89,8 @@ class TripProvider extends ChangeNotifier {
     _itinerary = null;
     _selectedDay = 1;
     _missedReasons.clear();
+    _stampCollectionEnabled = false;
+    _hasRespondedToStampOptIn = false;
     notifyListeners();
   }
 

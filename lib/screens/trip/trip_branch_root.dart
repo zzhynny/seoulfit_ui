@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/trip_provider.dart';
 import 'final_route_screen.dart';
-import 'stamp_book_optin_screen.dart';
 import 'trip_empty_state_screen.dart';
 import 'trip_reset_confirm_sheet.dart';
 
 /// The Trip branch's root page: shows Trip_Empty-State when there's no
-/// itinerary yet, a one-time Stamp Book opt-in right after a fresh
-/// itinerary is generated, and Final Route (with persistent bottom nav)
-/// once the trip is underway.
+/// itinerary yet, and Final Route (with persistent bottom nav) once a
+/// trip exists. The Stamp Book opt-in is a separate, explicitly-triggered
+/// route reached only via the "Check in for today's places" button.
 class TripBranchRoot extends StatefulWidget {
   const TripBranchRoot({
     super.key,
@@ -25,8 +24,6 @@ class TripBranchRoot extends StatefulWidget {
 }
 
 class _TripBranchRootState extends State<TripBranchRoot> {
-  bool _stampOptInDecided = false;
-
   @override
   void initState() {
     super.initState();
@@ -42,21 +39,7 @@ class _TripBranchRootState extends State<TripBranchRoot> {
     }
 
     if (!trip.hasItinerary) {
-      _stampOptInDecided = false;
       return TripEmptyStateScreen(onStartPlanning: widget.onStartPlanning);
-    }
-
-    if (!_stampOptInDecided) {
-      return StampBookOptInScreen(
-        onStartCollecting: (enabled) {
-          trip.setStampCollectionEnabled(enabled);
-          setState(() => _stampOptInDecided = true);
-        },
-        onSkip: () {
-          trip.setStampCollectionEnabled(false);
-          setState(() => _stampOptInDecided = true);
-        },
-      );
     }
 
     return Column(

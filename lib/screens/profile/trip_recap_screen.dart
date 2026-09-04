@@ -180,6 +180,7 @@ class _RecapStopMarker extends StatelessWidget {
           stop.visited ? 'assets/images/stamp-paw-green.png' : 'assets/images/stamp-paw-empty.png',
           width: 48,
           height: 48,
+          fit: BoxFit.contain,
         ),
         const SizedBox(height: 4),
         Container(
@@ -305,7 +306,7 @@ class _LowDataRecapBody extends StatelessWidget {
     };
     return Column(
       children: [
-        Image.asset(asset, width: 60, height: 60),
+        Image.asset(asset, width: 60, height: 60, fit: BoxFit.contain),
         const SizedBox(height: 6),
         Text('Day ${day.dayNumber}', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700)),
         Text(day.label, style: AppTextStyles.caption.copyWith(fontSize: 9, color: labelColor)),
