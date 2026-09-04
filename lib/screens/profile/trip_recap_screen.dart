@@ -70,7 +70,11 @@ class TripRecapScreen extends StatelessWidget {
 }
 
 /// Derives a short display name + "Day N • X/Y Visited" (or "Planned")
-/// label for a trip day, matching 17_Trip-Recap-Main's stop labels.
+/// label for a trip day, matching 17_Trip-Recap-Main's stop labels. The
+/// map's own stamp ellipses in Figma are binary (a solid "stamp-paw-green"
+/// once any activity is checked in, otherwise the dashed empty stamp) —
+/// unlike the low-data stamp-book grid below, this view has no separate
+/// "partial" asset.
 RecapStop _stopFor(TripDay day) {
   final name = day.areaName.replaceAll(' Area', '');
   final total = day.activities.length;
@@ -80,7 +84,11 @@ RecapStop _stopFor(TripDay day) {
       : visited == total
           ? 'Day ${day.dayNumber} • All Visited'
           : 'Day ${day.dayNumber} • $visited/$total Visited';
-  return RecapStop(name: name, dayLabel: label, state: _stateFor(day));
+  return RecapStop(
+    name: name,
+    dayLabel: label,
+    state: visited > 0 ? StampState.visited : StampState.empty,
+  );
 }
 
 /// Derives a stamp-book state ("Stamped" / "Started" / "Empty") for a trip
@@ -95,69 +103,47 @@ RecapStampDay _stampDayFor(TripDay day) {
   return RecapStampDay(dayNumber: day.dayNumber, state: state, label: label);
 }
 
-class _FullRecapBody extends StatefulWidget {
+/// One stop's stamp + label position, each as its own independent center
+/// fraction of the map-card's Figma bounding box — NOT derived from a
+/// shared wrapper box. Pulled straight from Dev Mode MCP metadata for
+/// frame 86:76 (17_Trip-Recap-Main), node "map-card" (105:4, 345x444):
+/// the stamp ellipse's own top-left (not its label wrapper frame's
+/// top-left, which is offset from the ellipse and was the source of the
+/// earlier misalignment) plus half its 60x60 size gives its true center.
+class _StopLayout {
+  const _StopLayout({required this.stampCenter, required this.labelCenter});
+
+  final Offset stampCenter;
+  final Offset labelCenter;
+}
+
+class _FullRecapBody extends StatelessWidget {
   const _FullRecapBody({required this.days});
 
   final List<TripDay> days;
 
-  @override
-  State<_FullRecapBody> createState() => _FullRecapBodyState();
-}
+  // map-card is 345x444 in Figma (the visible, clipped bounding box — its
+  // cityscape-bg child bleeds 9px past the right edge and is cropped by
+  // this frame, so 345 is the correct reference width, not 354).
+  static const _cardAspectRatio = 345 / 444;
 
-class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProviderStateMixin {
-  static const _cardAspectRatio = 354 / 444;
-
-  // Each stop's stamp-CENTER position as a fraction of the 354x444 Figma
-  // card, converted to Alignment's -1..1 range (x = 2*fracX-1). Anchoring
-  // via Align (not Positioned+pixel offsets, which broke on viewport-size
-  // changes) keeps every stop locked to the railway track regardless of
-  // screen size, since Align re-resolves against the AspectRatio-locked
-  // card's actual size on every layout pass.
-  static const _stampAlignments = [
-    Alignment(-0.2147, -0.8333), // 1) Jongno
-    Alignment(-0.7740, -0.2793), // 2) Bukchon
-    Alignment(0.0621, 0.1757), // 3) Namsan
-    Alignment(-0.6554, 0.4550), // 4) Dongdaemun
-    Alignment(0.3955, 0.8108), // 5) Yeouido (Day 5 — label renders above so it can't clip)
+  static const _stopLayouts = [
+    _StopLayout(stampCenter: Offset(170 / 345, 49 / 444), labelCenter: Offset(170 / 345, 100.5 / 444)), // 1) Jongno
+    _StopLayout(stampCenter: Offset(52 / 345, 172 / 444), labelCenter: Offset(135.5 / 345, 172 / 444)), // 2) Bukchon
+    _StopLayout(stampCenter: Offset(200 / 345, 273 / 444), labelCenter: Offset(285.5 / 345, 273 / 444)), // 3) Namsan
+    _StopLayout(stampCenter: Offset(73 / 345, 335 / 444), labelCenter: Offset(153 / 345, 334 / 444)), // 4) Dongdaemun
+    _StopLayout(stampCenter: Offset(259 / 345, 414 / 444), labelCenter: Offset(259 / 345, 367.5 / 444)), // 5) Yeouido
   ];
 
-  static const _staggerStepMs = 90;
-  static const _slamMs = 420;
-
-  late final AnimationController _controller;
-  late final List<Animation<double>> _scaleAnims;
-  late final List<Animation<double>> _rotateAnims;
-
-  @override
-  void initState() {
-    super.initState();
-    final totalMs = _staggerStepMs * (_stampAlignments.length - 1) + _slamMs;
-    _controller = AnimationController(vsync: this, duration: Duration(milliseconds: totalMs));
-    _scaleAnims = [];
-    _rotateAnims = [];
-    for (var i = 0; i < _stampAlignments.length; i++) {
-      final start = (_staggerStepMs * i) / totalMs;
-      final end = (_staggerStepMs * i + _slamMs) / totalMs;
-      final interval = Interval(start, end, curve: Curves.elasticOut);
-      _scaleAnims.add(Tween<double>(begin: 1.6, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: interval)));
-      _rotateAnims.add(Tween<double>(begin: -0.12, end: 0.0).animate(CurvedAnimation(parent: _controller, curve: interval)));
-    }
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  static const _stampSize = 38.0;
 
   @override
   Widget build(BuildContext context) {
     // Fixed 5-node railway regardless of actual trip length — a mock trip
     // shorter than 5 days only stamps the days it actually has; the
     // remaining nodes stay in the "not recorded" dashed state.
-    final stops = List.generate(_stampAlignments.length, (i) {
-      if (i < widget.days.length) return _stopFor(widget.days[i]);
+    final stops = List.generate(_stopLayouts.length, (i) {
+      if (i < days.length) return _stopFor(days[i]);
       return RecapStop(
         name: _kFixedStopNames[i],
         dayLabel: 'Day ${i + 1} • Not Recorded',
@@ -185,43 +171,69 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
                 // The background illustration and the stamp overlays are
                 // direct siblings of this SAME Stack, which is itself the
                 // AspectRatio's only child — so both share exactly one
-                // locked-size box; nothing here separately estimates the
-                // image's bounds.
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.asset('assets/images/recap-railway-bg.png', fit: BoxFit.cover),
-                      ),
-                    ),
-                    Positioned(
-                      left: 24,
-                      top: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(8),
+                // locked-size box; LayoutBuilder below reads that box's
+                // real pixel size on every layout pass (not a separately
+                // estimated one), so the ratios stay locked to the track
+                // regardless of viewport size.
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final h = constraints.maxHeight;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.asset('assets/images/recap-railway-bg.png', fit: BoxFit.cover),
+                          ),
                         ),
-                        child: Text(
-                          'YOUR SEOUL JOURNEY',
-                          style: AppTextStyles.caption.copyWith(color: const Color(0xFF5E836A), fontWeight: FontWeight.w600),
+                        Positioned(
+                          left: 24,
+                          top: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'YOUR SEOUL JOURNEY',
+                              style: AppTextStyles.caption.copyWith(color: const Color(0xFF5E836A), fontWeight: FontWeight.w600),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    for (var i = 0; i < stops.length; i++)
-                      Align(
-                        alignment: _stampAlignments[i],
-                        child: _RecapStopMarker(
-                          stop: stops[i],
-                          scale: _scaleAnims[i],
-                          rotate: _rotateAnims[i],
-                          labelAbove: i == stops.length - 1,
-                        ),
-                      ),
-                  ],
+                        for (var i = 0; i < stops.length; i++) ...[
+                          Positioned(
+                            left: w * _stopLayouts[i].stampCenter.dx,
+                            top: h * _stopLayouts[i].stampCenter.dy,
+                            child: FractionalTranslation(
+                              // Centers the stamp exactly on the target
+                              // point regardless of the child's own size —
+                              // no separate radius bookkeeping needed.
+                              translation: const Offset(-0.5, -0.5),
+                              child: Image.asset(
+                                stops[i].state == StampState.visited
+                                    ? 'assets/images/stamp-paw-green.png'
+                                    : 'assets/images/stamp-paw-empty.png',
+                                width: _stampSize,
+                                height: _stampSize,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: w * _stopLayouts[i].labelCenter.dx,
+                            top: h * _stopLayouts[i].labelCenter.dy,
+                            child: FractionalTranslation(
+                              translation: const Offset(-0.5, -0.5),
+                              child: _StopLabel(stop: stops[i]),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -229,11 +241,9 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
           const SizedBox(height: 16),
           Row(
             children: [
-              _legendDot('assets/images/stamp-paw-green.png', 'Completed'),
-              const SizedBox(width: 14),
-              _legendDot('assets/images/stamp-paw-partial.png', 'Partial'),
-              const SizedBox(width: 14),
-              _legendDot('assets/images/stamp-paw-empty.png', 'Not Recorded'),
+              _legendDot(AppColors.primary, 'Visited'),
+              const SizedBox(width: 16),
+              _legendDot(AppColors.border, 'Planned'),
             ],
           ),
           const SizedBox(height: 16),
@@ -249,11 +259,11 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
     );
   }
 
-  Widget _legendDot(String asset, String label) {
+  Widget _legendDot(Color color, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(asset, width: 16, height: 16, fit: BoxFit.contain),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 5),
         Text(label, style: AppTextStyles.caption),
       ],
@@ -261,35 +271,14 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
   }
 }
 
-class _RecapStopMarker extends StatelessWidget {
-  const _RecapStopMarker({
-    required this.stop,
-    required this.scale,
-    required this.rotate,
-    this.labelAbove = false,
-  });
+class _StopLabel extends StatelessWidget {
+  const _StopLabel({required this.stop});
 
   final RecapStop stop;
-  final Animation<double> scale;
-  final Animation<double> rotate;
-  final bool labelAbove;
-
-  // Kept tight and symmetric around the stamp itself (not the wider label)
-  // so Align's own child-size math stays anchored on the stamp's true
-  // center — the label is allowed to overflow this box via the parent
-  // Stack's Clip.none instead of widening it.
-  static const _boxSize = 44.0;
-  static const _stampSize = 38.0;
 
   @override
   Widget build(BuildContext context) {
-    final asset = switch (stop.state) {
-      StampState.visited => 'assets/images/stamp-paw-green.png',
-      StampState.partial => 'assets/images/stamp-paw-partial.png',
-      StampState.empty => 'assets/images/stamp-paw-empty.png',
-    };
-    final stampImage = Image.asset(asset, width: _stampSize, height: _stampSize, fit: BoxFit.contain);
-    final label = Container(
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.85),
@@ -301,32 +290,6 @@ class _RecapStopMarker extends StatelessWidget {
         children: [
           Text(stop.name, style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFF2D2A26))),
           Text(stop.dayLabel, style: AppTextStyles.caption.copyWith(fontSize: 9, color: const Color(0xFF5E836A))),
-        ],
-      ),
-    );
-
-    return SizedBox(
-      width: _boxSize,
-      height: _boxSize,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: scale,
-            builder: (context, child) => Transform.rotate(
-              angle: rotate.value,
-              child: Transform.scale(scale: scale.value, child: child),
-            ),
-            child: stampImage,
-          ),
-          Positioned(
-            left: -80,
-            right: -80,
-            top: labelAbove ? null : _boxSize + 4,
-            bottom: labelAbove ? _boxSize + 4 : null,
-            child: Center(child: label),
-          ),
         ],
       ),
     );
