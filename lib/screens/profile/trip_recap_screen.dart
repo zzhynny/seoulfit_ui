@@ -117,11 +117,16 @@ class _StopLayout {
   final Offset labelCenter;
 }
 
-class _FullRecapBody extends StatelessWidget {
+class _FullRecapBody extends StatefulWidget {
   const _FullRecapBody({required this.days});
 
   final List<TripDay> days;
 
+  @override
+  State<_FullRecapBody> createState() => _FullRecapBodyState();
+}
+
+class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProviderStateMixin {
   // map-card is 345x444 in Figma (the visible, clipped bounding box — its
   // cityscape-bg child bleeds 9px past the right edge and is cropped by
   // this frame, so 345 is the correct reference width, not 354).
@@ -135,7 +140,44 @@ class _FullRecapBody extends StatelessWidget {
     _StopLayout(stampCenter: Offset(259 / 345, 414 / 444), labelCenter: Offset(259 / 345, 367.5 / 444)), // 5) Yeouido
   ];
 
-  static const _stampSize = 38.0;
+  // Exact Figma spec: the stamp ellipse is 60x60 — FractionalTranslation's
+  // -0.5/-0.5 centering means growing this from the old 38px expands
+  // symmetrically around the same track coordinate, no re-anchoring needed.
+  static const _stampSize = 60.0;
+
+  static const _slamStep = 0.15;
+  static const _slamSpan = 0.35;
+
+  late final AnimationController _controller;
+  late final List<Animation<double>> _slamAnims;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _slamAnims = List.generate(_stopLayouts.length, (i) {
+      final start = _slamStep * i;
+      final end = (start + _slamSpan).clamp(0.0, 1.0);
+      return Tween<double>(begin: 2.2, end: 1.0).animate(
+        CurvedAnimation(parent: _controller, curve: Interval(start, end, curve: Curves.easeOutBack)),
+      );
+    });
+    // Web-safe trigger: wait for the first real frame (so the map card has
+    // actually been laid out), then a short extra delay before starting —
+    // starting forward() inside initState/build itself can get dropped by
+    // Flutter Web's first paint.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 180), () {
+        if (mounted) _controller.forward(from: 0.0);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +185,7 @@ class _FullRecapBody extends StatelessWidget {
     // shorter than 5 days only stamps the days it actually has; the
     // remaining nodes stay in the "not recorded" dashed state.
     final stops = List.generate(_stopLayouts.length, (i) {
-      if (i < days.length) return _stopFor(days[i]);
+      if (i < widget.days.length) return _stopFor(widget.days[i]);
       return RecapStop(
         name: _kFixedStopNames[i],
         dayLabel: 'Day ${i + 1} • Not Recorded',
@@ -210,15 +252,21 @@ class _FullRecapBody extends StatelessWidget {
                             child: FractionalTranslation(
                               // Centers the stamp exactly on the target
                               // point regardless of the child's own size —
-                              // no separate radius bookkeeping needed.
+                              // no separate radius bookkeeping needed. The
+                              // slam scale below grows/shrinks from this
+                              // same center, so it never shifts the anchor.
                               translation: const Offset(-0.5, -0.5),
-                              child: Image.asset(
-                                stops[i].state == StampState.visited
-                                    ? 'assets/images/stamp-paw-green.png'
-                                    : 'assets/images/stamp-paw-empty.png',
-                                width: _stampSize,
-                                height: _stampSize,
-                                fit: BoxFit.contain,
+                              child: AnimatedBuilder(
+                                animation: _slamAnims[i],
+                                builder: (context, child) => Transform.scale(scale: _slamAnims[i].value, child: child),
+                                child: Image.asset(
+                                  stops[i].state == StampState.visited
+                                      ? 'assets/images/stamp-paw-green.png'
+                                      : 'assets/images/stamp-paw-empty.png',
+                                  width: _stampSize,
+                                  height: _stampSize,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
