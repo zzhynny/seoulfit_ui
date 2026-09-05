@@ -89,17 +89,10 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_mode == ChatMode.plan)
             Row(
               children: [
-                Container(
+                SizedBox(
                   width: 36,
                   height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.composerBackground,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
-                  ),
+                  child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
                 ),
                 const SizedBox(width: 12),
                 Column(
