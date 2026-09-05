@@ -182,6 +182,17 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
         if (mounted) _controller.forward(from: 0.0);
       });
     });
+    // The trip counts as "completed" as soon as the full railway map (not
+    // the low-data variant) actually gets viewed, regardless of how it was
+    // reached — not deferred until the Done button — so Profile's Stamp
+    // Book consistently opens the full map from then on. Deferred to a
+    // post-frame callback rather than called directly here: calling
+    // notifyListeners() (via markTripCompleted) synchronously inside
+    // initState, while a Provider-watching ancestor is still mid-build,
+    // can trip Flutter's "setState during build" assertion.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<TripProvider>().markTripCompleted();
+    });
   }
 
   @override

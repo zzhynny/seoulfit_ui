@@ -281,17 +281,15 @@ GoRouter buildAppRouter() {
                 GoRoute(
                   path: 'recap',
                   builder: (context, state) => TripRecapScreen(
-                    onDone: () {
-                      context.read<TripProvider>().markTripCompleted();
-                      // Unwind this branch's own stack back to its root
-                      // ('/trip', Final Route) — there's nothing to defend
-                      // against here anymore since this recap route only
-                      // ever lives on the Trip branch's own stack now.
-                      while (context.canPop()) {
-                        context.pop();
-                      }
-                      context.go(AppRoutes.trip);
-                    },
+                    // isTripCompleted is now set as soon as the full railway
+                    // map (not the low-data variant) actually mounts — see
+                    // _FullRecapBodyState.initState — not here on Done, so
+                    // this is a single, direct navigation: go() already
+                    // resets this branch's own stack to just '/trip' in one
+                    // step, no separate pop-loop needed beforehand (that
+                    // pop-then-go combination was the redundant
+                    // double-routing causing a visible flash mid-transition).
+                    onDone: () => context.go(AppRoutes.trip),
                     // Strictly pops back to whatever pushed this — either
                     // 16_Trip-Finish-Confirm or 11_Final-Route itself.
                     onBack: () => context.pop(),
