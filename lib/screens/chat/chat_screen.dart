@@ -11,7 +11,7 @@ enum ChatMode { plan, onTrip }
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, required this.onOpenHelpTopic, required this.onBuildItinerary});
 
-  final void Function(String topicTitle) onOpenHelpTopic;
+  final void Function(LiveHelpTopic topic) onOpenHelpTopic;
   final VoidCallback onBuildItinerary;
 
   @override
@@ -412,7 +412,7 @@ class _TravelerSelector extends StatelessWidget {
 class _OnTripView extends StatelessWidget {
   const _OnTripView({required this.onOpenTopic});
 
-  final void Function(String topicTitle) onOpenTopic;
+  final void Function(LiveHelpTopic topic) onOpenTopic;
 
   @override
   Widget build(BuildContext context) {
@@ -431,7 +431,7 @@ class _OnTripView extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           for (final topic in topics) ...[
-            _TopicCard(topic: topic, onTap: () => onOpenTopic(topic.title)),
+            _TopicCard(topic: topic, onTap: () => onOpenTopic(topic.topic)),
             const SizedBox(height: 16),
           ],
           Text(

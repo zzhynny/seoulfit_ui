@@ -33,6 +33,29 @@ class AppTextStyles {
     );
   }
 
+  /// Ad-hoc body text in the UI's sans face.
+  ///
+  /// Exists so screens ported from the Flutter app — which called
+  /// `GoogleFonts.plusJakartaSans(...)` inline at ~300 sites — can be
+  /// converted one-for-one onto Manrope instead of being hand-rewritten onto
+  /// the named styles below. Prefer the named styles in new code.
+  static TextStyle sans({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w400,
+    Color color = AppColors.textPrimary,
+    double? height,
+    double? letterSpacing,
+    TextDecoration? decoration,
+    FontStyle? fontStyle,
+  }) =>
+      _sans(size: fontSize, weight: fontWeight, color: color)
+          .copyWith(
+            height: height,
+            letterSpacing: letterSpacing,
+            decoration: decoration,
+            fontStyle: fontStyle,
+          );
+
   // Headings (DM Serif Text)
   static TextStyle get displayLarge => _serif(size: 48);
   static TextStyle get headingLarge => _serif(size: 32);

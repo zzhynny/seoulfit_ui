@@ -15,6 +15,8 @@ import '../screens/onboarding/choose_buddy_screen.dart';
 import '../screens/onboarding/permissions_screen.dart';
 
 import '../screens/chat/chat_screen.dart';
+import '../screens/live_help/live_help_screen.dart';
+import '../models/chat.dart';
 
 import '../screens/trip/trip_branch_root.dart';
 import '../screens/trip/confirm_slots_screen.dart';
@@ -147,12 +149,31 @@ GoRouter buildAppRouter() {
             GoRoute(
               path: AppRoutes.chat,
               builder: (context, state) => ChatScreen(
-                onOpenHelpTopic: (title) => _showHelpTopicSheet(context, title),
+                onOpenHelpTopic: (topic) =>
+                    context.push('${AppRoutes.chat}/help/${topic.name}'),
                 // Cross-branch jump into the Trip tab's wizard — go(), not
                 // push(), since Confirm Slots now lives inside the Trip
                 // branch's own nested Navigator, not this one.
                 onBuildItinerary: () => context.go(AppRoutes.confirmSlots),
               ),
+              routes: [
+                GoRoute(
+                  path: 'help/:topic',
+                  builder: (context, state) {
+                    final name = state.pathParameters['topic'];
+                    final topic = LiveHelpTopic.values
+                        .where((t) => t.name == name)
+                        .firstOrNull;
+                    // A hand-typed or stale URL shouldn't crash the tab;
+                    // fall back to the hub.
+                    if (topic == null) return const SizedBox.shrink();
+                    return LiveHelpTopicScreen(
+                      topic: topic,
+                      onBack: () => context.pop(),
+                    );
+                  },
+                ),
+              ],
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -373,29 +394,3 @@ const _kDefaultPreferences = TripPreferences(
   dietaryNotes: 'Vegan Options',
   pace: 'Relaxed',
 );
-
-void _showHelpTopicSheet(BuildContext context, String title) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (context) => Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            const Text('Instant concierge results would appear here in the full app.'),
-          ],
-        ),
-      ),
-    ),
-  );
-}

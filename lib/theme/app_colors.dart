@@ -38,6 +38,7 @@ class AppColors {
   // Status
   static const Color success = primary;
   static const Color warning = Color(0xFFE0A756);
+  static const Color warningTint = Color(0xFFFDF6E7);
 }
 
 /// Per-day route colours for the map.
