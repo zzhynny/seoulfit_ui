@@ -5,6 +5,7 @@ import '../../models/trip.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/primary_button.dart';
+import 'trip_story_screen.dart';
 
 /// Minimum number of days with at least one check-in for the full
 /// railway-map recap (17_Trip-Recap-Main) to show; below this, the
@@ -77,9 +78,30 @@ class TripRecapScreen extends StatelessWidget {
           child: fullRecap ? _FullRecapBody(days: days) : _LowDataRecapBody(days: days),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: PrimaryButton(label: 'Done', onPressed: onDone),
         ),
+        // Only offered on the full recap: the low-data variant exists
+        // precisely because there aren't enough stamps to make a card worth
+        // sharing.
+        if (fullRecap)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TripStoryScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.ios_share_rounded, size: 16),
+              label: const Text('View as a story card'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                textStyle: AppTextStyles.bodyMedium
+                    .copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
       ],
     );
   }

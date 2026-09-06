@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import '../data/repositories/trip_repository.dart';
 import '../models/plan_check.dart';
+import '../models/trip_checkin.dart';
+import '../services/checkin_store.dart';
 import '../models/trip.dart';
 
 class TripProvider extends ChangeNotifier {
@@ -115,11 +119,80 @@ class TripProvider extends ChangeNotifier {
 
   void checkIn(String activityId) {
     _mutateActivity(activityId, (a) => a.copyWith(visited: true));
+    unawaited(_persistCheckins());
   }
 
   void markMissed(String activityId, MissedReason reason) {
     _missedReasons[activityId] = reason;
     notifyListeners();
+    unawaited(_persistCheckins());
+  }
+
+  /// Writes the trip's check-in record to local storage (and, best-effort,
+  /// to the backend's research table).
+  ///
+  /// Without this the record only ever existed in memory: Profile's stamp
+  /// and spot counts read [CheckinStore] and were therefore always zero, the
+  /// recap had nothing to survive a restart with, and nothing ever reached
+  /// POST /trip/checkin.
+  ///
+  /// Fire-and-forget by design — a slow write must never make the check-in
+  /// button feel stuck, and the in-memory itinerary is what the screen is
+  /// already rendering.
+  Future<void> _persistCheckins() async {
+    final itinerary = _itinerary;
+    if (itinerary == null) return;
+
+    final tripId = _tripId ??= 'trip-${DateTime.now().millisecondsSinceEpoch}';
+    final planned = <int, List<String>>{};
+    final coords = <String, List<double>>{};
+    final checkins = <int, DayCheckin>{};
+
+    for (final day in itinerary.days) {
+      planned[day.dayNumber] = [for (final a in day.activities) a.id];
+
+      final visited = <String>{};
+      final misses = <String, MissReason>{};
+      for (final activity in day.activities) {
+        final lat = activity.lat;
+        final lng = activity.lng;
+        if (lat != null && lng != null) coords[activity.id] = [lat, lng];
+        if (activity.visited) visited.add(activity.id);
+        final reason = _missedReasons[activity.id];
+        if (reason != null) misses[activity.id] = _missReasonOf(reason);
+      }
+      // A day nobody has touched stays unrecorded, which every aggregate
+      // excludes — recording it empty would read as "visited nothing".
+      if (visited.isNotEmpty || misses.isNotEmpty) {
+        checkins[day.dayNumber] = DayCheckin(visited: visited, misses: misses);
+      }
+    }
+
+    await CheckinStore.save(TripCheckin(
+      tripId: tripId,
+      planned: planned,
+      checkins: checkins,
+      coords: coords,
+    ));
+  }
+
+  /// The id this trip's record is stored under. Generated on first check-in
+  /// rather than taken from ApiService.threadId, which is regenerated every
+  /// launch and would orphan yesterday's stamps.
+  String? _tripId;
+  String? get tripId => _tripId;
+
+  static MissReason _missReasonOf(MissedReason reason) {
+    switch (reason) {
+      case MissedReason.notEnoughTime:
+        return MissReason.time;
+      case MissedReason.tooTired:
+        return MissReason.stamina;
+      case MissedReason.didntFeelLikeIt:
+        return MissReason.notInterested;
+      case MissedReason.other:
+        return MissReason.other;
+    }
   }
 
   MissedReason? reasonFor(String activityId) => _missedReasons[activityId];
