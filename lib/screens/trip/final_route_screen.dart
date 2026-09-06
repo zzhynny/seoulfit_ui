@@ -5,6 +5,7 @@ import '../../models/trip.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/day_tabs.dart';
+import '../../widgets/itinerary_detail.dart';
 import '../../widgets/route_map.dart';
 
 class FinalRouteScreen extends StatefulWidget {
@@ -104,13 +105,25 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
             children: [
               if (itinerary.days.length > 1)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: DayTabs(
                     days: itinerary.days,
                     selectedDay: selectedDay,
                     onSelect: trip.selectDay,
                   ),
                 ),
+              Builder(builder: (context) {
+                final day = itinerary.days
+                    .where((d) => d.dayNumber == selectedDay)
+                    .firstOrNull;
+                if (day == null || day.estimatedCost.trim().isEmpty) {
+                  return const SizedBox(height: 4);
+                }
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: DayCostChip(estimatedCost: day.estimatedCost),
+                );
+              }),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: RouteMap(
@@ -169,6 +182,15 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
                     ],
                   ],
                 ),
+              ),
+              if (itinerary.sources.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: SourcesCard(sources: itinerary.sources),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: ExportItineraryButton(itinerary: itinerary),
               ),
               GestureDetector(
                 onTap: widget.onResetItinerary,

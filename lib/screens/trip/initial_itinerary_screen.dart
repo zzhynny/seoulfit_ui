@@ -3,6 +3,7 @@ import '../../models/trip.dart';
 import '../../theme/theme.dart';
 import '../../widgets/activity_card.dart';
 import '../../widgets/day_tabs.dart';
+import '../../widgets/itinerary_detail.dart';
 import '../../widgets/route_map.dart';
 import '../../widgets/primary_button.dart';
 import 'place_detail_sheet.dart';
@@ -46,13 +47,9 @@ class _InitialItineraryScreenState extends State<InitialItineraryScreen> {
                 ],
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: const Color(0xFFEAEFE2), borderRadius: BorderRadius.circular(6)),
-                child: Text(
-                  widget.itinerary.preferences.groupSize.toUpperCase(),
-                  style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
-                ),
+              PlanScoreChip(
+                feasibility: widget.itinerary.feasibilityScore,
+                overall: widget.itinerary.overallScore,
               ),
             ],
           ),
@@ -68,10 +65,20 @@ class _InitialItineraryScreenState extends State<InitialItineraryScreen> {
             onlyDay: _selectedDay,
           ),
         ),
+        if (widget.itinerary.summary.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: TripSummaryText(summary: widget.itinerary.summary),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: DayTabs(days: widget.itinerary.days, selectedDay: _selectedDay, onSelect: (d) => setState(() => _selectedDay = d)),
         ),
+        if (day.estimatedCost.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: DayCostChip(estimatedCost: day.estimatedCost),
+          ),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -83,6 +90,12 @@ class _InitialItineraryScreenState extends State<InitialItineraryScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
+              if (widget.itinerary.sources.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                SourcesCard(sources: widget.itinerary.sources),
+                const SizedBox(height: 12),
+              ],
+              ExportItineraryButton(itinerary: widget.itinerary),
             ],
           ),
         ),
