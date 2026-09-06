@@ -36,6 +36,13 @@ void main() {
     expect(state.confirmed, isFalse);
     expect(state.slots.keys, contains('travel_dates'));
 
+    // current_field, not current_step, is what names the question being
+    // asked: the step stays 'collecting' for the whole intake, so the quick
+    // replies key on this. A backend that stops sending it silently disables
+    // every chip.
+    expect(state.currentField, 'travel_dates');
+    expect(state.currentStep, 'collecting');
+
     // The generated thread id has to clear the backend's own 16-128 char
     // guard, or every chat turn 422s before it reaches the graph.
     expect(ApiService().threadId.length, greaterThanOrEqualTo(16));

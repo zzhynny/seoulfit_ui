@@ -41,34 +41,39 @@ class ApiChatRepository implements ChatRepository {
       // appear. Pressing it lands on Confirm Slots, which reads the same
       // state back via GET /state.
       readyToBuild: state.currentStep == 'confirm',
-      quickReplies: _quickRepliesFor(state.currentStep),
+      quickReplies: _quickRepliesFor(state.currentField),
     );
   }
 }
 
-/// One-tap answers for the step the backend is on.
+/// One-tap answers for the slot the buddy is waiting on.
 ///
-/// This is deliberately only the two steps whose own question text offers an
-/// escape hatch — `region` says "you can skip this, say 'anywhere'" and
-/// `restrictions` says "(or 'none')". The chip is just that offer made
-/// tappable.
+/// Keyed on `current_field`, not `current_step`. The backend's step stays
+/// `"collecting"` for the whole intake — it is `current_field` that names the
+/// one question being asked, because the buddy asks strictly one field per
+/// turn (FIELD_ORDER in graph.py).
 ///
-/// `collecting_purpose` gets none on purpose. graph.py's comment on
-/// FIELD_QUESTIONS records that the question was rewritten to be open
-/// specifically because listing categories primed people to answer in the
-/// vocabulary that throws away the most information — 49% of the corpus's
-/// itineraries hook on interests a fixed category list cannot express
-/// (K-drama locations, halal food, pet-friendly, backpacking). Category
-/// chips here would reintroduce exactly that priming through the UI.
+/// The options mirror what each question already offers in its own text, so
+/// a chip is that offer made tappable rather than a second vocabulary the
+/// planner has to interpret.
 ///
-/// `collecting_dates` gets none because no canned date is a useful answer,
-/// and `confirm` needs none — the "Build My Itinerary" CTA already is one.
-List<String> _quickRepliesFor(String step) {
-  switch (step) {
-    case 'collecting_region':
-      return const ['Anywhere'];
-    case 'collecting_restrictions':
+/// `travel_dates` gets none deliberately: its question says "Tap the calendar
+/// to pick your dates", and graph.py notes the wording omits "or how many
+/// days?" precisely because a typed duration is what the picker-only rule
+/// rejects. Chips here would invite exactly the answer the backend refuses —
+/// that slot needs a date picker, which this screen does not yet have.
+List<String> _quickRepliesFor(String? field) {
+  switch (field) {
+    case 'category':
+      return const ['Beauty', 'History', 'Food', 'Shopping', 'Activity'];
+    case 'companion':
+      return const ['Solo', 'Couple', 'Friends', 'Family'];
+    case 'pace':
+      return const ['Packed', 'Relaxed'];
+    case 'restrictions':
       return const ['None'];
+    case 'region':
+      return const ['Recommend one', 'Hongdae', 'Gangnam', 'Itaewon'];
     default:
       return const [];
   }
