@@ -80,6 +80,7 @@ class TripDay {
     required this.date,
     required this.areaName,
     required this.activities,
+    this.estimatedCost = '',
   });
 
   final int dayNumber;
@@ -87,7 +88,44 @@ class TripDay {
   final String areaName;
   final List<TripActivity> activities;
 
+  /// The planner's own cost estimate for the day, already formatted
+  /// ("60,000 - 80,000 KRW (approx. \$45-\$60 USD)"). Empty when it didn't
+  /// produce one.
+  final String estimatedCost;
+
   int get visitedCount => activities.where((a) => a.visited).length;
+
+  /// Copies the day with new [activities], keeping everything else.
+  ///
+  /// Rebuilding a TripDay by listing its fields is how estimatedCost got
+  /// silently dropped the moment it was added — every caller has to remember
+  /// a field it never mentions.
+  TripDay withActivities(List<TripActivity> activities) => TripDay(
+        dayNumber: dayNumber,
+        date: date,
+        areaName: areaName,
+        activities: activities,
+        estimatedCost: estimatedCost,
+      );
+}
+
+/// A course the planner drew this itinerary from, so the traveller can see
+/// where a day came from rather than taking it on trust.
+class TripSource {
+  const TripSource({
+    required this.courseTitle,
+    required this.source,
+    required this.sourceUrl,
+    this.courseId = '',
+  });
+
+  final String courseTitle;
+
+  /// Publisher — Visit Seoul, Korea Tourism Organization, and so on.
+  final String source;
+
+  final String sourceUrl;
+  final String courseId;
 }
 
 /// The slots the planner collects over chat, shown back on Confirm Slots.
@@ -209,11 +247,53 @@ class Itinerary {
     required this.preferences,
     required this.days,
     required this.routeStops,
+    this.summary = '',
+    this.sources = const [],
+    this.overallScore,
+    this.feasibilityScore,
+    this.raw = const {},
   });
 
   final TripPreferences preferences;
   final List<TripDay> days;
   final List<RouteStop> routeStops;
 
+  /// The planner's prose description of the whole trip.
+  final String summary;
+
+  /// Courses this itinerary was drawn from.
+  final List<TripSource> sources;
+
+  /// The critic's blended score, 0..1 — feasibility plus requested-area
+  /// coverage and foreigner-readiness. Null when the plan was never scored.
+  final double? overallScore;
+
+  /// The critic's feasibility term alone, 0..1: meal windows, travel time
+  /// between stops and opening hours. The only score that speaks to whether
+  /// the days can actually be completed.
+  final double? feasibilityScore;
+
+  /// The backend's itinerary payload, verbatim.
+  ///
+  /// Kept so an export carries the fields these typed models don't surface —
+  /// critic_report, area_coverage, repair_log. Never read for display.
+  final Map<String, dynamic> raw;
+
   int get stampedDays => days.where((d) => d.visitedCount > 0).length;
+
+  /// Copies the itinerary with new [days], keeping the trip-level fields.
+  ///
+  /// Same reason as [TripDay.withActivities]: a check-in only changes which
+  /// stops are visited, and hand-listing the fields around that change drops
+  /// the summary, sources and critic scores every time a new one is added.
+  Itinerary withDays(List<TripDay> days) => Itinerary(
+        preferences: preferences,
+        days: days,
+        routeStops: routeStops,
+        summary: summary,
+        sources: sources,
+        overallScore: overallScore,
+        feasibilityScore: feasibilityScore,
+        raw: raw,
+      );
 }

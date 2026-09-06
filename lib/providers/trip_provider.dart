@@ -223,18 +223,9 @@ class TripProvider extends ChangeNotifier {
       final newActivities = day.activities.map((a) {
         return a.id == activityId ? update(a) : a;
       }).toList();
-      return TripDay(
-        dayNumber: day.dayNumber,
-        date: day.date,
-        areaName: day.areaName,
-        activities: newActivities,
-      );
+      return day.withActivities(newActivities);
     }).toList();
-    _itinerary = Itinerary(
-      preferences: itinerary.preferences,
-      days: newDays,
-      routeStops: itinerary.routeStops,
-    );
+    _itinerary = itinerary.withDays(newDays);
     notifyListeners();
   }
 }

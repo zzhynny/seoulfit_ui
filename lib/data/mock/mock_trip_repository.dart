@@ -32,6 +32,25 @@ class MockTripRepository implements TripRepository {
       preferences: preferences,
       days: _buildDays(),
       routeStops: _buildRouteStops(),
+      // Stand-ins so the offline build exercises the same layout as a real
+      // plan — a screen that only ever sees empty strings here reads as
+      // finished when it is only untested.
+      summary: 'Five autumn days across Jongno and Hongdae, built around '
+          'palaces, tea houses and late-night street food.',
+      sources: const [
+        TripSource(
+          courseTitle: 'Seoul Palace & Hanok Walking Course',
+          source: 'Visit Seoul',
+          sourceUrl: 'https://english.visitseoul.net/',
+        ),
+        TripSource(
+          courseTitle: 'Hongdae Food & Culture Trail',
+          source: 'Korea Tourism Organization',
+          sourceUrl: 'https://english.visitkorea.or.kr/',
+        ),
+      ],
+      overallScore: 0.87,
+      feasibilityScore: 0.94,
     );
     seedItinerary = itinerary;
     return itinerary;
@@ -70,6 +89,7 @@ class MockTripRepository implements TripRepository {
   List<TripDay> _buildDays() {
     return [
       TripDay(
+        estimatedCost: '45,000 - 60,000 KRW (approx. \$34-\$45 USD)',
         dayNumber: 1,
         date: 'Oct 12',
         areaName: 'Jongno Area',
@@ -117,6 +137,7 @@ class MockTripRepository implements TripRepository {
         ],
       ),
       TripDay(
+        estimatedCost: '50,000 - 70,000 KRW (approx. \$38-\$53 USD)',
         dayNumber: 2,
         date: 'Oct 13',
         areaName: 'Bukchon Area',
@@ -142,6 +163,7 @@ class MockTripRepository implements TripRepository {
         ],
       ),
       TripDay(
+        estimatedCost: '35,000 - 55,000 KRW (approx. \$26-\$41 USD)',
         dayNumber: 3,
         date: 'Oct 14',
         areaName: 'Namsan Area',
@@ -174,6 +196,7 @@ class MockTripRepository implements TripRepository {
         ],
       ),
       TripDay(
+        estimatedCost: '60,000 - 80,000 KRW (approx. \$45-\$60 USD)',
         dayNumber: 4,
         date: 'Oct 15',
         areaName: 'Dongdaemun Area',
@@ -197,6 +220,7 @@ class MockTripRepository implements TripRepository {
         ],
       ),
       TripDay(
+        estimatedCost: '40,000 - 55,000 KRW (approx. \$30-\$41 USD)',
         dayNumber: 5,
         date: 'Oct 16',
         areaName: 'Yeouido Area',

@@ -115,6 +115,7 @@ TripDay toUiDay(api.ItineraryDay day) {
     date: '',
     areaName: day.theme,
     activities: activities,
+    estimatedCost: day.estimatedCost,
   );
 }
 
@@ -174,8 +175,24 @@ Itinerary toUiItinerary(api.Itinerary itinerary, api.TravelState state) {
     preferences: toUiPreferences(state),
     days: itinerary.days.map(toUiDay).toList(),
     routeStops: toUiRouteStops(itinerary),
+    summary: itinerary.summary,
+    sources: itinerary.sources.map(toUiSource).toList(),
+    // Computed backend-side: overallScore prefers a flat overall_score and
+    // otherwise reads critic_report.after, and feasibilityScore always comes
+    // from critic_report.after. Recomputing that here would be a second
+    // implementation of the same fallback chain.
+    overallScore: itinerary.overallScore,
+    feasibilityScore: itinerary.feasibilityScore,
+    raw: itinerary.raw,
   );
 }
+
+TripSource toUiSource(api.ItinerarySource source) => TripSource(
+      courseId: source.courseId,
+      courseTitle: source.courseTitle,
+      source: source.source,
+      sourceUrl: source.sourceUrl,
+    );
 
 /// Shown as-is on Confirm Slots. A slot the traveller never answered comes
 /// back null; the em dash keeps the row's shape rather than collapsing it.

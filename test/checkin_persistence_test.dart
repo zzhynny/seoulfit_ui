@@ -90,4 +90,27 @@ void main() {
     expect(provider.tripId, firstId);
     expect(firstId, isNotNull);
   });
+
+  test('a check-in keeps the trip-level fields it never touches', () async {
+    // _mutateActivity rebuilds the Itinerary and every TripDay around the one
+    // changed stop. Listing the fields by hand there dropped summary,
+    // sources, scores and per-day cost the moment they were added, so
+    // checking in silently emptied the itinerary screens.
+    final provider = await loadedProvider();
+    final before = provider.itinerary!;
+    expect(before.summary, isNotEmpty, reason: 'fixture must have a summary');
+    expect(before.sources, isNotEmpty);
+    expect(before.days.first.estimatedCost, isNotEmpty);
+
+    provider.checkIn(before.days.first.activities.first.id);
+    final after = provider.itinerary!;
+
+    expect(after.summary, before.summary);
+    expect(after.sources.length, before.sources.length);
+    expect(after.overallScore, before.overallScore);
+    expect(after.feasibilityScore, before.feasibilityScore);
+    expect(after.days.first.estimatedCost, before.days.first.estimatedCost);
+    // And the check-in itself still happened.
+    expect(after.days.first.activities.first.visited, isTrue);
+  });
 }

@@ -261,4 +261,60 @@ void main() {
 
     expect(toUiHop(leg).options.single.label, 'Transit');
   });
+
+  test('carries summary, sources, cost and critic scores off the payload', () {
+    // These five all reached the mapper and were dropped on the floor, which
+    // is why the itinerary screens showed less than the Flutter app's.
+    final payload = <String, dynamic>{
+      'summary': 'Three days across Jongno and Hongdae.',
+      'critic_report': {
+        'after': {'overall_score': 0.87, 'feasibility_score': 0.94},
+      },
+      'sources': [
+        {
+          'course_id': 'c-1',
+          'course_title': 'Seoul Palace Walking Course',
+          'source': 'Visit Seoul',
+          'source_url': 'https://english.visitseoul.net/',
+        },
+      ],
+      'days': [
+        {
+          'day': 1,
+          'theme': 'Palaces',
+          'estimated_cost': '60,000 - 80,000 KRW',
+          'pois': [
+            {'name': 'Gyeongbokgung', 'type': 'history', 'stay_minutes': 120},
+          ],
+        },
+      ],
+    };
+
+    final itinerary = toUiItinerary(
+      api.Itinerary.fromJson(payload),
+      const api.TravelState(),
+    );
+
+    expect(itinerary.summary, 'Three days across Jongno and Hongdae.');
+    expect(itinerary.overallScore, 0.87);
+    expect(itinerary.feasibilityScore, 0.94);
+    expect(itinerary.sources.single.courseTitle, 'Seoul Palace Walking Course');
+    expect(itinerary.sources.single.source, 'Visit Seoul');
+    expect(itinerary.days.single.estimatedCost, '60,000 - 80,000 KRW');
+    // raw is kept verbatim so an export carries what the typed models drop.
+    expect(itinerary.raw['critic_report'], isNotNull);
+  });
+
+  test('an unscored plan reports null rather than zero', () {
+    final itinerary = toUiItinerary(
+      api.Itinerary.fromJson(const {'days': []}),
+      const api.TravelState(),
+    );
+
+    // A reassuring-looking 0.0 would read as "scored, and terrible".
+    expect(itinerary.overallScore, isNull);
+    expect(itinerary.feasibilityScore, isNull);
+    expect(itinerary.summary, '');
+    expect(itinerary.sources, isEmpty);
+  });
 }

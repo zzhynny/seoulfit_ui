@@ -78,13 +78,22 @@ class ApiTripRepository implements TripRepository {
     // Preferences aren't part of the revalidate response — carry over the
     // ones already on screen rather than spending a round-trip on /state.
     final rebuilt = api.Itinerary.fromJson(Map<String, dynamic>.from(repaired));
+    final result = _resultOf(response);
     final rebuiltUi = Itinerary(
       preferences: itinerary.preferences,
       days: rebuilt.days.map(toUiDay).toList(),
       routeStops: toUiRouteStops(rebuilt),
+      summary: rebuilt.summary,
+      sources: rebuilt.sources.map(toUiSource).toList(),
+      // The repaired plan's own scores, from this call's "after" report —
+      // rebuilt.raw is the itinerary payload and carries no critic_report of
+      // its own, so its getters would both return null.
+      overallScore: result.after.overallScore,
+      feasibilityScore: result.after.feasibilityScore,
+      raw: rebuilt.raw,
     );
 
-    return (rebuiltUi, _resultOf(response));
+    return (rebuiltUi, result);
   }
 
   @override
