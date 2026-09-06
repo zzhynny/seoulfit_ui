@@ -533,13 +533,23 @@ def parse_trip_start_date(text: str | None, *, today: date | None = None) -> str
     return candidate.isoformat()
 
 
-def _parse_num_days(duration: str | None) -> int:
+def _parse_num_days(duration: str | None, override: int | None = None) -> int:
     """Parse the number of trip days from a free-text duration/date string.
 
     Order matters: explicit '4 days'/'1 week' win, then date ranges like
     'June 23 to 24' (→ 2), and only a small bare number is trusted as a day
     count — so '23' from a date never becomes a 23-day trip.
+
+    `override`, when given a positive int, short-circuits all of the above:
+    an explicit day count from the caller is authoritative and the free-text
+    `duration` (which may be stale, missing, or ambiguous) is never even
+    inspected. No caller passes one today -- graph.py's date-picker flow
+    instead guarantees `duration` itself always ends in a parseable
+    "(N days)" suffix (see graph._describe_trip) -- but this stays available
+    as a seam for a future caller that has the count without the text.
     """
+    if override is not None and override > 0:
+        return override
     if not duration:
         return 1
     text = duration.lower().strip()
@@ -613,6 +623,7 @@ def parse_day_segments(
     location: str | None,
     purpose: str | None,
     duration: str | None,
+    num_days: int | None = None,
 ) -> list[dict[str, Any]]:
     """Split a trip request into per-area / per-purpose day segments.
 
@@ -621,8 +632,11 @@ def parse_day_segments(
 
     If no areas are detected in the user's text, returns a single segment
     covering every day with area=None and purpose_hint=purpose.
+
+    `num_days`, when a positive int, overrides `duration` text parsing (see
+    `_parse_num_days`) -- pass the frontend's structured day count here.
     """
-    num_days = _parse_num_days(duration)
+    num_days = _parse_num_days(duration, override=num_days)
     areas = extract_requested_areas(location, purpose)
 
     if not areas:

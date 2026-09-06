@@ -12,6 +12,19 @@ import json
 import os
 import sys
 
+# On Windows, a Python process's stdout/stderr default to the OS locale codec
+# (cp949 on a Korean-locale machine) unless PYTHONUTF8=1 is set before the
+# interpreter starts -- easy to forget when launching uvicorn directly. cp949
+# can't encode most non-Korean/non-ASCII punctuation (e.g. an en dash "–"),
+# so any print() of a course/POI name containing one crashes with
+# UnicodeEncodeError. UTF-8 can encode any Unicode string, so reconfiguring
+# here removes the whole class of failure without hunting down every print()
+# call site. Must run before any other import: several modules
+# (e.g. the lens/live-help data loaders) print on import.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure") and (_stream.encoding or "").lower() != "utf-8":
+        _stream.reconfigure(encoding="utf-8")
+
 # All backend modules (graph.py, state.py, planner.py, …) now live flat in
 # this same directory, so add it to sys.path to stay import-safe regardless of
 # where uvicorn is launched from.
@@ -853,8 +866,9 @@ def swap_candidates(req: SwapCandidatesRequest):
     특히 closed_weekday와 이 day의 실제 요일(trip_start_date + day로 계산)이
     겹치면 "화요일 정기휴무" 식으로 미리 알려준다.
 
-    is_generic_activity/is_transit_marker로 걸러진 POI는 build_candidate_pool
-    단계에서 이미 후보 풀에 없으므로 여기서 따로 걸러낼 필요가 없다.
+    is_generic_activity/is_transit_marker/requires_review로 걸러진 POI는
+    build_candidate_pool 단계에서 이미 후보 풀에 없으므로 여기서 따로 걸러낼
+    필요가 없다.
 
     v1 범위: time_window/purpose는 스키마에는 받지만 아직 후보 필터링에는
     안 쓴다(슬롯별 시간대·목적 매칭에 쓸 신호가 POI 데이터에 없음) — 나중에

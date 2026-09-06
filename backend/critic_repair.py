@@ -30,6 +30,7 @@ try:
 except Exception:
     TravelState = dict
 
+from date_utils import weekday_for_day
 from planner import compute_transit_legs
 
 
@@ -304,6 +305,10 @@ def candidate_from_course_poi(raw: dict[str, Any]) -> dict[str, Any]:
         # Station") — 방문지가 아니라 이동 마커일 뿐이라 is_generic_activity와
         # 같은 방식으로 후보 풀에서 제외한다.
         "is_transit_marker": bool(raw.get("is_transit_marker")),
+        # 이름 표기가 모호해 수동 검토가 필요한 POI(예: "예술의전당" 관련
+        # 여러 동명/유사명 항목) — 어느 실제 장소를 가리키는지 확정 못한
+        # 상태라 위 둘과 같은 방식으로 후보 풀에서 제외한다.
+        "requires_review": bool(raw.get("requires_review")),
         "rating": raw.get("rating"),
         "opening_hours": opening_hours,
         # course_data_v6: Google Places Legacy Place Details로 얻은 정기 휴무
@@ -371,6 +376,11 @@ def build_candidate_pool(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
             if item.get("is_transit_marker"):
                 # 코스 시작/끝에 찍힌 순수 지하철역명(예: "Anguk Station") — 방문
                 # 목적지가 아니라 이동 마커일 뿐이라 같은 이유로 제외한다.
+                continue
+            if item.get("requires_review"):
+                # 이름 표기가 모호해 수동 검토가 필요한 POI(예: 예술의전당 계열
+                # 명칭 중복) — 어느 실제 장소인지 확정되기 전까지 같은 이유로
+                # 후보 풀에서 제외한다.
                 continue
             key = normalize_text(item.get("name"))
             if key:
@@ -546,11 +556,17 @@ class CriticAgent:
     def evaluate(self, state: dict[str, Any]) -> dict[str, Any]:
         itinerary = state.get("itinerary") or {}
         requested_areas = self._get_requested_areas(state)
+        # Only needed to look up closed_weekday/is_area_type/is_transit_marker by
+        # name for CLOSED_ON_ASSIGNED_DAY -- as_output_poi() strips those fields
+        # from the itinerary's own POI dicts, so they aren't readable off `poi`
+        # directly and have to be re-looked-up from the candidate pool.
+        pool = build_candidate_pool(state)
+        trip_start_date = state.get("trip_start_date")
 
         issues: list[CriticIssue] = []
 
         area_report = self._evaluate_area_coverage(itinerary, requested_areas, issues)
-        day_report = self._evaluate_days(itinerary, requested_areas, issues)
+        day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues)
         duplicate_report = self._evaluate_duplicates(itinerary, issues)
         foreigner_report = self._evaluate_foreigner_readiness(itinerary, issues)
 
@@ -637,6 +653,8 @@ class CriticAgent:
         self,
         itinerary: dict[str, Any],
         requested_areas: list[str],
+        pool: dict[str, dict[str, Any]],
+        trip_start_date: str | None,
         issues: list[CriticIssue],
     ) -> dict[str, Any]:
         days = itinerary.get("days") or []
@@ -685,6 +703,10 @@ class CriticAgent:
                     day=day_num,
                 ))
 
+            checks += 1
+            if self._day_has_closed_poi(pois, pool, trip_start_date, day_num, issues):
+                penalties += 0.30
+
         if checks == 0:
             return {"score": 0.0}
 
@@ -710,6 +732,52 @@ class CriticAgent:
                 max_dist = max(max_dist, dist)
 
         return max_dist > 8.0
+
+    def _day_has_closed_poi(
+        self,
+        pois: list[dict[str, Any]],
+        pool: dict[str, dict[str, Any]],
+        trip_start_date: str | None,
+        day_num: int,
+        issues: list[CriticIssue],
+    ) -> bool:
+        if not trip_start_date:
+            return False  # 날짜 추출 실패 -- 조용히 스킵, 에러 내지 않음
+
+        try:
+            weekday = weekday_for_day(trip_start_date, day_num, lang="en")
+        except (ValueError, TypeError):
+            return False  # 날짜 계산 실패도 동일하게 조용히 스킵
+
+        found = False
+        for poi in pois:
+            # as_output_poi()가 closed_weekday/is_area_type/is_transit_marker를
+            # 걷어내므로 최종 POI dict엔 이 필드들이 없다 -- 이름으로 pool을
+            # 다시 조회해서 얻는다. pool에 없는 POI(LLM이 직접 써넣은 호텔 등)는
+            # 정보가 없으니 조용히 스킵한다.
+            candidate = pool.get(normalize_text(poi_name(poi)))
+            if candidate is None:
+                continue
+
+            if candidate.get("is_area_type") or candidate.get("is_transit_marker"):
+                # 구역형/경유마커는 "정기휴무" 개념 자체가 안 맞으므로 제외.
+                continue
+
+            closed_weekday = candidate.get("closed_weekday") or []
+            if weekday in closed_weekday:
+                found = True
+                issues.append(CriticIssue(
+                    code="CLOSED_ON_ASSIGNED_DAY",
+                    severity="high",
+                    message=(
+                        f"{poi_name(poi)} is regularly closed on {weekday}s "
+                        f"but is scheduled for Day {day_num} ({weekday})."
+                    ),
+                    day=day_num,
+                    area=infer_area_from_poi(poi),
+                ))
+
+        return found
 
     def _evaluate_duplicates(
         self,
@@ -793,11 +861,30 @@ class RepairAgent:
             state.get("category"),
         )
 
+        # Structured record of POIs dropped outright (as opposed to swapped or
+        # moved) so a diagnostic UI can say *why* a stop disappeared -- not
+        # just that repair_log mentions it in prose. Populated only by
+        # _repair_closed_on_assigned_day when neither same-day-swap nor
+        # move-to-another-day works out.
+        removed_pois: list[dict[str, Any]] = []
+
         itinerary = self._repair_missing_areas(
             itinerary=itinerary,
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+        )
+
+        # Runs before the meal/under-fill repairs below so that a POI removed
+        # here (unrepairable closure) leaves a gap those steps can naturally
+        # backfill, instead of the day staying short by one.
+        itinerary = self._repair_closed_on_assigned_day(
+            itinerary=itinerary,
+            pool=pool,
+            trip_start_date=state.get("trip_start_date"),
+            requested_areas=requested_areas,
+            logs=logs,
+            removed_pois=removed_pois,
         )
 
         itinerary = self._repair_missing_meals(
@@ -820,6 +907,7 @@ class RepairAgent:
         )
 
         itinerary["repair_log"] = logs
+        itinerary["removed_pois"] = removed_pois
         return itinerary, logs
 
     def _repair_missing_areas(
@@ -870,6 +958,141 @@ class RepairAgent:
 
             if inserted:
                 logs.append(f"Added {inserted} POI(s) for requested area {area_label(area)}.")
+
+        return itinerary
+
+    def _repair_closed_on_assigned_day(
+        self,
+        *,
+        itinerary: dict[str, Any],
+        pool: dict[str, dict[str, Any]],
+        trip_start_date: str | None,
+        requested_areas: list[str],
+        logs: list[str],
+        removed_pois: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        if not trip_start_date:
+            return itinerary  # 날짜 추출 실패 -- 조용히 스킵, 에러 내지 않음
+
+        days = itinerary.get("days") or []
+        if not days:
+            return itinerary
+
+        # day별 실제 요일을 한 번만 계산해둔다 (day 이동 후보를 찾을 때도 재사용).
+        day_weekday: dict[int, str | None] = {}
+        for day in days:
+            day_num = safe_int(day.get("day"), 0)
+            try:
+                day_weekday[day_num] = weekday_for_day(trip_start_date, day_num, lang="en")
+            except (ValueError, TypeError):
+                day_weekday[day_num] = None
+
+        used = used_name_set(itinerary)
+
+        for day_index, day in enumerate(days):
+            day_num = safe_int(day.get("day"), 0)
+            weekday = day_weekday.get(day_num)
+            if not weekday:
+                continue
+
+            pois = day.get("pois") or []
+            kept: list[dict[str, Any]] = []
+
+            for poi in pois:
+                name_key = normalize_text(poi_name(poi))
+                candidate = pool.get(name_key)
+
+                is_closed = bool(
+                    candidate
+                    and not candidate.get("is_area_type")
+                    and not candidate.get("is_transit_marker")
+                    and weekday in (candidate.get("closed_weekday") or [])
+                )
+                if not is_closed:
+                    kept.append(poi)
+                    continue
+
+                # (a) 같은 day, 같은 area + 같은 type의 대체 후보를 먼저 시도한다.
+                day_area = self._target_area_for_day(day, requested_areas, day_index)
+                replacements = []
+                if day_area:
+                    replacements = candidates_for_area(
+                        pool,
+                        day_area,
+                        exclude=used,
+                        preferred_types={normalize_text(candidate.get("type"))},
+                    )
+                # 대체 후보도 같은 요일에 휴무면 의미가 없으므로 제외한다.
+                replacements = [
+                    c for c in replacements
+                    if weekday not in (c.get("closed_weekday") or [])
+                ]
+
+                if replacements:
+                    repl = replacements[0]
+                    new_poi = as_output_poi(
+                        repl,
+                        note_suffix=(
+                            f"Swapped by Repair Agent -- {poi_name(poi)} is "
+                            f"regularly closed on {weekday}s."
+                        ),
+                    )
+                    kept.append(new_poi)
+                    used.discard(name_key)
+                    used.add(normalize_text(repl.get("name")))
+                    logs.append(
+                        f"Day {day_num}: replaced {poi_name(poi)} (closed {weekday}) "
+                        f"with {repl.get('name')}."
+                    )
+                    continue
+
+                # (b) 대체 후보가 없으면, 그 요일에 휴무가 아닌 다른 day로 옮긴다.
+                moved = False
+                for other_day in days:
+                    other_num = safe_int(other_day.get("day"), 0)
+                    if other_num == day_num:
+                        continue
+                    other_weekday = day_weekday.get(other_num)
+                    if not other_weekday:
+                        continue
+                    if other_weekday in (candidate.get("closed_weekday") or []):
+                        continue  # 그 POI가 옮길 day에도 마찬가지로 휴무
+
+                    other_day.setdefault("pois", []).append(poi)
+                    logs.append(
+                        f"Moved {poi_name(poi)} from Day {day_num} (closed {weekday}) "
+                        f"to Day {other_num}."
+                    )
+                    moved = True
+                    break
+
+                if moved:
+                    continue
+
+                # (a)도 (b)도 실패 -- 여행 기간 내 방문 가능한 날이 없다는 뜻이므로
+                # POI를 아예 제외한다. logs(사람이 읽는 로그)뿐 아니라 구조화된
+                # removed_pois에도 남겨서, 진단서 화면이 "여행 기간 중 방문 가능한
+                # 날이 없어 OO를 일정에서 제외했습니다" 같은 문구를 만들 수 있게 한다.
+                #
+                # pool에서도 이 항목을 완전히 지운다 -- 뒤에 오는
+                # _repair_missing_meals/_repair_underfilled_days는 매번 itinerary
+                # 기준으로 used_name_set()을 새로 계산하므로(이 함수의 로컬 used와
+                # 무관), 지금 day에서 빼도 이름이 "안 쓰인 상태"로 되돌아가서 pool에
+                # 남아있으면 바로 다시 채워 넣힐 수 있다. pool 자체(참조 공유 dict)
+                # 에서 지워야 이번 repair() 실행 동안 다시는 후보로 안 나온다.
+                pool.pop(name_key, None)
+                removed_pois.append({
+                    "name": poi_name(poi),
+                    "day": day_num,
+                    "weekday": weekday,
+                    "reason": "CLOSED_ON_ASSIGNED_DAY_UNREPAIRABLE",
+                })
+                logs.append(
+                    f"Removed {poi_name(poi)} from Day {day_num}: closed every day "
+                    f"of the trip on {weekday}s and no other day was open."
+                )
+
+            day["pois"] = kept
 
         return itinerary
 

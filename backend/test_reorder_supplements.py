@@ -59,7 +59,9 @@ def _is_google(p):
 here = os.path.dirname(__file__)
 before = after = 0.0
 for f in sorted(glob.glob(os.path.join(here, "..", "benchmark", "seoulfit_results", "scenario_*.json"))):
-    for day in json.load(open(f)).get("days", []):
+    with open(f, encoding="utf-8") as _fh:
+        days = json.load(_fh).get("days", [])
+    for day in days:
         ps = [p for p in day.get("pois", []) if isinstance(p.get("lat"), (int, float))]
         if len(ps) < 3:
             continue
