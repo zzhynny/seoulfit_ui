@@ -3,10 +3,16 @@ import '../../models/lens.dart';
 import '../../theme/theme.dart';
 
 class LensResultScreen extends StatelessWidget {
-  const LensResultScreen({super.key, required this.result, required this.onScanAnother});
+  const LensResultScreen({
+    super.key,
+    required this.result,
+    required this.onScanAnother,
+    required this.onBack,
+  });
 
   final LensPlaceResult result;
   final VoidCallback onScanAnother;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +28,20 @@ class LensResultScreen extends StatelessWidget {
                 child: Image.asset('assets/images/lens-result-hero.png', fit: BoxFit.cover),
               ),
               Container(height: 320, color: Colors.black.withValues(alpha: 0.15)),
+              // Over the hero, where a full-bleed image otherwise leaves no
+              // way out but the button at the very bottom.
+              Positioned(
+                left: 4,
+                top: 4,
+                child: SafeArea(
+                  child: IconButton(
+                    onPressed: onBack,
+                    icon: const Icon(Icons.chevron_left, size: 28),
+                    color: Colors.white,
+                    tooltip: 'Back',
+                  ),
+                ),
+              ),
               Positioned(
                 left: 24,
                 right: 24,

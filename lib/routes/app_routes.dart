@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/repositories/events_repository.dart';
+import '../data/repositories/trip_repository.dart';
 import '../data/repositories/lens_repository.dart';
 import '../models/lens.dart';
-import '../models/trip.dart';
 import '../providers/trip_provider.dart';
 import '../widgets/main_shell.dart';
 
@@ -210,15 +210,18 @@ GoRouter buildAppRouter() {
               routes: [
                 GoRoute(
                   path: 'confirm-slots',
-                  builder: (context, state) {
-                    final trip = context.read<TripProvider>();
-                    final preferences = trip.itinerary?.preferences ?? _kDefaultPreferences;
-                    return ConfirmSlotsScreen(
-                      preferences: preferences,
-                      onGenerate: () => context.push(AppRoutes.craftingItinerary),
-                      onBack: () => context.go(AppRoutes.chat),
-                    );
-                  },
+                  // Reads the slots back from the planner thread rather than
+                  // from trip.itinerary: there IS no itinerary at this point
+                  // — this screen is what confirms the answers so one can be
+                  // built. The old fallback quietly showed hardcoded mock
+                  // preferences ("Oct 12 - Oct 16", "Culture, K-Pop") that had
+                  // nothing to do with what the traveller had just said.
+                  builder: (context, state) => ConfirmSlotsScreen(
+                    loadPreferences:
+                        context.read<TripRepository>().fetchDefaultPreferences,
+                    onGenerate: () => context.push(AppRoutes.craftingItinerary),
+                    onBack: () => context.go(AppRoutes.chat),
+                  ),
                 ),
                 GoRoute(
                   path: 'initial-itinerary',
@@ -247,6 +250,9 @@ GoRouter buildAppRouter() {
                 GoRoute(
                   path: 'stamp-book-optin',
                   builder: (context, state) => StampBookOptInScreen(
+                    // Backing out records nothing, so the opt-in is offered
+                    // again rather than silently counting as a decline.
+                    onBack: () => context.pop(),
                     onStartCollecting: (enabled) {
                       context.read<TripProvider>().respondToStampOptIn(enabled);
                       context.pushReplacement('${AppRoutes.trip}/day-checkin/1');
@@ -262,6 +268,7 @@ GoRouter buildAppRouter() {
                   builder: (context, state) {
                     final day = int.parse(state.pathParameters['day']!);
                     return DayCheckInScreen(
+                      onBack: () => context.pop(),
                       dayNumber: day,
                       onComplete: () => context.push('${AppRoutes.trip}/day-complete/$day'),
                       onMissedPlace: (activityId) =>
@@ -349,6 +356,7 @@ GoRouter buildAppRouter() {
                   builder: (context, state) => LensResultScreen(
                     result: state.extra as LensPlaceResult,
                     onScanAnother: () => context.pop(),
+                    onBack: () => context.pop(),
                   ),
                 ),
               ],
@@ -396,11 +404,3 @@ GoRouter buildAppRouter() {
   );
 }
 
-const _kDefaultPreferences = TripPreferences(
-  dateRange: 'Oct 12 – Oct 16',
-  region: 'Jongno, Hongdae',
-  travelStyle: 'Culture, K-Pop',
-  groupSize: '2 Adults',
-  dietaryNotes: 'Vegan Options',
-  pace: 'Relaxed',
-);

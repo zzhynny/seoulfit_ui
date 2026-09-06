@@ -3,20 +3,67 @@ import '../../models/trip.dart';
 import '../../theme/theme.dart';
 import '../../widgets/primary_button.dart';
 
-class ConfirmSlotsScreen extends StatelessWidget {
+class ConfirmSlotsScreen extends StatefulWidget {
   const ConfirmSlotsScreen({
     super.key,
-    required this.preferences,
+    required this.loadPreferences,
     required this.onGenerate,
     required this.onBack,
   });
 
-  final TripPreferences preferences;
+  /// Fetches the slots the planner has actually collected, read back from the
+  /// thread. Async because it is a round-trip, not screen state.
+  final Future<TripPreferences> Function() loadPreferences;
+
   final VoidCallback onGenerate;
   final VoidCallback onBack;
 
   @override
+  State<ConfirmSlotsScreen> createState() => _ConfirmSlotsScreenState();
+}
+
+class _ConfirmSlotsScreenState extends State<ConfirmSlotsScreen> {
+  TripPreferences? _preferences;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final preferences = await widget.loadPreferences();
+      if (mounted) setState(() => _preferences = preferences);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final preferences = _preferences;
+    final onGenerate = widget.onGenerate;
+    final onBack = widget.onBack;
+
+    if (preferences == null) {
+      return Center(
+        child: _failed
+            ? Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  "Couldn't read your answers back. Go back to Chat and try "
+                  'again.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              )
+            : const CircularProgressIndicator(),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

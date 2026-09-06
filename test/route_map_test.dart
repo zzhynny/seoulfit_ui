@@ -85,4 +85,37 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
   });
+
+  testWidgets('picks the map, not the illustration, once stops have coordinates',
+      (tester) async {
+    // Coordinates from a live generation against the webapp backend. The
+    // reported symptom was the map "looking like an image", i.e. the Figma
+    // fallback winning with real data — so this asserts the branch.
+    //
+    // Only the branch: whether flutter_map then paints its markers is its
+    // concern, and asserting it here means faking an HttpClient for the tile
+    // requests, which tests the fake more than the app.
+    await tester.pumpWidget(MaterialApp(
+      home: RouteMap(
+        itinerary: itineraryOf([
+          [
+            stop('GangGang Sul Lai', lat: 37.5523988, lng: 126.9226),
+            stop('Hongdae Food Street', lat: 37.5529929, lng: 126.9216827),
+          ],
+        ]),
+      ),
+    ));
+
+    // The illustration is an Image.asset; the map branch renders none.
+    expect(find.byType(Image), findsNothing);
+    // The placeholder sits behind the tiles so an unpainted map never reads
+    // as a broken image.
+    expect(find.text('Loading map…'), findsOneWidget);
+
+    // The tile layer really reaches for openstreetmap.org, which the test
+    // binding answers with a 400. Those failures are the harness, not the
+    // widget, and the app already renders them as the placeholder — drain
+    // them so they don't fail the assertions above.
+    while (tester.takeException() != null) {}
+  });
 }

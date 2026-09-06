@@ -13,11 +13,13 @@ class DayCheckInScreen extends StatelessWidget {
     required this.dayNumber,
     required this.onComplete,
     required this.onMissedPlace,
+    required this.onBack,
   });
 
   final int dayNumber;
   final VoidCallback onComplete;
   final void Function(String activityId) onMissedPlace;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +32,15 @@ class DayCheckInScreen extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+          padding: const EdgeInsets.fromLTRB(8, 16, 24, 0),
           child: Row(
             children: [
+              IconButton(
+                onPressed: onBack,
+                icon: const Icon(Icons.chevron_left, size: 28),
+                color: AppColors.textPrimary,
+                tooltip: 'Back',
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

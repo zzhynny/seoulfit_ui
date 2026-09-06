@@ -7,10 +7,16 @@ class StampBookOptInScreen extends StatefulWidget {
     super.key,
     required this.onStartCollecting,
     required this.onSkip,
+    required this.onBack,
   });
 
   final void Function(bool enabled) onStartCollecting;
+
+  /// Records a decline and moves on.
   final VoidCallback onSkip;
+
+  /// Leaves without answering, so the prompt is asked again next time.
+  final VoidCallback onBack;
 
   @override
   State<StampBookOptInScreen> createState() => _StampBookOptInScreenState();
@@ -24,9 +30,15 @@ class _StampBookOptInScreenState extends State<StampBookOptInScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+          padding: const EdgeInsets.fromLTRB(8, 16, 24, 0),
           child: Row(
             children: [
+              IconButton(
+                onPressed: widget.onBack,
+                icon: const Icon(Icons.chevron_left, size: 28),
+                color: AppColors.textPrimary,
+                tooltip: 'Back',
+              ),
               Image.asset(
                 'assets/images/stamp-paw-green.png',
                 width: 30,

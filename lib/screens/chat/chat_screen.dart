@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../../models/chat.dart';
 import '../../models/companion.dart';
+import '../../widgets/animations.dart';
 import 'date_range_answer.dart';
 import '../../providers/companion_provider.dart';
 import '../../theme/theme.dart';
@@ -84,6 +85,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   travelerCount: _travelerCount,
                   onTravelerChange: (v) => setState(() => _travelerCount = v),
                   composerController: _composerController,
+                  sending: _sending,
                   onSend: _send,
                   onQuickReply: _send,
                   onPickDates: _pickDates,
@@ -200,6 +202,7 @@ class _PlanView extends StatelessWidget {
     required this.onBuildItinerary,
     required this.onQuickReply,
     required this.onPickDates,
+    required this.sending,
   });
 
   final List<ChatMessage> messages;
@@ -211,6 +214,10 @@ class _PlanView extends StatelessWidget {
   final VoidCallback onBuildItinerary;
   final ValueChanged<String> onQuickReply;
   final VoidCallback onPickDates;
+
+  /// A turn is in flight. Shown as a typing bubble, and the composer's send
+  /// button becomes a spinner.
+  final bool sending;
 
   @override
   Widget build(BuildContext context) {
@@ -303,6 +310,7 @@ class _PlanView extends StatelessWidget {
               ),
             ),
           ),
+        if (sending) const _TypingBubble(),
         // The dates question is picker-only; the backend bounces typed
         // answers back to the calendar.
         if (messages.isNotEmpty &&
@@ -311,11 +319,17 @@ class _PlanView extends StatelessWidget {
         if (messages.isNotEmpty && messages.last.quickReplies.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Row(
+            // Wrap, not Row: 'category' offers five chips and 'region' four,
+            // which overflow a phone width on one line. Wrapping keeps every
+            // option reachable — a horizontal scroller would hide some of
+            // them off the right edge with no affordance saying so.
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 for (final reply in messages.last.quickReplies)
                   Padding(
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: EdgeInsets.zero,
                     child: ActionChip(
                       label: Text(reply, style: AppTextStyles.bodySmall),
                       onPressed: () => onQuickReply(reply),
@@ -354,15 +368,26 @@ class _PlanView extends StatelessWidget {
                   ),
                 ),
                 GestureDetector(
-                  onTap: onSend,
+                  onTap: sending ? null : onSend,
                   child: Container(
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: sending
+                          ? AppColors.primary.withValues(alpha: 0.45)
+                          : AppColors.primary,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.send, size: 16, color: Colors.white),
+                    child: sending
+                        ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.send, size: 16, color: Colors.white),
                   ),
                 ),
               ],
@@ -531,6 +556,95 @@ class _TopicCard extends StatelessWidget {
             ),
             const Icon(Icons.chevron_right, color: AppColors.textSecondary),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The buddy's "thinking" bubble.
+///
+/// A conversational turn is a Gemini call measured at 3-7s, and the confirm
+/// turn runs the whole planner. Without this the chat simply sat still and
+/// looked broken.
+class _TypingBubble extends StatefulWidget {
+  const _TypingBubble();
+
+  @override
+  State<_TypingBubble> createState() => _TypingBubbleState();
+}
+
+class _TypingBubbleState extends State<_TypingBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Honours the platform reduced-motion setting: the bubble still shows,
+    // it just holds still instead of looping.
+    if (Motion.reduced(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: const BoxDecoration(
+            color: AppColors.bubbleBot,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+              bottomRight: Radius.circular(16),
+              bottomLeft: Radius.circular(4),
+            ),
+          ),
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < 3; i++)
+                  Padding(
+                    padding: EdgeInsets.only(right: i == 2 ? 0 : 5),
+                    child: Opacity(
+                      // Each dot leads the next by a third of the cycle.
+                      opacity: 0.35 +
+                          0.65 *
+                              ((_controller.value + i / 3) % 1.0 < 0.5
+                                  ? ((_controller.value + i / 3) % 1.0) * 2
+                                  : (1 - ((_controller.value + i / 3) % 1.0)) *
+                                      2),
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

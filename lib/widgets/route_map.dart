@@ -31,7 +31,23 @@ class RouteMap extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       child: SizedBox(
         height: height,
-        child: FlutterMap(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Behind the tiles: OSM tiles arrive over the network, and until
+            // the first one paints FlutterMap renders an empty box that reads
+            // as a broken image. The map covers this as soon as it has
+            // anything to draw.
+            Container(
+              color: AppColors.surfaceMuted,
+              alignment: Alignment.center,
+              child: Text(
+                'Loading map…',
+                style: AppTextStyles.caption
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+            FlutterMap(
           options: _options(allPoints),
           children: [
             TileLayer(
@@ -65,6 +81,8 @@ class RouteMap extends StatelessWidget {
                       ),
                     ),
               ],
+            ),
+          ],
             ),
           ],
         ),

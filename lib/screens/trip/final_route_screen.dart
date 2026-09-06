@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/trip.dart';
+import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
+import '../../widgets/day_tabs.dart';
 import '../../widgets/route_map.dart';
 
 class FinalRouteScreen extends StatefulWidget {
@@ -25,7 +28,29 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final stops = widget.itinerary.routeStops;
+    final itinerary = widget.itinerary;
+    final trip = context.watch<TripProvider>();
+    final selectedDay = itinerary.days.any((d) => d.dayNumber == trip.selectedDay)
+        ? trip.selectedDay
+        : (itinerary.days.isEmpty ? 1 : itinerary.days.first.dayNumber);
+
+    // routeStops is one flat sequence across the whole trip, which rendered
+    // every day's stops in a single scroll. Slice it back into the day the
+    // tabs are showing, using each day's own length so the numbering stays
+    // the trip-wide one printed on the map markers.
+    var offset = 0;
+    var stops = const <RouteStop>[];
+    for (final day in itinerary.days) {
+      final count = day.activities.length;
+      if (day.dayNumber == selectedDay) {
+        stops = itinerary.routeStops
+            .skip(offset)
+            .take(count)
+            .toList(growable: false);
+        break;
+      }
+      offset += count;
+    }
     return Column(
       children: [
         Padding(
@@ -77,6 +102,15 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
           child: ListView(
             padding: const EdgeInsets.only(bottom: 8),
             children: [
+              if (itinerary.days.length > 1)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: DayTabs(
+                    days: itinerary.days,
+                    selectedDay: selectedDay,
+                    onSelect: trip.selectDay,
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: RouteMap(itinerary: widget.itinerary),
