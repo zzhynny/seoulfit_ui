@@ -1,26 +1,70 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/companion_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/figma_chrome.dart';
+import '../../widgets/generation_pacer.dart';
 import '../../widgets/loading_log_panel.dart';
 
-class CraftingItineraryScreen extends StatefulWidget {
-  const CraftingItineraryScreen({super.key, required this.onDone});
+class CraftingItineraryScreen extends StatelessWidget {
+  const CraftingItineraryScreen({
+    super.key,
+    required this.run,
+    required this.onComplete,
+    required this.onFailed,
+    required this.onBackToChat,
+  });
 
-  final VoidCallback onDone;
+  /// Sends the confirming chat turn, which is what builds the itinerary.
+  final Future<void> Function() run;
+
+  final VoidCallback onComplete;
+  final VoidCallback onFailed;
+
+  /// An escape while the planner works. The turn keeps running on the
+  /// backend, so coming back to the Trip tab still finds the finished plan.
+  final VoidCallback onBackToChat;
+
+  /// The backend's real pipeline: handle_confirm collects the answers,
+  /// retrieve runs RAG over the course corpus, plan builds the days, and
+  /// critic_repair scores and repairs them. Naming the actual stages means a
+  /// long wait at least says what it is waiting on.
+  static const _stages = [
+    'Reading your answers...',
+    "Searching Seoul's course library...",
+    'Building your day-by-day plan...',
+    "Checking the days are actually doable...",
+    'Adding SeoulFit tips...',
+  ];
+
+  /// Measured at ~71s against a warm backend. Only a pacing hint — the pacer
+  /// caps below 100% and waits for the real response however long it takes.
+  static const _estimate = Duration(seconds: 71);
 
   @override
-  State<CraftingItineraryScreen> createState() => _CraftingItineraryScreenState();
+  Widget build(BuildContext context) {
+    return GenerationPacer(
+      stages: _stages,
+      estimate: _estimate,
+      run: run,
+      onComplete: onComplete,
+      onFailed: onFailed,
+      builder: (context, progress, steps) =>
+          _CraftingBody(progress: progress, steps: steps, onBackToChat: onBackToChat),
+    );
+  }
 }
 
-class _CraftingItineraryScreenState extends State<CraftingItineraryScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(const Duration(milliseconds: 1800), widget.onDone);
-  }
+class _CraftingBody extends StatelessWidget {
+  const _CraftingBody({
+    required this.progress,
+    required this.steps,
+    required this.onBackToChat,
+  });
+
+  final double progress;
+  final List<LoadingLogStep> steps;
+  final VoidCallback onBackToChat;
 
   @override
   Widget build(BuildContext context) {
@@ -93,14 +137,29 @@ class _CraftingItineraryScreenState extends State<CraftingItineraryScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                child: const LoadingLogPanel(
-                  steps: [
-                    LoadingLogStep(label: 'Mapping local autumn foliage...', state: LoadingLogStepState.done),
-                    LoadingLogStep(label: 'Filtering premium vegan culinary dining...', state: LoadingLogStepState.done),
-                    LoadingLogStep(label: 'Optimizing neighborhood walking routes...', state: LoadingLogStepState.pending),
-                    LoadingLogStep(label: 'Assembling custom SeoulFit AI tips...', state: LoadingLogStepState.pending),
-                  ],
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                child: GenerationProgressBar(
+                  progress: progress,
+                  color: AppColors.primary,
+                  trackColor: AppColors.border,
+                  labelStyle: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: LoadingLogPanel(steps: steps),
+              ),
+              TextButton.icon(
+                onPressed: onBackToChat,
+                icon: const Icon(Icons.chevron_left, size: 18),
+                label: const Text('Back to Chat'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  textStyle: AppTextStyles.bodySmall
+                      .copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               Padding(

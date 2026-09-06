@@ -1,26 +1,55 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/companion_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/figma_chrome.dart';
+import '../../widgets/generation_pacer.dart';
 import '../../widgets/loading_log_panel.dart';
 
-class ReoptimizingScreen extends StatefulWidget {
-  const ReoptimizingScreen({super.key, required this.onDone});
+class ReoptimizingScreen extends StatelessWidget {
+  const ReoptimizingScreen({
+    super.key,
+    required this.run,
+    required this.onComplete,
+    required this.onFailed,
+  });
 
-  final VoidCallback onDone;
+  /// POST /revalidate: applies the edits, then Critic -> Repair -> Critic.
+  final Future<void> Function() run;
+
+  final VoidCallback onComplete;
+  final VoidCallback onFailed;
+
+  /// Mirrors what /revalidate actually does, in order.
+  static const _stages = [
+    'Applying your changes...',
+    'Checking opening hours and travel times...',
+    'Repairing what does not fit...',
+    'Re-scoring the plan...',
+  ];
+
+  /// Shorter than generation — no RAG or planning, and the client allows 30s.
+  static const _estimate = Duration(seconds: 18);
 
   @override
-  State<ReoptimizingScreen> createState() => _ReoptimizingScreenState();
+  Widget build(BuildContext context) {
+    return GenerationPacer(
+      stages: _stages,
+      estimate: _estimate,
+      run: run,
+      onComplete: onComplete,
+      onFailed: onFailed,
+      builder: (context, progress, steps) =>
+          _ReoptimizingBody(progress: progress, steps: steps),
+    );
+  }
 }
 
-class _ReoptimizingScreenState extends State<ReoptimizingScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(const Duration(milliseconds: 2000), widget.onDone);
-  }
+class _ReoptimizingBody extends StatelessWidget {
+  const _ReoptimizingBody({required this.progress, required this.steps});
+
+  final double progress;
+  final List<LoadingLogStep> steps;
 
   @override
   Widget build(BuildContext context) {
@@ -58,13 +87,17 @@ class _ReoptimizingScreenState extends State<ReoptimizingScreen> {
                     style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 24),
-                  const LoadingLogPanel(
-                    steps: [
-                      LoadingLogStep(label: 'Filling in new recommendations...', state: LoadingLogStepState.done),
-                      LoadingLogStep(label: 'Checking opening hours...', state: LoadingLogStepState.active),
-                      LoadingLogStep(label: 'Optimizing walking routes...', state: LoadingLogStepState.pending),
-                    ],
+                  GenerationProgressBar(
+                    progress: progress,
+                    color: AppColors.primary,
+                    trackColor: AppColors.border,
+                    labelStyle: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
+                  const SizedBox(height: 16),
+                  LoadingLogPanel(steps: steps),
                 ],
               ),
             ),
