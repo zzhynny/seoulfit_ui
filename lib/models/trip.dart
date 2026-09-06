@@ -132,18 +132,76 @@ class RouteStop {
     required this.nameEn,
     this.nameKo,
     required this.arrivalTime,
-    this.transitMode,
-    this.transitDetail,
     this.exitInstruction,
+    this.hop,
   });
 
   final int order;
   final String nameEn;
   final String? nameKo;
   final String arrivalTime;
-  final String? transitMode;
-  final String? transitDetail;
   final String? exitInstruction;
+
+  /// How to get from this stop to the next one. Null on the last stop of the
+  /// trip, and on any pair the planner couldn't route.
+  final TransitHop? hop;
+}
+
+/// One public-transport option for a hop, from ODsay via the backend.
+class TransitChoice {
+  const TransitChoice({
+    required this.label,
+    required this.segments,
+    this.totalMinutes,
+    this.fareWon,
+    this.transfers,
+    this.walkMeters,
+  });
+
+  /// 'Subway', 'Bus', 'Subway + Bus' — the backend's own `type_label`.
+  final String label;
+
+  /// Line-by-line description of the ride, e.g. 'Line 2 → Line 3'.
+  final List<String> segments;
+
+  final int? totalMinutes;
+  final int? fareWon;
+  final int? transfers;
+  final int? walkMeters;
+
+  bool get isSubway => label.toLowerCase().contains('subway');
+}
+
+/// The leg between two consecutive stops.
+class TransitHop {
+  const TransitHop({
+    required this.options,
+    this.distanceKm,
+    this.walkMinutes,
+    this.carMinutes,
+    this.kakaoWalkUrl,
+    this.kakaoCarUrl,
+  });
+
+  /// Public-transport options, best first.
+  ///
+  /// Routinely empty: the backend omits them for stops within walking
+  /// distance of each other, and ODsay's daily quota being spent produces
+  /// the same empty list. Callers must fall back to [walkMinutes] /
+  /// [carMinutes] rather than treating this as an error.
+  final List<TransitChoice> options;
+
+  final double? distanceKm;
+  final int? walkMinutes;
+  final int? carMinutes;
+  final String? kakaoWalkUrl;
+  final String? kakaoCarUrl;
+
+  bool get hasAnything =>
+      options.isNotEmpty ||
+      walkMinutes != null ||
+      carMinutes != null ||
+      distanceKm != null;
 }
 
 class Itinerary {

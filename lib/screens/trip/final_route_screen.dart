@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/trip.dart';
 import '../../theme/theme.dart';
 import '../../widgets/route_map.dart';
@@ -122,7 +123,12 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
                   children: [
                     for (var i = 0; i < stops.length; i++) ...[
                       _PlaceStopCard(stop: stops[i], index: i + 1),
-                      if (i < stops.length - 1) const _HopGuide(),
+                      // Only between stops, and only when the planner
+                      // actually routed the pair.
+                      if (i < stops.length - 1 &&
+                          stops[i].hop != null &&
+                          stops[i].hop!.hasAnything)
+                        _HopGuide(hop: stops[i].hop!),
                     ],
                   ],
                 ),
@@ -232,8 +238,18 @@ class _PlaceStopCard extends StatelessWidget {
   }
 }
 
+/// How to get to the next stop.
+///
+/// Replaces a hardcoded "Subway (18m)" mockup with the planner's own leg.
+/// Public-transport options come from ODsay and are routinely absent — the
+/// backend skips it for stops within walking distance, and a spent daily
+/// quota returns the same empty list — so walk and drive estimates are the
+/// baseline and the option chips are the enhancement, never the other way
+/// round.
 class _HopGuide extends StatelessWidget {
-  const _HopGuide();
+  const _HopGuide({required this.hop});
+
+  final TransitHop hop;
 
   @override
   Widget build(BuildContext context) {
@@ -249,58 +265,123 @@ class _HopGuide extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: const Color(0xFF5E836A), borderRadius: BorderRadius.circular(10)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.train, size: 16, color: Colors.white),
-                    const SizedBox(width: 6),
-                    Text('Subway (18m)', style: AppTextStyles.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-                  ],
+              for (var i = 0; i < hop.options.length; i++)
+                _ModeChip(
+                  icon: hop.options[i].isSubway
+                      ? Icons.train
+                      : Icons.directions_bus,
+                  label: _optionLabel(hop.options[i]),
+                  // The backend returns options best-first, so the leading
+                  // one is the recommendation.
+                  primary: i == 0,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: AppColors.borderAlt),
-                  borderRadius: BorderRadius.circular(10),
+              if (hop.walkMinutes != null)
+                _ModeChip(
+                  icon: Icons.directions_walk,
+                  label: '${hop.walkMinutes}m walk',
+                  primary: hop.options.isEmpty,
+                  onTap: _launcher(hop.kakaoWalkUrl),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.directions_bus, size: 16, color: Color(0xFF66615B)),
-                    const SizedBox(width: 6),
-                    Text('Bus (21m)', style: AppTextStyles.caption.copyWith(color: const Color(0xFF66615B), fontWeight: FontWeight.w700)),
-                  ],
+              if (hop.carMinutes != null)
+                _ModeChip(
+                  icon: Icons.local_taxi_outlined,
+                  label: '${hop.carMinutes}m drive',
+                  onTap: _launcher(hop.kakaoCarUrl),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text('🚇 Subway Line 2 · 18 min · ₩1,400 · 420m walk',
-              style: AppTextStyles.caption.copyWith(color: const Color(0xFF8A857D), fontWeight: FontWeight.w500)),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: const Color(0xFFEBF0EC), borderRadius: BorderRadius.circular(12)),
-            child: Row(
-              children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF5E836A)),
-                const SizedBox(width: 8),
-                Text('Get off: Exit 9', style: AppTextStyles.caption.copyWith(color: const Color(0xFF5E836A), fontWeight: FontWeight.w700)),
-              ],
+          if (hop.options.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              _detailLine(hop.options.first),
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.textSecondary),
             ),
-          ),
+          ] else if (hop.distanceKm != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              '${hop.distanceKm!.toStringAsFixed(1)} km away',
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.textSecondary),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  VoidCallback? _launcher(String? url) {
+    if (url == null || url.isEmpty) return null;
+    return () async {
+      final uri = Uri.parse(url);
+      try {
+        if (await canLaunchUrl(uri)) await launchUrl(uri);
+      } catch (_) {
+        // Nothing to do — the chip still shows the estimate, which is the
+        // part the traveller actually needs.
+      }
+    };
+  }
+}
+
+String _optionLabel(TransitChoice option) {
+  final minutes = option.totalMinutes;
+  return minutes == null ? option.label : '${option.label} (${minutes}m)';
+}
+
+/// The leading option's specifics: which lines, how many changes, the fare,
+/// and how far you still walk.
+String _detailLine(TransitChoice option) {
+  return [
+    if (option.segments.isNotEmpty) option.segments.join(' → '),
+    if (option.transfers != null && option.transfers! > 0)
+      '${option.transfers} transfer${option.transfers == 1 ? "" : "s"}',
+    if (option.fareWon != null) '\u20a9${option.fareWon}',
+    if (option.walkMeters != null && option.walkMeters! > 0)
+      '${option.walkMeters}m walk',
+  ].join(' \u00b7 ');
+}
+
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.icon,
+    required this.label,
+    this.primary = false,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool primary;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = primary ? Colors.white : const Color(0xFF66615B);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: primary ? const Color(0xFF5E836A) : Colors.white,
+          border: primary ? null : Border.all(color: AppColors.borderAlt),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Text(label,
+                style: AppTextStyles.caption
+                    .copyWith(color: fg, fontWeight: FontWeight.w700)),
+          ],
+        ),
       ),
     );
   }

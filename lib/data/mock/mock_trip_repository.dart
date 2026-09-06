@@ -229,9 +229,22 @@ class MockTripRepository implements TripRepository {
         nameEn: 'Hongik University Area',
         nameKo: '홍익대학교',
         arrivalTime: '1:30 PM',
-        transitMode: 'Subway (18m)',
-        transitDetail: 'Subway Line 2 · 18 min · ₩1,400 · 420m walk',
         exitInstruction: 'Get off: Exit 9',
+        hop: TransitHop(
+          distanceKm: 3.4,
+          walkMinutes: 42,
+          carMinutes: 12,
+          options: [
+            TransitChoice(
+              label: 'Subway',
+              segments: ['Line 2'],
+              totalMinutes: 18,
+              fareWon: 1400,
+              transfers: 0,
+              walkMeters: 420,
+            ),
+          ],
+        ),
       ),
       RouteStop(
         order: 2,

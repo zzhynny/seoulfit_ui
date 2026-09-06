@@ -204,9 +204,61 @@ void main() {
     // Coordinates survive for the Final Route map.
     expect(day.activities.first.lat, closeTo(37.5775, 0.001));
 
-    // Route stops flatten in visit order and carry the leg detail.
+    // Route stops flatten in visit order and carry the real leg.
     expect(itinerary.routeStops.map((s) => s.order), [1, 2, 3]);
-    expect(itinerary.routeStops.first.transitDetail, '0.1 km · 1 min walk');
+    final hop = itinerary.routeStops.first.hop!;
+    expect(hop.walkMinutes, 1);
+    expect(hop.distanceKm, 0.09);
+    // These stops are a block apart, so the backend skipped ODsay entirely.
+    // An empty option list is normal, not a failure — a spent daily quota
+    // (HTTP 429) produces exactly the same thing.
+    expect(hop.options, isEmpty);
+    expect(hop.hasAnything, isTrue);
+
+    // The last stop of a day has nothing after it to route to.
+    expect(itinerary.routeStops.last.hop, isNull);
     expect(itinerary.preferences.dateRange, 'October 12-14');
+  });
+
+  test('carries ODsay options through when the backend has them', () {
+    // Shape from models/travel_state.dart's TransitOption, which mirrors the
+    // backend's ODsay extraction. Quota was spent while this was built, so
+    // the fixture stands in for a leg that did get options.
+    final leg = api.TransitLeg.fromJson(const {
+      'distance_km': 9.92,
+      'walk_minutes': 149,
+      'car_minutes': 20,
+      'kakao_walk_url': 'https://m.map.kakao.com/scheme/route?by=foot',
+      'transit_options': [
+        {
+          'type': 1,
+          'type_label': 'Subway',
+          'total_minutes': 34,
+          'fare_won': 1500,
+          'walk_meters': 610,
+          'transfers': 1,
+          'segments': ['Line 3', 'Line 2'],
+        },
+      ],
+    });
+
+    final hop = toUiHop(leg);
+
+    expect(hop.options, hasLength(1));
+    expect(hop.options.single.label, 'Subway');
+    expect(hop.options.single.isSubway, isTrue);
+    expect(hop.options.single.segments, ['Line 3', 'Line 2']);
+    expect(hop.options.single.fareWon, 1500);
+    expect(hop.walkMinutes, 149);
+  });
+
+  test('an unlabelled option still gets a usable chip label', () {
+    final leg = api.TransitLeg.fromJson(const {
+      'transit_options': [
+        {'total_minutes': 12, 'segments': <String>[]},
+      ],
+    });
+
+    expect(toUiHop(leg).options.single.label, 'Transit');
   });
 }

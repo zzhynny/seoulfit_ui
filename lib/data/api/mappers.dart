@@ -128,12 +128,14 @@ List<RouteStop> toUiRouteStops(api.Itinerary itinerary) {
     for (var i = 0; i < day.pois.length; i++) {
       final poi = day.pois[i];
       final leg = i < day.transitLegs.length ? day.transitLegs[i] : null;
+      final isLastOfDay = i == day.pois.length - 1;
       stops.add(RouteStop(
         order: order++,
         nameEn: poi.name,
         arrivalTime: clockLabel(offset),
-        transitMode: leg?.walkMinutes != null ? 'Walk' : 'Transit',
-        transitDetail: _legDetail(leg),
+        // No hop after the final stop of a day — the next stop belongs to a
+        // different day and the planner routes no leg across that boundary.
+        hop: (leg == null || isLastOfDay) ? null : toUiHop(leg),
       ));
       final stay = poi.stayMinutes > 0 ? poi.stayMinutes : _defaultStayMinutes;
       offset += stay + travelMinutesAfter(day.transitLegs, i, day.pois.length);
@@ -142,14 +144,30 @@ List<RouteStop> toUiRouteStops(api.Itinerary itinerary) {
   return stops;
 }
 
-String? _legDetail(api.TransitLeg? leg) {
-  if (leg == null || !leg.hasAnyData) return null;
-  final parts = <String>[
-    if (leg.distanceKm != null) '${leg.distanceKm!.toStringAsFixed(1)} km',
-    if (leg.walkMinutes != null) '${leg.walkMinutes} min walk',
-  ];
-  return parts.isEmpty ? null : parts.join(' · ');
-}
+/// Carries a backend leg across, ODsay options included.
+///
+/// The options list is routinely empty — the backend skips ODsay for stops
+/// within walking distance, and a spent daily quota (HTTP 429) yields the
+/// same empty list. Neither is an error, so the hop still carries its
+/// walk/car estimate and Kakao links.
+TransitHop toUiHop(api.TransitLeg leg) => TransitHop(
+      distanceKm: leg.distanceKm,
+      walkMinutes: leg.walkMinutes,
+      carMinutes: leg.carMinutes,
+      kakaoWalkUrl: leg.kakaoWalkUrl,
+      kakaoCarUrl: leg.kakaoCarUrl,
+      options: [
+        for (final option in leg.transitOptions)
+          TransitChoice(
+            label: option.typeLabel.isEmpty ? 'Transit' : option.typeLabel,
+            segments: option.segments,
+            totalMinutes: option.totalMinutes,
+            fareWon: option.fareWon,
+            transfers: option.transfers,
+            walkMeters: option.walkMeters,
+          ),
+      ],
+    );
 
 Itinerary toUiItinerary(api.Itinerary itinerary, api.TravelState state) {
   return Itinerary(
