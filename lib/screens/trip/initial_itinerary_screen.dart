@@ -4,6 +4,7 @@ import '../../theme/theme.dart';
 import '../../widgets/activity_card.dart';
 import '../../widgets/day_tabs.dart';
 import '../../widgets/primary_button.dart';
+import 'place_detail_sheet.dart';
 
 class InitialItineraryScreen extends StatefulWidget {
   const InitialItineraryScreen({
@@ -75,7 +76,10 @@ class _InitialItineraryScreenState extends State<InitialItineraryScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               for (final activity in day.activities) ...[
-                ActivityCard(activity: activity),
+                ActivityCard(
+                  activity: activity,
+                  onTap: () => showPlaceDetailSheet(context, activity),
+                ),
                 const SizedBox(height: 12),
               ],
             ],

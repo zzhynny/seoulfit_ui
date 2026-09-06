@@ -6,13 +6,17 @@ import 'poi_photo.dart';
 
 /// A read-only itinerary activity row (used on Initial Itinerary).
 class ActivityCard extends StatelessWidget {
-  const ActivityCard({super.key, required this.activity});
+  const ActivityCard({super.key, required this.activity, this.onTap});
 
   final TripActivity activity;
 
+  /// Opens the stop's detail sheet. Optional so the mock build, which has no
+  /// backend to ask for arrival tips, can leave the card inert.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -56,6 +60,13 @@ class ActivityCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (onTap == null) return card;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: card,
     );
   }
 }

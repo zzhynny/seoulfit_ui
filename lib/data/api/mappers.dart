@@ -89,6 +89,7 @@ TripActivity toUiActivity(api.Poi poi, String time) {
     description: poi.notes.isNotEmpty ? poi.notes : poi.address,
     lat: poi.lat,
     lng: poi.lng,
+    poiType: poi.type,
   );
 }
 

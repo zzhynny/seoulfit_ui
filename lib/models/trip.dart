@@ -33,6 +33,7 @@ class TripActivity {
     this.aiInsight,
     this.lat,
     this.lng,
+    this.poiType = '',
   });
 
   final String id;
@@ -50,6 +51,11 @@ class TripActivity {
   final double? lat;
   final double? lng;
 
+  /// The planner's raw `poi_type` (`restaurant`, `cafe`, `history`, …), kept
+  /// alongside the coarser [category] because /poi-detail and
+  /// /poi-arrival-tip take it to disambiguate a bare name. Empty for mocks.
+  final String poiType;
+
   TripActivity copyWith({bool? included, bool? visited}) => TripActivity(
         id: id,
         time: time,
@@ -62,6 +68,7 @@ class TripActivity {
         aiInsight: aiInsight,
         lat: lat,
         lng: lng,
+        poiType: poiType,
       );
 }
 
