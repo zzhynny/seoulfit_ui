@@ -1,3 +1,4 @@
+import '../../models/plan_check.dart';
 import '../../models/travel_state.dart' as api;
 import '../../models/trip.dart';
 import '../../services/api_service.dart';
@@ -57,12 +58,16 @@ class ApiTripRepository implements TripRepository {
   }
 
   /// Re-runs Critic → Repair → Critic with the stops the user switched off on
-  /// "Make This Trip Yours" removed, and persists the result on the thread so
-  /// later edits build on it.
+  /// "Make This Trip Yours" removed and any swaps applied, and persists the
+  /// result on the thread so later edits build on it.
   @override
-  Future<Itinerary> reoptimizeItinerary(Itinerary itinerary) async {
+  Future<(Itinerary, ReoptimizeResult)> reoptimizeItinerary(
+    Itinerary itinerary, {
+    Map<String, String> swappedSlots = const {},
+  }) async {
     final response = await _api.revalidate(
       excludedIds: excludedIdsOf(itinerary),
+      swappedSlots: swappedSlots,
     );
 
     final repaired = response['repaired_itinerary'];
@@ -73,10 +78,50 @@ class ApiTripRepository implements TripRepository {
     // Preferences aren't part of the revalidate response — carry over the
     // ones already on screen rather than spending a round-trip on /state.
     final rebuilt = api.Itinerary.fromJson(Map<String, dynamic>.from(repaired));
-    return Itinerary(
+    final rebuiltUi = Itinerary(
       preferences: itinerary.preferences,
       days: rebuilt.days.map(toUiDay).toList(),
       routeStops: toUiRouteStops(rebuilt),
     );
+
+    return (rebuiltUi, _resultOf(response));
   }
+
+  @override
+  Future<List<SwapCandidate>> fetchSwapCandidates({
+    required int day,
+    required int slotIndex,
+    required String currentPoi,
+    required String dayArea,
+    String currentPoiType = '',
+    List<String> excludedIds = const [],
+  }) async {
+    final rows = await _api.fetchSwapCandidates(
+      day: day,
+      slotIndex: slotIndex,
+      currentPoi: currentPoi,
+      dayArea: dayArea,
+      currentPoiType: currentPoiType,
+      excludedIds: excludedIds,
+    );
+    return rows.map(SwapCandidate.fromJson).toList();
+  }
+}
+
+ReoptimizeResult _resultOf(Map<String, dynamic> response) {
+  CriticReport side(String key) {
+    final raw = response[key];
+    return raw is Map
+        ? CriticReport.fromJson(Map<String, dynamic>.from(raw))
+        : CriticReport.empty;
+  }
+
+  return ReoptimizeResult(
+    before: side('before'),
+    after: side('after'),
+    repairLog: [
+      for (final line in (response['repair_log'] as List? ?? const []))
+        line.toString(),
+    ],
+  );
 }

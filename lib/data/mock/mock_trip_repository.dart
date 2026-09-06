@@ -1,3 +1,4 @@
+import '../../models/plan_check.dart';
 import '../../models/trip.dart';
 import '../repositories/trip_repository.dart';
 
@@ -37,11 +38,34 @@ class MockTripRepository implements TripRepository {
   }
 
   @override
-  Future<Itinerary> reoptimizeItinerary(Itinerary itinerary) async {
+  Future<(Itinerary, ReoptimizeResult)> reoptimizeItinerary(
+    Itinerary itinerary, {
+    Map<String, String> swappedSlots = const {},
+  }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     seedItinerary = itinerary;
-    return itinerary;
+    // Nothing critiques the mock plan, so the sheet renders its clean state.
+    return (
+      itinerary,
+      const ReoptimizeResult(
+        before: CriticReport.empty,
+        after: CriticReport.empty,
+        repairLog: [],
+      ),
+    );
   }
+
+  /// No planner behind the mock, so no candidates to rank.
+  @override
+  Future<List<SwapCandidate>> fetchSwapCandidates({
+    required int day,
+    required int slotIndex,
+    required String currentPoi,
+    required String dayArea,
+    String currentPoiType = '',
+    List<String> excludedIds = const [],
+  }) async =>
+      const [];
 
   List<TripDay> _buildDays() {
     return [

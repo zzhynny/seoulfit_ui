@@ -118,8 +118,14 @@ GoRouter buildAppRouter() {
         path: AppRoutes.craftingItinerary,
         builder: (context, state) => CraftingItineraryScreen(
           onDone: () async {
-            await context.read<TripProvider>().generateItinerary();
-            if (context.mounted) context.go(AppRoutes.initialItinerary);
+            try {
+              await context.read<TripProvider>().generateItinerary();
+              if (context.mounted) context.go(AppRoutes.initialItinerary);
+            } catch (_) {
+              // The planner turn can take 180s and can fail outright. Without
+              // this the loader spins forever with no way back.
+              if (context.mounted) context.go(AppRoutes.error);
+            }
           },
         ),
       ),
@@ -127,8 +133,12 @@ GoRouter buildAppRouter() {
         path: AppRoutes.reoptimizing,
         builder: (context, state) => ReoptimizingScreen(
           onDone: () async {
-            await context.read<TripProvider>().reoptimize();
-            if (context.mounted) context.go(AppRoutes.trip);
+            try {
+              await context.read<TripProvider>().reoptimize();
+              if (context.mounted) context.go(AppRoutes.trip);
+            } catch (_) {
+              if (context.mounted) context.go(AppRoutes.error);
+            }
           },
         ),
       ),

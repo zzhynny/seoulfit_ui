@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../data/repositories/trip_repository.dart';
+import '../models/plan_check.dart';
 import '../models/trip.dart';
 
 class TripProvider extends ChangeNotifier {
@@ -55,9 +56,42 @@ class TripProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Stops the user chose to replace, as `current name -> replacement name`.
+  /// Applied on the next [reoptimize] and cleared once the backend has
+  /// persisted them, so a later edit doesn't re-apply a swap already baked
+  /// into the plan.
+  final Map<String, String> _pendingSwaps = {};
+  Map<String, String> get pendingSwaps => Map.unmodifiable(_pendingSwaps);
+
+  void swapActivity(String activityId, String replacementName) {
+    _pendingSwaps[activityId] = replacementName;
+    notifyListeners();
+  }
+
+  String? pendingSwapFor(String activityId) => _pendingSwaps[activityId];
+
+  /// The critic's before/after verdict from the last [reoptimize]. Null until
+  /// the user has optimized at least once.
+  ReoptimizeResult? _lastPlanCheck;
+  ReoptimizeResult? get lastPlanCheck => _lastPlanCheck;
+
+  /// Takes the pending verdict and clears it, so landing on Final Route shows
+  /// the sheet exactly once per optimize rather than on every tab switch.
+  ReoptimizeResult? consumePlanCheck() {
+    final result = _lastPlanCheck;
+    _lastPlanCheck = null;
+    return result;
+  }
+
   Future<void> reoptimize() async {
     if (_itinerary == null) return;
-    _itinerary = await _repository.reoptimizeItinerary(_itinerary!);
+    final (itinerary, result) = await _repository.reoptimizeItinerary(
+      _itinerary!,
+      swappedSlots: Map.of(_pendingSwaps),
+    );
+    _itinerary = itinerary;
+    _lastPlanCheck = result;
+    _pendingSwaps.clear();
     notifyListeners();
   }
 
@@ -104,6 +138,8 @@ class TripProvider extends ChangeNotifier {
     _stampCollectionEnabled = false;
     _hasRespondedToStampOptIn = false;
     _tripCompleted = false;
+    _pendingSwaps.clear();
+    _lastPlanCheck = null;
     notifyListeners();
   }
 

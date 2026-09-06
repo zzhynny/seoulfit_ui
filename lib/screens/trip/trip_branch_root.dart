@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/trip_provider.dart';
 import 'final_route_screen.dart';
+import 'plan_check_sheet.dart';
 import 'trip_empty_state_screen.dart';
 import 'trip_reset_confirm_sheet.dart';
 
@@ -33,6 +34,13 @@ class _TripBranchRootState extends State<TripBranchRoot> {
   void initState() {
     super.initState();
     context.read<TripProvider>().loadCurrentTrip();
+    // The critic already ran; this is the one place its verdict is visible.
+    // Deferred to after the first frame — a modal can't open during build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final result = context.read<TripProvider>().consumePlanCheck();
+      if (result != null) showPlanCheckSheet(context, result);
+    });
   }
 
   @override
