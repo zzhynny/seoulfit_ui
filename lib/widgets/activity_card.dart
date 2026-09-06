@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../theme/theme.dart';
 import 'category_tag.dart';
-import 'placeholder_photo.dart';
+import 'poi_photo.dart';
 
 /// A read-only itinerary activity row (used on Initial Itinerary).
 class ActivityCard extends StatelessWidget {
@@ -23,7 +23,7 @@ class ActivityCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PlaceholderPhoto(size: 80, borderRadius: 12, asset: activity.imageAsset),
+          PoiPhoto(name: activity.title, size: 80, asset: activity.imageAsset),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -96,7 +96,7 @@ class ToggleActivityCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                PlaceholderPhoto(size: 64, borderRadius: 12, asset: activity.imageAsset),
+                PoiPhoto(name: activity.title, size: 64, asset: activity.imageAsset),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -190,7 +190,7 @@ class CheckInActivityCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            PlaceholderPhoto(size: 64, borderRadius: 12, asset: activity.imageAsset),
+            PoiPhoto(name: activity.title, size: 64, asset: activity.imageAsset),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

@@ -39,3 +39,18 @@ class AppColors {
   static const Color success = primary;
   static const Color warning = Color(0xFFE0A756);
 }
+
+/// Per-day route colours for the map.
+///
+/// Taken verbatim from the Flutter app's `kDayColors`: these were picked for
+/// marker legibility — white numerals stay readable on every one — not to
+/// match the palette above. Changing them to sit prettier against the sage
+/// theme is how a marker becomes unreadable. Cycles when a trip runs longer
+/// than the list.
+const List<Color> kDayColors = [
+  Color(0xFF4FD1C5), // mint
+  Color(0xFF457B9D), // sky blue
+  Color(0xFFF59E0B), // amber
+  Color(0xFF7C3AED), // violet
+  Color(0xFFE63946), // persimmon
+];

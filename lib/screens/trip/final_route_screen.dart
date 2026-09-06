@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/trip.dart';
 import '../../theme/theme.dart';
+import '../../widgets/route_map.dart';
 
 class FinalRouteScreen extends StatefulWidget {
   const FinalRouteScreen({
@@ -77,18 +78,7 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    height: 200,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F5F4),
-                      border: Border.all(color: AppColors.borderAlt),
-                    ),
-                    child: Image.asset('assets/images/final-route-map.png', fit: BoxFit.cover),
-                  ),
-                ),
+                child: RouteMap(itinerary: widget.itinerary),
               ),
               if (_showTransitTip)
                 Padding(

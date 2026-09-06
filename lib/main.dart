@@ -48,6 +48,9 @@ class SeoulFitApp extends StatelessWidget {
 
     return MultiProvider(
       providers: [
+        // Nullable on purpose: mock builds provide null, and PoiPhoto reads
+        // it as `ApiService?` so it simply doesn't fetch.
+        Provider<ApiService?>.value(value: kUseMocks ? null : api),
         Provider<ChatRepository>(
           create: (_) =>
               kUseMocks ? MockChatRepository() : ApiChatRepository(api),

@@ -41,6 +41,35 @@ class ApiChatRepository implements ChatRepository {
       // appear. Pressing it lands on Confirm Slots, which reads the same
       // state back via GET /state.
       readyToBuild: state.currentStep == 'confirm',
+      quickReplies: _quickRepliesFor(state.currentStep),
     );
+  }
+}
+
+/// One-tap answers for the step the backend is on.
+///
+/// This is deliberately only the two steps whose own question text offers an
+/// escape hatch — `region` says "you can skip this, say 'anywhere'" and
+/// `restrictions` says "(or 'none')". The chip is just that offer made
+/// tappable.
+///
+/// `collecting_purpose` gets none on purpose. graph.py's comment on
+/// FIELD_QUESTIONS records that the question was rewritten to be open
+/// specifically because listing categories primed people to answer in the
+/// vocabulary that throws away the most information — 49% of the corpus's
+/// itineraries hook on interests a fixed category list cannot express
+/// (K-drama locations, halal food, pet-friendly, backpacking). Category
+/// chips here would reintroduce exactly that priming through the UI.
+///
+/// `collecting_dates` gets none because no canned date is a useful answer,
+/// and `confirm` needs none — the "Build My Itinerary" CTA already is one.
+List<String> _quickRepliesFor(String step) {
+  switch (step) {
+    case 'collecting_region':
+      return const ['Anywhere'];
+    case 'collecting_restrictions':
+      return const ['None'];
+    default:
+      return const [];
   }
 }

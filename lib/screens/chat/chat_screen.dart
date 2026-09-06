@@ -21,6 +21,11 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   ChatMode _mode = ChatMode.plan;
   List<ChatMessage> _messages = [];
+
+  /// A real turn takes seconds against Gemini. Without this, tapping a quick
+  /// reply twice sends two turns and the second answer lands on a question
+  /// the backend has already moved past.
+  bool _sending = false;
   final _composerController = TextEditingController();
   int _travelerCount = 2;
 
@@ -36,16 +41,21 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _messages = messages);
   }
 
-  Future<void> _send() async {
-    final text = _composerController.text.trim();
-    if (text.isEmpty) return;
+  Future<void> _send([String? preset]) async {
+    final text = (preset ?? _composerController.text).trim();
+    if (text.isEmpty || _sending) return;
     setState(() {
+      _sending = true;
       _messages = [..._messages, ChatMessage(sender: ChatSender.user, text: text)];
       _composerController.clear();
     });
-    final reply = await context.read<ChatRepository>().sendMessage(text);
-    if (!mounted) return;
-    setState(() => _messages = [..._messages, reply]);
+    try {
+      final reply = await context.read<ChatRepository>().sendMessage(text);
+      if (!mounted) return;
+      setState(() => _messages = [..._messages, reply]);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   @override
@@ -69,6 +79,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   onTravelerChange: (v) => setState(() => _travelerCount = v),
                   composerController: _composerController,
                   onSend: _send,
+                  onQuickReply: _send,
                   onBuildItinerary: widget.onBuildItinerary,
                 )
               : _OnTripView(onOpenTopic: widget.onOpenHelpTopic),
@@ -180,6 +191,7 @@ class _PlanView extends StatelessWidget {
     required this.composerController,
     required this.onSend,
     required this.onBuildItinerary,
+    required this.onQuickReply,
   });
 
   final List<ChatMessage> messages;
@@ -189,6 +201,7 @@ class _PlanView extends StatelessWidget {
   final TextEditingController composerController;
   final VoidCallback onSend;
   final VoidCallback onBuildItinerary;
+  final ValueChanged<String> onQuickReply;
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +292,27 @@ class _PlanView extends StatelessWidget {
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
                 ),
               ),
+            ),
+          ),
+        if (messages.isNotEmpty && messages.last.quickReplies.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Row(
+              children: [
+                for (final reply in messages.last.quickReplies)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      label: Text(reply, style: AppTextStyles.bodySmall),
+                      onPressed: () => onQuickReply(reply),
+                      backgroundColor: AppColors.surface,
+                      side: const BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         Container(

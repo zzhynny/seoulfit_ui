@@ -6,6 +6,7 @@ class ChatMessage {
     required this.text,
     this.showTravelerSelector = false,
     this.readyToBuild = false,
+    this.quickReplies = const [],
   });
 
   final ChatSender sender;
@@ -13,6 +14,11 @@ class ChatMessage {
 
   /// Renders the inline +/- traveller stepper under this bubble.
   final bool showTravelerSelector;
+
+  /// One-tap answers offered under the composer for the question this
+  /// message asked. Deliberately sparse — see [ApiChatRepository] for why
+  /// most steps offer none.
+  final List<String> quickReplies;
 
   /// Reveals the "Build My Itinerary" CTA. Separate from
   /// [showTravelerSelector] because the two coincide only in the mock: the
