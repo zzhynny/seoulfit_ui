@@ -1,0 +1,4 @@
+tags:
+  # Hits the live FastAPI backend on localhost:8000. Skip with:
+  #   flutter test --exclude-tags backend
+  backend:

@@ -26,6 +26,19 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>SeoulFit uses the camera to identify Seoul landmarks with Seoul Lens.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SeoulFit uses your location to find nearby emergency rooms, cafes and restaurants while you travel.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SeoulFit accesses your photos so you can identify Seoul landmarks with Seoul Lens.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
