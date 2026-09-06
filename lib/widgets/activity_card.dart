@@ -3,6 +3,7 @@ import '../models/trip.dart';
 import '../theme/theme.dart';
 import 'category_tag.dart';
 import 'poi_photo.dart';
+import 'poi_summary.dart';
 
 /// A read-only itinerary activity row (used on Initial Itinerary).
 class ActivityCard extends StatelessWidget {
@@ -54,11 +55,13 @@ class ActivityCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(activity.title, style: AppTextStyles.headingSmall.copyWith(fontSize: 16)),
                 const SizedBox(height: 4),
-                Text(
-                  activity.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySmall,
+                // The place's own description, fetched per card. The
+                // planner's note stands in until it lands, so the line is
+                // never blank and never a spinner.
+                PoiSummary(
+                  name: activity.title,
+                  type: activity.poiType,
+                  fallback: activity.description,
                 ),
               ],
             ),
