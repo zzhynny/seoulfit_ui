@@ -54,7 +54,10 @@ void main() {
     expect(days.single.map((s) => s.order), [1, 3]);
   });
 
-  test('excluded stops are neither plotted nor counted', () {
+  test('an excluded stop is not plotted but still consumes its number', () {
+    // The printed route list numbers every stop, switched off or not. Having
+    // the map skip it from the count too renumbered everything after it, so
+    // marker 2 pointed at row 3.
     final days = mappableDays(itineraryOf([
       [
         stop('A', lat: 37.57, lng: 126.97),
@@ -63,7 +66,7 @@ void main() {
       ],
     ]));
 
-    expect(days.single.map((s) => s.order), [1, 2]);
+    expect(days.single.map((s) => s.order), [1, 3]);
   });
 
   test('a day with nothing plottable is dropped entirely', () {
@@ -140,6 +143,22 @@ void main() {
       // disagree with the route list printed under the map.
       expect(mappableDays(threeDays(), onlyDay: 2).single.single.order, 3);
       expect(mappableDays(threeDays(), onlyDay: 3).single.single.order, 4);
+    });
+
+    test('a skipped day consumes its numbers even with a stop switched off',
+        () {
+      final itinerary = itineraryOf([
+        [
+          stop('A', lat: 37.57, lng: 126.97),
+          stop('Off', lat: 37.575, lng: 126.975, included: false),
+        ],
+        [stop('C', lat: 37.55, lng: 126.92)],
+      ]);
+
+      // Day 1 holds numbers 1 and 2 whether or not its second stop is on, so
+      // day 2's stop is 3 either way.
+      expect(mappableDays(itinerary, onlyDay: 2).single.single.order, 3);
+      expect(mappableDays(itinerary).last.single.order, 3);
     });
 
     test('null shows the whole trip', () {

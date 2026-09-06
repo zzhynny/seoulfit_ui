@@ -163,6 +163,19 @@ class ItineraryDay {
 /// Distance + walk/car ETA + Kakao Map deep links between two consecutive
 /// POIs in a single day.
 class TransitLeg {
+  /// POI names this leg connects. The backend always sends them
+  /// (compute_transit_legs sets from_name/to_name).
+  ///
+  /// Unused while legs are read straight off an itinerary day, where they
+  /// are one per consecutive pair and index matching is exact — verified
+  /// against a live payload: every day has len(pois)-1 legs with sequential
+  /// from_idx. They are needed the moment a *recomputed* list from POST
+  /// /transit-legs is used instead: that one is flat across the whole
+  /// selection and re-indexed, so position stops meaning anything once the
+  /// view filters to a single day.
+  final String? fromName;
+  final String? toName;
+
   final double? distanceKm;
   final int? walkMinutes;
   final int? carMinutes;
@@ -171,6 +184,8 @@ class TransitLeg {
   final List<TransitOption> transitOptions;
 
   const TransitLeg({
+    this.fromName,
+    this.toName,
     this.distanceKm,
     this.walkMinutes,
     this.carMinutes,
@@ -180,6 +195,8 @@ class TransitLeg {
   });
 
   factory TransitLeg.fromJson(Map<String, dynamic> json) => TransitLeg(
+        fromName: json['from_name'] as String?,
+        toName: json['to_name'] as String?,
         distanceKm: (json['distance_km'] as num?)?.toDouble(),
         walkMinutes: (json['walk_minutes'] as num?)?.toInt(),
         carMinutes: (json['car_minutes'] as num?)?.toInt(),

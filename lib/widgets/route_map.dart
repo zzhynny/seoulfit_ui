@@ -170,19 +170,19 @@ List<List<MappedStop>> mappableDays(Itinerary itinerary, {int? onlyDay}) {
     // Numbering still counts the skipped days, so a marker keeps the same
     // number whether the map is filtered or not.
     if (onlyDay != null && day.dayNumber != onlyDay) {
-      order += day.activities.where((a) => a.included).length;
+      order += day.activities.length;
       continue;
     }
     final stops = <MappedStop>[];
     for (final activity in day.activities) {
-      if (!activity.included) continue;
       final lat = activity.lat;
       final lng = activity.lng;
-      // Numbering counts every included stop, plotted or not, so a stop the
-      // planner couldn't geocode leaves a gap rather than shifting every
-      // number after it out of step with the list.
+      // Numbering counts every stop the route list counts — switched off or
+      // ungeocoded included — so a marker's number always names the same row
+      // in that list. Skipping either from the count instead renumbered
+      // everything after it and the two silently disagreed.
       final current = order++;
-      if (lat == null || lng == null) continue;
+      if (!activity.included || lat == null || lng == null) continue;
       stops.add(MappedStop(current, LatLng(lat, lng), day.dayNumber));
     }
     if (stops.isNotEmpty) days.add(stops);
