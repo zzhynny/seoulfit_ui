@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../../models/chat.dart';
 import '../../models/companion.dart';
+import 'date_range_answer.dart';
 import '../../providers/companion_provider.dart';
 import '../../theme/theme.dart';
 
@@ -39,6 +40,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final messages = await context.read<ChatRepository>().fetchConversation();
     if (!mounted) return;
     setState(() => _messages = messages);
+  }
+
+  Future<void> _pickDates() async {
+    final answer = await pickTravelDates(context);
+    if (answer != null) await _send(answer);
   }
 
   Future<void> _send([String? preset]) async {
@@ -80,6 +86,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   composerController: _composerController,
                   onSend: _send,
                   onQuickReply: _send,
+                  onPickDates: _pickDates,
                   onBuildItinerary: widget.onBuildItinerary,
                 )
               : _OnTripView(onOpenTopic: widget.onOpenHelpTopic),
@@ -192,6 +199,7 @@ class _PlanView extends StatelessWidget {
     required this.onSend,
     required this.onBuildItinerary,
     required this.onQuickReply,
+    required this.onPickDates,
   });
 
   final List<ChatMessage> messages;
@@ -202,6 +210,7 @@ class _PlanView extends StatelessWidget {
   final VoidCallback onSend;
   final VoidCallback onBuildItinerary;
   final ValueChanged<String> onQuickReply;
+  final VoidCallback onPickDates;
 
   @override
   Widget build(BuildContext context) {
@@ -294,6 +303,11 @@ class _PlanView extends StatelessWidget {
               ),
             ),
           ),
+        // The dates question is picker-only; the backend bounces typed
+        // answers back to the calendar.
+        if (messages.isNotEmpty &&
+            messages.last.awaitingField == 'travel_dates')
+          DateRangeAnswerBar(onPick: onPickDates),
         if (messages.isNotEmpty && messages.last.quickReplies.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),

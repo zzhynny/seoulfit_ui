@@ -7,6 +7,7 @@ class ChatMessage {
     this.showTravelerSelector = false,
     this.readyToBuild = false,
     this.quickReplies = const [],
+    this.awaitingField,
   });
 
   final ChatSender sender;
@@ -19,6 +20,11 @@ class ChatMessage {
   /// message asked. Deliberately sparse — see [ApiChatRepository] for why
   /// most steps offer none.
   final List<String> quickReplies;
+
+  /// The backend's `current_field` — the one slot this message is asking
+  /// about. Drives the calendar affordance, which only makes sense while the
+  /// buddy is waiting on `travel_dates`.
+  final String? awaitingField;
 
   /// Reveals the "Build My Itinerary" CTA. Separate from
   /// [showTravelerSelector] because the two coincide only in the mock: the

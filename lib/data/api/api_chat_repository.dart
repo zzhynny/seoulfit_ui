@@ -42,6 +42,7 @@ class ApiChatRepository implements ChatRepository {
       // state back via GET /state.
       readyToBuild: state.currentStep == 'confirm',
       quickReplies: _quickRepliesFor(state.currentField),
+      awaitingField: state.currentField,
     );
   }
 }
