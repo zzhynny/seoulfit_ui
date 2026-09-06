@@ -73,6 +73,25 @@ class ApiService {
     }
   }
 
+  /// Reads the thread's current state without invoking the graph (GET /state).
+  ///
+  /// Cheap — no LLM call — so the Trip tab can re-read the persisted itinerary
+  /// on entry rather than caching it client-side. Returns a state with a null
+  /// itinerary when nothing has been generated on this thread yet, which is
+  /// what puts the Trip tab into its empty state.
+  Future<TravelState> getState() async {
+    final response = await http
+        .get(Uri.parse('$_base/state?thread_id=$threadId'))
+        .timeout(chatTimeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Backend error ${response.statusCode}: ${response.body}');
+    }
+    return TravelState.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
   /// Resets the conversation on the backend.
   Future<void> reset() async {
     await http
@@ -216,6 +235,30 @@ class ApiService {
       throw Exception('Backend error ${response.statusCode}: ${response.body}');
     }
     return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
+
+  /// Live-scraped Seoul ticket events for one genre.
+  ///
+  /// The backend swallows every upstream failure and returns `[]` rather than
+  /// a 5xx, so an empty list here means "nothing to show", not "broken".
+  Future<List<Map<String, dynamic>>> fetchEvents(String category) async {
+    final response = await http
+        .post(
+          Uri.parse('$_base/events'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'category': category}),
+        )
+        .timeout(const Duration(seconds: 25));
+
+    if (response.statusCode != 200) {
+      throw Exception('Backend error ${response.statusCode}: ${response.body}');
+    }
+    final list =
+        jsonDecode(utf8.decode(response.bodyBytes)) as List? ?? const [];
+    return [
+      for (final e in list)
+        if (e is Map) Map<String, dynamic>.from(e),
+    ];
   }
 
   /// Sends one trip's check-in snapshot to the backend. Write-only and

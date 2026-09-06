@@ -16,10 +16,11 @@ class MockTripRepository implements TripRepository {
   Future<TripPreferences> fetchDefaultPreferences() async {
     return const TripPreferences(
       dateRange: 'Oct 12 – Oct 16',
-      duration: '5 Days (Autumn)',
+      region: 'Jongno, Hongdae',
       travelStyle: 'Culture, K-Pop',
       groupSize: '2 Adults',
       dietaryNotes: 'Vegan Options',
+      pace: 'Relaxed',
     );
   }
 

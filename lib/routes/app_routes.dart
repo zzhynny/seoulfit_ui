@@ -303,8 +303,11 @@ GoRouter buildAppRouter() {
               path: AppRoutes.lens,
               builder: (context, state) => LensScanScreen(
                 onScan: (source) async {
-                  final result = await context.read<LensRepository>().scanPlace();
-                  if (context.mounted) {
+                  final result =
+                      await context.read<LensRepository>().scanPlace(source);
+                  // Null means the user dismissed the picker — stay on the
+                  // scan screen rather than pushing an empty result.
+                  if (result != null && context.mounted) {
                     context.push('${AppRoutes.lens}/result', extra: result);
                   }
                 },
@@ -364,10 +367,11 @@ GoRouter buildAppRouter() {
 
 const _kDefaultPreferences = TripPreferences(
   dateRange: 'Oct 12 – Oct 16',
-  duration: '5 Days (Autumn)',
+  region: 'Jongno, Hongdae',
   travelStyle: 'Culture, K-Pop',
   groupSize: '2 Adults',
   dietaryNotes: 'Vegan Options',
+  pace: 'Relaxed',
 );
 
 void _showHelpTopicSheet(BuildContext context, String title) {

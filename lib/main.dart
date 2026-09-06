@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'data/api/api_chat_repository.dart';
+import 'data/api/api_events_repository.dart';
+import 'data/api/api_lens_repository.dart';
+import 'data/api/api_profile_repository.dart';
+import 'data/api/api_trip_repository.dart';
 import 'data/mock/mock_chat_repository.dart';
 import 'data/mock/mock_events_repository.dart';
 import 'data/mock/mock_lens_repository.dart';
@@ -14,8 +19,18 @@ import 'data/repositories/trip_repository.dart';
 import 'providers/companion_provider.dart';
 import 'providers/trip_provider.dart';
 import 'routes/app_routes.dart';
+import 'services/api_service.dart';
 import 'theme/theme.dart';
 import 'widgets/figma_chrome.dart';
+
+/// Runs against the mock repositories instead of the FastAPI backend:
+///
+///   flutter run --dart-define=USE_MOCKS=true
+///
+/// Kept because the mocks carry the Figma-parity content the screens were
+/// designed against, and because the UI has to stay demoable with no backend
+/// and no network.
+const kUseMocks = bool.fromEnvironment('USE_MOCKS');
 
 void main() {
   runApp(const SeoulFitApp());
@@ -26,14 +41,37 @@ class SeoulFitApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // One ApiService, so one thread_id: the itinerary is a side effect of the
+    // chat conversation, so Chat and Trip must talk to the same LangGraph
+    // thread. Separate instances would plan against an empty set of answers.
+    final api = ApiService();
+
     return MultiProvider(
       providers: [
-        Provider<ChatRepository>(create: (_) => MockChatRepository()),
-        Provider<TripRepository>(create: (_) => MockTripRepository()),
-        Provider<LensRepository>(create: (_) => MockLensRepository()),
-        Provider<EventsRepository>(create: (_) => MockEventsRepository()),
-        Provider<ProfileRepository>(create: (_) => MockProfileRepository()),
+        Provider<ChatRepository>(
+          create: (_) =>
+              kUseMocks ? MockChatRepository() : ApiChatRepository(api),
+        ),
+        Provider<TripRepository>(
+          create: (_) =>
+              kUseMocks ? MockTripRepository() : ApiTripRepository(api),
+        ),
+        Provider<LensRepository>(
+          create: (_) =>
+              kUseMocks ? MockLensRepository() : ApiLensRepository(),
+        ),
+        Provider<EventsRepository>(
+          create: (_) =>
+              kUseMocks ? MockEventsRepository() : ApiEventsRepository(api),
+        ),
         ChangeNotifierProvider(create: (_) => CompanionProvider()),
+        // Depends on CompanionProvider: the profile's name is the one entered
+        // during onboarding, which lives there and can change afterwards.
+        ProxyProvider<CompanionProvider, ProfileRepository>(
+          update: (_, companion, _) => kUseMocks
+              ? MockProfileRepository()
+              : ApiProfileRepository(api, displayName: companion.userName),
+        ),
         ChangeNotifierProvider(
           create: (context) => TripProvider(context.read<TripRepository>()),
         ),

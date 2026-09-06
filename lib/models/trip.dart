@@ -31,6 +31,8 @@ class TripActivity {
     this.included = true,
     this.visited = false,
     this.aiInsight,
+    this.lat,
+    this.lng,
   });
 
   final String id;
@@ -43,6 +45,11 @@ class TripActivity {
   final bool visited;
   final String? aiInsight;
 
+  /// Coordinates, when this activity came from a real backend POI. Null for
+  /// mock data. Final Route draws its map from these.
+  final double? lat;
+  final double? lng;
+
   TripActivity copyWith({bool? included, bool? visited}) => TripActivity(
         id: id,
         time: time,
@@ -53,6 +60,8 @@ class TripActivity {
         included: included ?? this.included,
         visited: visited ?? this.visited,
         aiInsight: aiInsight,
+        lat: lat,
+        lng: lng,
       );
 }
 
@@ -74,20 +83,40 @@ class TripDay {
   int get visitedCount => activities.where((a) => a.visited).length;
 }
 
+/// The slots the planner collects over chat, shown back on Confirm Slots.
+///
+/// These are the backend's six `ALL_FIELDS`, not an independent design: what
+/// this screen shows has to be what the planner will actually use. The mock's
+/// old `duration` field is gone — no backend slot holds it, it's phrasing
+/// inside [dateRange] ("Oct 12 for 5 days") — and `region` and `pace`, which
+/// the backend does collect, take its place.
 class TripPreferences {
   const TripPreferences({
     required this.dateRange,
-    required this.duration,
+    required this.region,
     required this.travelStyle,
     required this.groupSize,
     required this.dietaryNotes,
+    required this.pace,
   });
 
+  /// `travel_dates` — free text in the user's own phrasing.
   final String dateRange;
-  final String duration;
+
+  /// `region` — the areas to plan around; drives RAG retrieval.
+  final String region;
+
+  /// `category` — what the traveller is here for.
   final String travelStyle;
+
+  /// `companion` — who they're travelling with.
   final String groupSize;
+
+  /// `restrictions` — dietary and accessibility notes.
   final String dietaryNotes;
+
+  /// `pace` — how packed the days should be.
+  final String pace;
 }
 
 class RouteStop {

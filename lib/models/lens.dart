@@ -1,3 +1,6 @@
+/// Where the photo Seoul Lens analyses comes from.
+enum LensPhotoSource { camera, gallery }
+
 class LensPlaceResult {
   const LensPlaceResult({
     required this.name,

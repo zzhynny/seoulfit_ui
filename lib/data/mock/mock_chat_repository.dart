@@ -20,6 +20,7 @@ class MockChatRepository implements ChatRepository {
         text:
             'Perfect! October is gorgeous with autumn foliage. Who are you traveling with? It helps me customize the pace.',
         showTravelerSelector: true,
+        readyToBuild: true,
       ),
     ];
   }
@@ -35,26 +36,5 @@ class MockChatRepository implements ChatRepository {
   }
 
   @override
-  List<OnTripHelpTopic> onTripTopics() {
-    return const [
-      OnTripHelpTopic(
-        emoji: '🛂',
-        title: 'Lost Passport',
-        badge: 'urgent',
-        description: 'Get instant embassies map & local report guidelines',
-      ),
-      OnTripHelpTopic(
-        emoji: '🏥',
-        title: 'Emergency Room',
-        badge: '911',
-        description: 'English-speaking hospitals & clinics nearby',
-      ),
-      OnTripHelpTopic(
-        emoji: '📍',
-        title: 'Near Me',
-        badge: 'utility',
-        description: 'Public transit, baggage storage & tourist centers',
-      ),
-    ];
-  }
+  List<OnTripHelpTopic> onTripTopics() => kOnTripTopics;
 }

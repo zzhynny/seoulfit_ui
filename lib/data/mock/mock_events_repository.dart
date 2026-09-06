@@ -4,9 +4,10 @@ import '../repositories/events_repository.dart';
 
 class MockEventsRepository implements EventsRepository {
   @override
-  Future<List<SeoulEvent>> fetchEvents() async {
+  Future<List<SeoulEvent>> fetchEvents(String category) async {
+    // Mirrors the backend contract: return only the requested genre.
     await Future.delayed(const Duration(milliseconds: 200));
-    return const [
+    const all = <SeoulEvent>[
       SeoulEvent(
         title: 'Les Misérables',
         dateRange: 'Jun 5 – Aug 18',
@@ -40,5 +41,7 @@ class MockEventsRepository implements EventsRepository {
         posterAsset: 'assets/images/event-jazz-festival.png',
       ),
     ];
+
+    return all.where((e) => e.category == category).toList();
   }
 }

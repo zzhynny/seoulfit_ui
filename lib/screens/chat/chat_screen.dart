@@ -262,7 +262,7 @@ class _PlanView extends StatelessWidget {
             },
           ),
         ),
-        if (messages.any((m) => m.showTravelerSelector))
+        if (messages.any((m) => m.readyToBuild))
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
             child: SizedBox(

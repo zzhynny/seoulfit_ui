@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../models/lens.dart';
 import '../../theme/theme.dart';
-
-enum LensPhotoSource { camera, gallery }
 
 class LensScanScreen extends StatefulWidget {
   const LensScanScreen({super.key, required this.onScan});

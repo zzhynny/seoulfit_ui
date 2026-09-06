@@ -23,15 +23,25 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Future<void> _load() async {
-    final events = await widget.repository.fetchEvents();
+    final events = await widget.repository.fetchEvents(_category);
     if (!mounted) return;
     setState(() => _events = events);
   }
 
+  void _selectCategory(String category) {
+    if (category == _category) return;
+    setState(() {
+      _category = category;
+      // Clear first: leaving the previous genre's posters up while the new
+      // ones load reads as if the filter did nothing.
+      _events = [];
+    });
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filtered = _events.where((e) => e.category == _category).toList();
-    final displayed = filtered.isEmpty ? _events : filtered;
+    final displayed = _events;
 
     return Column(
       children: [
@@ -78,7 +88,7 @@ class _EventsScreenState extends State<EventsScreen> {
                 _CategoryChip(
                   label: category,
                   selected: category == _category,
-                  onTap: () => setState(() => _category = category),
+                  onTap: () => _selectCategory(category),
                 ),
             ],
           ),
@@ -163,16 +173,16 @@ class _EventCard extends StatelessWidget {
           Expanded(
             child: event.posterAsset != null
                 ? Image.asset(event.posterAsset!, width: double.infinity, fit: BoxFit.cover)
-                : Container(
+                : event.posterUrl != null
+                ? Image.network(
+                    event.posterUrl!,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: event.posterColors,
-                      ),
-                    ),
-                  ),
+                    fit: BoxFit.cover,
+                    // A dead poster URL must not blank the card — the title
+                    // and venue underneath are the useful part.
+                    errorBuilder: (_, _, _) => _PosterFallback(event: event),
+                  )
+                : _PosterFallback(event: event),
           ),
           Padding(
             padding: const EdgeInsets.all(10),
@@ -186,6 +196,28 @@ class _EventCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The gradient stand-in shown when an event has no artwork, or when its
+/// remote poster fails to load.
+class _PosterFallback extends StatelessWidget {
+  const _PosterFallback({required this.event});
+
+  final SeoulEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: event.posterColors,
+        ),
       ),
     );
   }

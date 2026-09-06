@@ -3,7 +3,7 @@ import '../repositories/lens_repository.dart';
 
 class MockLensRepository implements LensRepository {
   @override
-  Future<LensPlaceResult> scanPlace() async {
+  Future<LensPlaceResult?> scanPlace(LensPhotoSource source) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return const LensPlaceResult(
       name: 'N Seoul Tower',
