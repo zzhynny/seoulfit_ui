@@ -1,0 +1,43 @@
+# Web framework
+#
+# dspy 2.5.43 pulls in litellm[proxy] 1.53.7, whose extra pins are very tight:
+#   fastapi          <0.112,>=0.111
+#   uvicorn          <0.23,  >=0.22
+#   python-multipart <0.0.10,>=0.0.9
+# We list the packages here (so they're explicit deps of our code) but leave
+# them unpinned - pip resolves them against litellm[proxy]'s constraints.
+fastapi
+uvicorn[standard]
+python-dotenv
+python-multipart
+pydantic
+requests>=2.31
+
+# Chat planner
+#
+# api.py contains a compatibility patch that only makes sense for the
+# langchain 0.3.x line ("langchain 0.3+ removed langchain.debug ..."), so we
+# cap langchain-core / langgraph below the 1.x and 0.3 cutovers respectively.
+langchain-core>=0.3.25,<0.4
+langchain-community>=0.3,<0.4
+langchain-google-genai>=2,<3
+langgraph>=0.2.60,<0.3
+dspy==2.5.43
+
+# Vector store for the course RAG (rag.py loads vectorstore/index.faiss).
+faiss-cpu>=1.8
+
+# Lens - Gemini Vision + Seoul Open Data RAG
+google-genai>=0.3.0
+
+# POI image search
+serpapi
+
+# Input guardrail — NeMo self-check input rail in front of /chat (guardrail_gate.py).
+# Runs through langchain-google-genai; needs NEMOGUARDRAILS_LLM_FRAMEWORK=langchain
+# (guardrail_gate.py sets this before importing nemoguardrails).
+nemoguardrails
+
+# Trip check-in persistence (checkin_store.py). Render injects DATABASE_URL;
+# without it the store falls back to a local SQLite file and this is unused.
+psycopg[binary]>=3.1

@@ -1,0 +1,1994 @@
+[
+  {
+    "poi_name": "Amore Seongsu (아모레 성수)",
+    "poi_type": "shopping",
+    "name_en": "Amore Seongsu",
+    "name_ko": "아모레 성수",
+    "lat": 37.54440782489604,
+    "lng": 127.05901731152727
+  },
+  {
+    "poi_name": "Seongsu Handmade Shoes Street (성수동 수제화 거리)",
+    "poi_type": "street",
+    "name_en": "Seongsu Handmade Shoes Street",
+    "name_ko": "성수동 수제화 거리",
+    "lat": 37.531503115571894,
+    "lng": 127.05764946608359
+  },
+  {
+    "poi_name": "Seoul Forest (서울숲)",
+    "poi_type": "park",
+    "name_en": "Seoul Forest",
+    "name_ko": "서울숲",
+    "lat": 37.54306914850906,
+    "lng": 127.04179894329786
+  },
+  {
+    "poi_name": "Seongsu Sky Bridge (성수 스카이브릿지)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seongsu Sky Bridge",
+    "name_ko": "성수 스카이브릿지",
+    "lat": 37.53808919873887,
+    "lng": 127.0419361931002
+  },
+  {
+    "poi_name": "Dream Forest (북서울꿈의숲)",
+    "poi_type": "park",
+    "name_en": "Dream Forest",
+    "name_ko": "북서울꿈의숲",
+    "lat": 37.62152873921256,
+    "lng": 127.03852303865304
+  },
+  {
+    "poi_name": "Gyeongchun Line (Railroad) Forest (경춘선숲길)",
+    "poi_type": "park",
+    "name_en": "Gyeongchun Line",
+    "name_ko": "Railroad) Forest (경춘선숲길",
+    "lat": 37.62032301495616,
+    "lng": 127.08067541615843
+  },
+  {
+    "poi_name": "Seoul Botanic Park (서울식물원)",
+    "poi_type": "park",
+    "name_en": "Seoul Botanic Park",
+    "name_ko": "서울식물원",
+    "lat": 37.56530713572862,
+    "lng": 126.8329912742287
+  },
+  {
+    "poi_name": "SEOULDAL (서울달)",
+    "poi_type": "tourist_spot",
+    "name_en": "SEOULDAL",
+    "name_ko": "서울달",
+    "lat": 37.52633938730018,
+    "lng": 126.9222524177325
+  },
+  {
+    "poi_name": "Lotte World Adventure (롯데월드 어드벤처)",
+    "poi_type": "tourist_spot",
+    "name_en": "Lotte World Adventure",
+    "name_ko": "롯데월드 어드벤처",
+    "lat": 37.511481833760485,
+    "lng": 127.09822412562512
+  },
+  {
+    "poi_name": "SEA LIFE COEX, Seoul Aquarium (씨라이프 코엑스 아쿠아리움)",
+    "poi_type": "tourist_spot",
+    "name_en": "SEA LIFE COEX, Seoul Aquarium",
+    "name_ko": "씨라이프 코엑스 아쿠아리움",
+    "lat": 37.512018348059286,
+    "lng": 127.0590370189726
+  },
+  {
+    "poi_name": "Saemaeul Market (새마을시장)",
+    "poi_type": "shopping",
+    "name_en": "Saemaeul Market",
+    "name_ko": "새마을시장",
+    "lat": 37.50891975984558,
+    "lng": 127.08388025105437
+  },
+  {
+    "poi_name": "Sindang-dong Tteokbokki Town (신당동 떡볶이 타운)",
+    "poi_type": "restaurant",
+    "name_en": "Sindang-dong Tteokbokki Town",
+    "name_ko": "신당동 떡볶이 타운",
+    "lat": 37.56300212719103,
+    "lng": 127.01458995724312
+  },
+  {
+    "poi_name": "Namdaemun Market (남대문시장)",
+    "poi_type": "shopping",
+    "name_en": "Namdaemun Market",
+    "name_ko": "남대문시장",
+    "lat": 37.55910418446656,
+    "lng": 126.9776512124017
+  },
+  {
+    "poi_name": "Namdaemun Galchi-jorim Alley (남대문 갈치조림골목)",
+    "poi_type": "restaurant",
+    "name_en": "Namdaemun Galchi-jorim Alley",
+    "name_ko": "남대문 갈치조림골목",
+    "lat": 37.559675259691794,
+    "lng": 126.97692463493553
+  },
+  {
+    "poi_name": "Euljiro Nogari Alley (을지로 노가리 골목)",
+    "poi_type": "restaurant",
+    "name_en": "Euljiro Nogari Alley",
+    "name_ko": "을지로 노가리 골목",
+    "lat": 37.56712353691728,
+    "lng": 126.99180363699284
+  },
+  {
+    "poi_name": "Cheonggyecheon Stream (청계천)",
+    "poi_type": "park",
+    "name_en": "Cheonggyecheon Stream",
+    "name_ko": "청계천",
+    "lat": 37.5693987304375,
+    "lng": 126.9790936299317
+  },
+  {
+    "poi_name": "The Hyundai Seoul (더현대서울)",
+    "poi_type": "shopping",
+    "name_en": "The Hyundai Seoul",
+    "name_ko": "더현대서울",
+    "lat": 37.52705399379279,
+    "lng": 126.92784760336099
+  },
+  {
+    "poi_name": "HiKR Ground (하이커 그라운드)",
+    "poi_type": "kpop_landmark",
+    "name_en": "HiKR Ground",
+    "name_ko": "하이커 그라운드",
+    "lat": 37.56852774810529,
+    "lng": 126.98162732870608
+  },
+  {
+    "poi_name": "LoL Park (롤파크)",
+    "poi_type": "tourist_spot",
+    "name_en": "LoL Park",
+    "name_ko": "롤파크",
+    "lat": 37.57101421898609,
+    "lng": 126.98143573507046
+  },
+  {
+    "poi_name": "Insadong Ssamziegil (인사동 쌈지길)",
+    "poi_type": "shopping",
+    "name_en": "Insadong Ssamziegil",
+    "name_ko": "인사동 쌈지길",
+    "lat": 37.574251039742435,
+    "lng": 126.9848357918581
+  },
+  {
+    "poi_name": "Naksan Park (낙산공원)",
+    "poi_type": "park",
+    "name_en": "Naksan Park",
+    "name_ko": "낙산공원",
+    "lat": 37.580580945280104,
+    "lng": 127.00653016852715
+  },
+  {
+    "poi_name": "Olympic Park (올림픽공원)",
+    "poi_type": "park",
+    "name_en": "Olympic Park",
+    "name_ko": "올림픽공원",
+    "lat": 37.52281746095689,
+    "lng": 127.12726884050593
+  },
+  {
+    "poi_name": "Seoul Olympic Main Stadium (서울올림픽주경기장)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul Olympic Main Stadium",
+    "name_ko": "서울올림픽주경기장",
+    "lat": 37.51587677899883,
+    "lng": 127.0727733198348
+  },
+  {
+    "poi_name": "Cheongdam Bridge (청담대교)",
+    "poi_type": "tourist_spot",
+    "name_en": "Cheongdam Bridge",
+    "name_ko": "청담대교",
+    "lat": 37.52299041753568,
+    "lng": 127.05225837419201
+  },
+  {
+    "poi_name": "LG Arts Center (LG아트센터)",
+    "poi_type": "tourist_spot",
+    "name_en": "LG Arts Center",
+    "name_ko": "LG아트센터",
+    "lat": 37.565262791730476,
+    "lng": 126.82948078168317
+  },
+  {
+    "poi_name": "Gangseo Wetland Eco Park (강서 습지생태공원)",
+    "poi_type": "park",
+    "name_en": "Gangseo Wetland Eco Park",
+    "name_ko": "강서 습지생태공원",
+    "lat": 37.586581353096896,
+    "lng": 126.81863083039525
+  },
+  {
+    "poi_name": "Magok Culture Street (마곡문화거리)",
+    "poi_type": "street",
+    "name_en": "Magok Culture Street",
+    "name_ko": "마곡문화거리",
+    "lat": 37.55902717039751,
+    "lng": 126.83731164376371
+  },
+  {
+    "poi_name": "National Gugak Center (국립국악원)",
+    "poi_type": "museum",
+    "name_en": "National Gugak Center",
+    "name_ko": "국립국악원",
+    "lat": 37.477718881260884,
+    "lng": 127.00981851686117
+  },
+  {
+    "poi_name": "Baeknyeonok (백년옥)",
+    "poi_type": "restaurant",
+    "name_en": "Baeknyeonok",
+    "name_ko": "백년옥",
+    "lat": 37.481198993988976,
+    "lng": 127.01378468198091
+  },
+  {
+    "poi_name": "Encore Kalguksu (앵콜칼국수)",
+    "poi_type": "restaurant",
+    "name_en": "Encore Kalguksu",
+    "name_ko": "앵콜칼국수",
+    "lat": 37.48129200553055,
+    "lng": 127.01340585614699
+  },
+  {
+    "poi_name": "Chungmuro Station (충무로역)",
+    "poi_type": "tourist_spot",
+    "name_en": "Chungmuro Station",
+    "name_ko": "충무로역",
+    "lat": 37.561932226923545,
+    "lng": 126.9950242709765
+  },
+  {
+    "poi_name": "Seoul Namsan Gugakdang (서울남산국악당)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul Namsan Gugakdang",
+    "name_ko": "서울남산국악당",
+    "lat": 37.55684031283972,
+    "lng": 126.99361993997445
+  },
+  {
+    "poi_name": "piknic (피크닉)",
+    "poi_type": "museum",
+    "name_en": "piknic",
+    "name_ko": "피크닉",
+    "lat": 37.55668474315379,
+    "lng": 126.97805100685264
+  },
+  {
+    "poi_name": "Mangwon Station (망원역)",
+    "poi_type": "tourist_spot",
+    "name_en": "Mangwon Station",
+    "name_ko": "망원역",
+    "lat": 37.5603175897877,
+    "lng": 126.9066479821644
+  },
+  {
+    "poi_name": "Mangwon Market (망원시장)",
+    "poi_type": "shopping",
+    "name_en": "Mangwon Market",
+    "name_ko": "망원시장",
+    "lat": 37.54909469424142,
+    "lng": 126.90988483803021
+  },
+  {
+    "poi_name": "Mangnidan Street Accessory Shop (망리단길 소품샵)",
+    "poi_type": "shopping",
+    "name_en": "Mangnidan Street Accessory Shop",
+    "name_ko": "망리단길 소품샵",
+    "lat": 37.54935092164579,
+    "lng": 126.90974299940135
+  },
+  {
+    "poi_name": "Digital Media City (디지털미디어시티)",
+    "poi_type": "kpop_landmark",
+    "name_en": "Digital Media City",
+    "name_ko": "디지털미디어시티",
+    "lat": 37.57942888497418,
+    "lng": 126.88978208798886
+  },
+  {
+    "poi_name": "Dongmyo Flea Market (동묘 구제시장)",
+    "poi_type": "shopping",
+    "name_en": "Dongmyo Flea Market",
+    "name_ko": "동묘 구제시장",
+    "lat": 37.57458237023789,
+    "lng": 127.00844476196647
+  },
+  {
+    "poi_name": "Hongik Univ. (홍대)",
+    "poi_type": "street",
+    "name_en": "Hongik Univ.",
+    "name_ko": "홍대",
+    "lat": 37.5535569874357,
+    "lng": 126.93003876183676
+  },
+  {
+    "poi_name": "Yeonnam-dong (연남동)",
+    "poi_type": "street",
+    "name_en": "Yeonnam-dong",
+    "name_ko": "연남동",
+    "lat": 37.56392172640174,
+    "lng": 126.92291721675069
+  },
+  {
+    "poi_name": "Mangwon-dong (망원동)",
+    "poi_type": "street",
+    "name_en": "Mangwon-dong",
+    "name_ko": "망원동",
+    "lat": 37.555821447008,
+    "lng": 126.9010388276151
+  },
+  {
+    "poi_name": "Seoul World Cup Stadium (서울월드컵경기장)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul World Cup Stadium",
+    "name_ko": "서울월드컵경기장",
+    "lat": 37.5684188436043,
+    "lng": 126.89725489697287
+  },
+  {
+    "poi_name": "National Museum of Modern and Contemporary Art (국립현대미술관)",
+    "poi_type": "museum",
+    "name_en": "National Museum of Modern and Contemporary Art",
+    "name_ko": "국립현대미술관",
+    "lat": 37.578613937948745,
+    "lng": 126.98057070215
+  },
+  {
+    "poi_name": "Seongsu-dong (성수동)",
+    "poi_type": "street",
+    "name_en": "Seongsu-dong",
+    "name_ko": "성수동",
+    "lat": 37.53754338629399,
+    "lng": 127.0463635471817
+  },
+  {
+    "poi_name": "Lotte World (롯데월드)",
+    "poi_type": "tourist_spot",
+    "name_en": "Lotte World",
+    "name_ko": "롯데월드",
+    "lat": 37.511481833760485,
+    "lng": 127.09822412562512
+  },
+  {
+    "poi_name": "Lotte World Mall (롯데월드몰)",
+    "poi_type": "shopping",
+    "name_en": "Lotte World Mall",
+    "name_ko": "롯데월드몰",
+    "lat": 37.5128360692718,
+    "lng": 127.10171181481532
+  },
+  {
+    "poi_name": "Jamsil Hangang Park (잠실 한강공원)",
+    "poi_type": "park",
+    "name_en": "Jamsil Hangang Park",
+    "name_ko": "잠실 한강공원",
+    "lat": 37.50686039380014,
+    "lng": 127.0817329530831
+  },
+  {
+    "poi_name": "Hannam-dong (한남동)",
+    "poi_type": "street",
+    "name_en": "Hannam-dong",
+    "name_ko": "한남동",
+    "lat": 37.53397809683548,
+    "lng": 127.00257680962314
+  },
+  {
+    "poi_name": "Seoul Station (서울역)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul Station",
+    "name_ko": "서울역",
+    "lat": 37.55604091654651,
+    "lng": 126.97159453695092
+  },
+  {
+    "poi_name": "Hangang Parks (한강공원)",
+    "poi_type": "park",
+    "name_en": "Hangang Parks",
+    "name_ko": "한강공원",
+    "lat": 37.529579035766496,
+    "lng": 126.93369611528455
+  },
+  {
+    "poi_name": "Bugak Skyway (북악스카이웨이)",
+    "poi_type": "tourist_spot",
+    "name_en": "Bugak Skyway",
+    "name_ko": "북악스카이웨이",
+    "lat": 37.60197412615028,
+    "lng": 126.98055071365528
+  },
+  {
+    "poi_name": "Hongik Univ. (홍대입구)",
+    "poi_type": "street",
+    "name_en": "Hongik Univ.",
+    "name_ko": "홍대입구",
+    "lat": 37.5535569874357,
+    "lng": 126.93003876183676
+  },
+  {
+    "poi_name": "Seonyudo Park (선유도공원)",
+    "poi_type": "park",
+    "name_en": "Seonyudo Park",
+    "name_ko": "선유도공원",
+    "lat": 37.543529459187546,
+    "lng": 126.89945462083047
+  },
+  {
+    "poi_name": "Times Square Yeongdeungpo (영등포 타임스퀘어)",
+    "poi_type": "shopping",
+    "name_en": "Times Square Yeongdeungpo",
+    "name_ko": "영등포 타임스퀘어",
+    "lat": 37.517195748629376,
+    "lng": 126.9036461054582
+  },
+  {
+    "poi_name": "63 Building (63빌딩)",
+    "poi_type": "tourist_spot",
+    "name_en": "63 Building",
+    "name_ko": "63빌딩",
+    "lat": 37.51957622934884,
+    "lng": 126.93983757956511
+  },
+  {
+    "poi_name": "Gwangjang Market (광장시장)",
+    "poi_type": "shopping",
+    "name_en": "Gwangjang Market",
+    "name_ko": "광장시장",
+    "lat": 37.570467421762785,
+    "lng": 127.00033715844381
+  },
+  {
+    "poi_name": "Hongik Univ. Station (AREX) (홍대입구역)",
+    "poi_type": "street",
+    "name_en": "Hongik Univ. Station",
+    "name_ko": "AREX) (홍대입구역",
+    "lat": 37.55744529756238,
+    "lng": 126.92677875006298
+  },
+  {
+    "poi_name": "광장시장",
+    "poi_type": "shopping",
+    "name_en": "광장시장",
+    "name_ko": "광장시장",
+    "lat": 37.570467421762785,
+    "lng": 127.00033715844381
+  },
+  {
+    "poi_name": "Amore Store Beauty Experience (아모레성수 뷰티체험)",
+    "poi_type": "shopping",
+    "name_en": "Amore Store Beauty Experience",
+    "name_ko": "아모레성수 뷰티체험",
+    "lat": 37.54440782489604,
+    "lng": 127.05901731152727
+  },
+  {
+    "poi_name": "Gyeongui Line Forest Park (경의선 숲길)",
+    "poi_type": "park",
+    "name_en": "Gyeongui Line Forest Park",
+    "name_ko": "경의선 숲길",
+    "lat": 37.56648850126204,
+    "lng": 126.91975891265915
+  },
+  {
+    "poi_name": "Bukchon (북촌)",
+    "poi_type": "history",
+    "name_en": "Bukchon",
+    "name_ko": "북촌",
+    "lat": 37.58180825093766,
+    "lng": 126.98694067671875
+  },
+  {
+    "poi_name": "Ichon Hangang Park (이촌 한강공원)",
+    "poi_type": "park",
+    "name_en": "Ichon Hangang Park",
+    "name_ko": "이촌 한강공원",
+    "lat": 37.517820657038456,
+    "lng": 126.97085089239906
+  },
+  {
+    "poi_name": "Inwangsan Mountain (인왕산)",
+    "poi_type": "park",
+    "name_en": "Inwangsan Mountain",
+    "name_ko": "인왕산",
+    "lat": 37.57630802508694,
+    "lng": 126.95773305326449
+  },
+  {
+    "poi_name": "Sejong Village Food and Culture Alley (세종마을 음식문화거리)",
+    "poi_type": "street",
+    "name_en": "Sejong Village Food and Culture Alley",
+    "name_ko": "세종마을 음식문화거리",
+    "lat": 37.57655042647526,
+    "lng": 126.9721042244635
+  },
+  {
+    "poi_name": "Nodeulseom Island (노들섬)",
+    "poi_type": "tourist_spot",
+    "name_en": "Nodeulseom Island",
+    "name_ko": "노들섬",
+    "lat": 37.51766606364029,
+    "lng": 126.95803661676074
+  },
+  {
+    "poi_name": "Daehak-ro Streets (대학로거리)",
+    "poi_type": "street",
+    "name_en": "Daehak-ro Streets",
+    "name_ko": "대학로거리",
+    "lat": 37.57133990737226,
+    "lng": 127.00176829251977
+  },
+  {
+    "poi_name": "Yongma Land (용마랜드)",
+    "poi_type": "tourist_spot",
+    "name_en": "Yongma Land",
+    "name_ko": "용마랜드",
+    "lat": 37.59451348242008,
+    "lng": 127.10452926753837
+  },
+  {
+    "poi_name": "Choong Ang High School (서울중앙고등학교)",
+    "poi_type": "tourist_spot",
+    "name_en": "Choong Ang High School",
+    "name_ko": "서울중앙고등학교",
+    "lat": 37.58439723898556,
+    "lng": 126.98652148629051
+  },
+  {
+    "poi_name": "Buam-dong (부암동)",
+    "poi_type": "street",
+    "name_en": "Buam-dong",
+    "name_ko": "부암동",
+    "lat": 37.595446399885034,
+    "lng": 126.96428978429861
+  },
+  {
+    "poi_name": "Yeouido Hangang Park (여의도 한강공원)",
+    "poi_type": "park",
+    "name_en": "Yeouido Hangang Park",
+    "name_ko": "여의도 한강공원",
+    "lat": 37.526347547968754,
+    "lng": 126.93359545342678
+  },
+  {
+    "poi_name": "Jongno (종로)",
+    "poi_type": "street",
+    "name_en": "Jongno",
+    "name_ko": "종로",
+    "lat": 37.58997899625068,
+    "lng": 126.9982821873948
+  },
+  {
+    "poi_name": "Yongsan Baekbin Railroad (용산땡땡거리)",
+    "poi_type": "street",
+    "name_en": "Yongsan Baekbin Railroad",
+    "name_ko": "용산땡땡거리",
+    "lat": 37.5253923020354,
+    "lng": 126.96461611753372
+  },
+  {
+    "poi_name": "Culture Station Seoul 284 (문화역서울284)",
+    "poi_type": "museum",
+    "name_en": "Culture Station Seoul 284",
+    "name_ko": "문화역서울284",
+    "lat": 37.55604091654651,
+    "lng": 126.97159453695092
+  },
+  {
+    "poi_name": "Mullae Art Village (문래동)",
+    "poi_type": "street",
+    "name_en": "Mullae Art Village",
+    "name_ko": "문래동",
+    "lat": 37.52058155223216,
+    "lng": 126.88678306923867
+  },
+  {
+    "poi_name": "Hanbok Rental (한복대여)",
+    "poi_type": "tourist_spot",
+    "name_en": "Hanbok Rental",
+    "name_ko": "한복대여",
+    "lat": 37.57731178443337,
+    "lng": 126.98517495927354
+  },
+  {
+    "poi_name": "Ikseon-dong (익선동)",
+    "poi_type": "history",
+    "name_en": "Ikseon-dong",
+    "name_ko": "익선동",
+    "lat": 37.573393345968874,
+    "lng": 126.99091885285405
+  },
+  {
+    "poi_name": "IFC Mall (여의도 IFC몰)",
+    "poi_type": "shopping",
+    "name_en": "IFC Mall",
+    "name_ko": "여의도 IFC몰",
+    "lat": 37.525058436298806,
+    "lng": 126.92593686013313
+  },
+  {
+    "poi_name": "The Hyundai Seoul (여의도 더현대 서울)",
+    "poi_type": "shopping",
+    "name_en": "The Hyundai Seoul",
+    "name_ko": "여의도 더현대 서울",
+    "lat": 37.52705399379279,
+    "lng": 126.92784760336099
+  },
+  {
+    "poi_name": "Garosu-gil (가로수길)",
+    "poi_type": "shopping",
+    "name_en": "Garosu-gil",
+    "name_ko": "가로수길",
+    "lat": 37.520006553897936,
+    "lng": 127.02287338247345
+  },
+  {
+    "poi_name": "Apgujeong Select Shop (압구정 편집샵)",
+    "poi_type": "shopping",
+    "name_en": "Apgujeong Select Shop",
+    "name_ko": "압구정 편집샵",
+    "lat": 37.526456261030404,
+    "lng": 127.03848835014765
+  },
+  {
+    "poi_name": "Sindang-dong (신당동)",
+    "poi_type": "street",
+    "name_en": "Sindang-dong",
+    "name_ko": "신당동",
+    "lat": 37.55399265250616,
+    "lng": 127.00856058870613
+  },
+  {
+    "poi_name": "Dongdaemun Market (동대문시장)",
+    "poi_type": "shopping",
+    "name_en": "Dongdaemun Market",
+    "name_ko": "동대문시장",
+    "lat": 37.57082681475057,
+    "lng": 127.0080941143508
+  },
+  {
+    "poi_name": "Hangang River Cruise (한강 유람선)",
+    "poi_type": "tourist_spot",
+    "name_en": "Hangang River Cruise",
+    "name_ko": "한강 유람선",
+    "lat": 37.5258601490893,
+    "lng": 126.93841006932385
+  },
+  {
+    "poi_name": "Cheongdam-dong (청담동)",
+    "poi_type": "shopping",
+    "name_en": "Cheongdam-dong",
+    "name_ko": "청담동",
+    "lat": 37.52299041753568,
+    "lng": 127.05225837419201
+  },
+  {
+    "poi_name": "애호락 안국본점",
+    "poi_type": "restaurant",
+    "name_en": "애호락 안국본점",
+    "name_ko": "애호락 안국본점",
+    "lat": 37.5791657150055,
+    "lng": 126.98664298215584
+  },
+  {
+    "poi_name": "루비스 한남점",
+    "poi_type": "restaurant",
+    "name_en": "루비스 한남점",
+    "name_ko": "루비스 한남점",
+    "lat": 37.53740581268215,
+    "lng": 127.00025727050974
+  },
+  {
+    "poi_name": "그동네떡볶이 홍대본점",
+    "poi_type": "restaurant",
+    "name_en": "그동네떡볶이 홍대본점",
+    "name_ko": "그동네떡볶이 홍대본점",
+    "lat": 37.554120833900214,
+    "lng": 126.92759480777815
+  },
+  {
+    "poi_name": "템플스트라이크 (Bowling)",
+    "poi_type": "tourist_spot",
+    "name_en": "템플스트라이크",
+    "name_ko": "Bowling",
+    "lat": 37.49889324776589,
+    "lng": 127.02554853325661
+  },
+  {
+    "poi_name": "Karaoke (노래방)",
+    "poi_type": "tourist_spot",
+    "name_en": "Karaoke",
+    "name_ko": "노래방",
+    "lat": 37.50089742843279,
+    "lng": 127.02727327022589
+  },
+  {
+    "poi_name": "Jjimjilbang (찜질방)",
+    "poi_type": "tourist_spot",
+    "name_en": "Jjimjilbang",
+    "name_ko": "찜질방",
+    "lat": 37.490413563390305,
+    "lng": 127.03026801216066
+  },
+  {
+    "poi_name": "Seoul Forest Cafe Streets (서울숲 카페거리)",
+    "poi_type": "cafe",
+    "name_en": "Seoul Forest Cafe Streets",
+    "name_ko": "서울숲 카페거리",
+    "lat": 37.54664460997843,
+    "lng": 127.0427551436349
+  },
+  {
+    "poi_name": "Seoul City Wall Hike (성곽길 하이킹코스)",
+    "poi_type": "park",
+    "name_en": "Seoul City Wall Hike",
+    "name_ko": "성곽길 하이킹코스",
+    "lat": 37.580580945280104,
+    "lng": 127.00653016852715
+  },
+  {
+    "poi_name": "Sinchon Station (신촌역)",
+    "poi_type": "tourist_spot",
+    "name_en": "Sinchon Station",
+    "name_ko": "신촌역",
+    "lat": 37.56800093330146,
+    "lng": 126.94739669374786
+  },
+  {
+    "poi_name": "KPOP Dance One-day Class (KPOP 댄스 원데이클래스)",
+    "poi_type": "kpop_landmark",
+    "name_en": "KPOP Dance One-day Class",
+    "name_ko": "KPOP 댄스 원데이클래스",
+    "lat": 37.55907442576055,
+    "lng": 126.94541511568683
+  },
+  {
+    "poi_name": "Hongdae Railroad Street (홍대 땡땡거리)",
+    "poi_type": "street",
+    "name_en": "Hongdae Railroad Street",
+    "name_ko": "홍대 땡땡거리",
+    "lat": 37.544459558555445,
+    "lng": 126.92245911797227
+  },
+  {
+    "poi_name": "Jazz Bars (재즈바)",
+    "poi_type": "tourist_spot",
+    "name_en": "Jazz Bars",
+    "name_ko": "재즈바",
+    "lat": 37.55855639851612,
+    "lng": 126.91892760907325
+  },
+  {
+    "poi_name": "Anguk Station (안국역)",
+    "poi_type": "tourist_spot",
+    "name_en": "Anguk Station",
+    "name_ko": "안국역",
+    "lat": 37.57682155051477,
+    "lng": 126.98603658847797
+  },
+  {
+    "poi_name": "Insa-dong Culture Street (인사동 문화의거리)",
+    "poi_type": "shopping",
+    "name_en": "Insa-dong Culture Street",
+    "name_ko": "인사동 문화의거리",
+    "lat": 37.573659025106025,
+    "lng": 126.9861276309419
+  },
+  {
+    "poi_name": "Gyeongbokgung Station (경복궁역)",
+    "poi_type": "tourist_spot",
+    "name_en": "Gyeongbokgung Station",
+    "name_ko": "경복궁역",
+    "lat": 37.57582675867173,
+    "lng": 126.97329642936916
+  },
+  {
+    "poi_name": "Sajikdan Altar (사직단)",
+    "poi_type": "history",
+    "name_en": "Sajikdan Altar",
+    "name_ko": "사직단",
+    "lat": 37.5758801076223,
+    "lng": 126.96722944186567
+  },
+  {
+    "poi_name": "Suseongdong Valley (수성동 계곡)",
+    "poi_type": "park",
+    "name_en": "Suseongdong Valley",
+    "name_ko": "수성동 계곡",
+    "lat": 37.582246147999925,
+    "lng": 126.96310670520168
+  },
+  {
+    "poi_name": "Hyoja-dong Streets (효자동 거리)",
+    "poi_type": "street",
+    "name_en": "Hyoja-dong Streets",
+    "name_ko": "효자동 거리",
+    "lat": 37.581974521464346,
+    "lng": 126.97164244842784
+  },
+  {
+    "poi_name": "Tongin Market (통인시장)",
+    "poi_type": "shopping",
+    "name_en": "Tongin Market",
+    "name_ko": "통인시장",
+    "lat": 37.58075368143289,
+    "lng": 126.96995063743242
+  },
+  {
+    "poi_name": "Brunch at Yeonhui-dong (연희동 브런치)",
+    "poi_type": "restaurant",
+    "name_en": "Brunch at Yeonhui-dong",
+    "name_ko": "연희동 브런치",
+    "lat": 37.56645287911279,
+    "lng": 126.91984841902821
+  },
+  {
+    "poi_name": "Jungnang Dulle-gil (중랑둘레길)",
+    "poi_type": "park",
+    "name_en": "Jungnang Dulle-gil",
+    "name_ko": "중랑둘레길",
+    "lat": 37.5865470658466,
+    "lng": 127.0818011185776
+  },
+  {
+    "poi_name": "Hangdong Railroad (항동철길)",
+    "poi_type": "street",
+    "name_en": "Hangdong Railroad",
+    "name_ko": "항동철길",
+    "lat": 37.48885941500106,
+    "lng": 126.83517886875347
+  },
+  {
+    "poi_name": "Bukhansan Mountain (북한산)",
+    "poi_type": "park",
+    "name_en": "Bukhansan Mountain",
+    "name_ko": "북한산",
+    "lat": 37.6212336272049,
+    "lng": 126.99402799940165
+  },
+  {
+    "poi_name": "Bukhansan Caravan & Glamping (북한산 카라반&글램핑)",
+    "poi_type": "tourist_spot",
+    "name_en": "Bukhansan Caravan & Glamping",
+    "name_ko": "북한산 카라반&글램핑",
+    "lat": 37.65009529032663,
+    "lng": 126.9379386815496
+  },
+  {
+    "poi_name": "Naksan Park City Wall Trail (낙산공원 성곽길)",
+    "poi_type": "park",
+    "name_en": "Naksan Park City Wall Trail",
+    "name_ko": "낙산공원 성곽길",
+    "lat": 37.580580945280104,
+    "lng": 127.00653016852715
+  },
+  {
+    "poi_name": "Seolleung and Jeongneung Royal Tombs (선릉과 정릉)",
+    "poi_type": "history",
+    "name_en": "Seolleung and Jeongneung Royal Tombs",
+    "name_ko": "선릉과 정릉",
+    "lat": 37.50736771408222,
+    "lng": 127.04716601512439
+  },
+  {
+    "poi_name": "Seongsu-dong Area (성수일대)",
+    "poi_type": "street",
+    "name_en": "Seongsu-dong Area",
+    "name_ko": "성수일대",
+    "lat": 37.53754338629399,
+    "lng": 127.0463635471817
+  },
+  {
+    "poi_name": "Bluesquare Performance Hall (블루스퀘어 공연)",
+    "poi_type": "tourist_spot",
+    "name_en": "Bluesquare Performance Hall",
+    "name_ko": "블루스퀘어 공연",
+    "lat": 37.54086761952918,
+    "lng": 127.00248691926774
+  },
+  {
+    "poi_name": "Dongjakdaegyo Bridge (동작대교)",
+    "poi_type": "tourist_spot",
+    "name_en": "Dongjakdaegyo Bridge",
+    "name_ko": "동작대교",
+    "lat": 37.5081176685017,
+    "lng": 126.98170292407924
+  },
+  {
+    "poi_name": "Seorae Village (서래마을)",
+    "poi_type": "street",
+    "name_en": "Seorae Village",
+    "name_ko": "서래마을",
+    "lat": 37.49641837417771,
+    "lng": 126.99717591536071
+  },
+  {
+    "poi_name": "Apgujeong Rodeo (압구정 로데오)",
+    "poi_type": "shopping",
+    "name_en": "Apgujeong Rodeo",
+    "name_ko": "압구정 로데오",
+    "lat": 37.527973550892995,
+    "lng": 127.03478705373023
+  },
+  {
+    "poi_name": "Dongdaemun Market / DDP (동대문 시장 / DDP)",
+    "poi_type": "tourist_spot",
+    "name_en": "Dongdaemun Market / DDP",
+    "name_ko": "동대문 시장 / DDP",
+    "lat": 37.56707028678808,
+    "lng": 127.0098788028792
+  },
+  {
+    "poi_name": "Gwanghwamun Area (광화문)",
+    "poi_type": "history",
+    "name_en": "Gwanghwamun Area",
+    "name_ko": "광화문",
+    "lat": 37.571620087032585,
+    "lng": 126.97676492906585
+  },
+  {
+    "poi_name": "Banpo Bridge Moonlight Rainbow Fountain (반포한강공원)",
+    "poi_type": "tourist_spot",
+    "name_en": "Banpo Bridge Moonlight Rainbow Fountain",
+    "name_ko": "반포한강공원",
+    "lat": 37.50770522731566,
+    "lng": 126.99273997522754
+  },
+  {
+    "poi_name": "Jongno Hanok Cafes (종로 한옥 카페)",
+    "poi_type": "cafe",
+    "name_en": "Jongno Hanok Cafes",
+    "name_ko": "종로 한옥 카페",
+    "lat": 37.57666786518978,
+    "lng": 126.98444430580031
+  },
+  {
+    "poi_name": "Namdaemun Hairtail Alley (남대문 갈치골목)",
+    "poi_type": "restaurant",
+    "name_en": "Namdaemun Hairtail Alley",
+    "name_ko": "남대문 갈치골목",
+    "lat": 37.56006327789374,
+    "lng": 126.97709356301019
+  },
+  {
+    "poi_name": "Hyundai Motor Studio Seoul (현대 모토스튜디오 서울)",
+    "poi_type": "tourist_spot",
+    "name_en": "Hyundai Motor Studio Seoul",
+    "name_ko": "현대 모토스튜디오 서울",
+    "lat": 37.52130607543157,
+    "lng": 127.03437128603719
+  },
+  {
+    "poi_name": "63 Building Observatory (63빌딩 전망대)",
+    "poi_type": "tourist_spot",
+    "name_en": "63 Building Observatory",
+    "name_ko": "63빌딩 전망대",
+    "lat": 37.51957622934884,
+    "lng": 126.93983757956511
+  },
+  {
+    "poi_name": "IFC Mall (IFC 몰)",
+    "poi_type": "shopping",
+    "name_en": "IFC Mall",
+    "name_ko": "IFC 몰",
+    "lat": 37.525058436298806,
+    "lng": 126.92593686013313
+  },
+  {
+    "poi_name": "Lotte World Mall Duty Free (롯데월드몰 면세점)",
+    "poi_type": "shopping",
+    "name_en": "Lotte World Mall Duty Free",
+    "name_ko": "롯데월드몰 면세점",
+    "lat": 37.5128360692718,
+    "lng": 127.10171181481532
+  },
+  {
+    "poi_name": "CALT - City Airport Terminal (도심공항터미널)",
+    "poi_type": "tourist_spot",
+    "name_en": "CALT - City Airport Terminal",
+    "name_ko": "도심공항터미널",
+    "lat": 37.50963210010009,
+    "lng": 127.05944349726684
+  },
+  {
+    "poi_name": "Lotte Mart Seoul Station Branch (서울역 롯데마트)",
+    "poi_type": "shopping",
+    "name_en": "Lotte Mart Seoul Station Branch",
+    "name_ko": "서울역 롯데마트",
+    "lat": 37.55704062934582,
+    "lng": 126.96986159256306
+  },
+  {
+    "poi_name": "Namdaemun Market (남대문 시장)",
+    "poi_type": "shopping",
+    "name_en": "Namdaemun Market",
+    "name_ko": "남대문 시장",
+    "lat": 37.55910418446656,
+    "lng": 126.9776512124017
+  },
+  {
+    "poi_name": "Express Bus Terminal Station Underground Shopping Center (고속버스터미널역 지하상가)",
+    "poi_type": "shopping",
+    "name_en": "Express Bus Terminal Station Underground Shopping Center",
+    "name_ko": "고속버스터미널역 지하상가",
+    "lat": 37.506435344593115,
+    "lng": 127.00683306766112
+  },
+  {
+    "poi_name": "Famille Station (파미에스테이션)",
+    "poi_type": "shopping",
+    "name_en": "Famille Station",
+    "name_ko": "파미에스테이션",
+    "lat": 37.504450604743695,
+    "lng": 127.00774058675913
+  },
+  {
+    "poi_name": "Guest House (게스트하우스)",
+    "poi_type": "tourist_spot",
+    "name_en": "Guest House",
+    "name_ko": "게스트하우스",
+    "lat": 37.50421935459173,
+    "lng": 127.01981046326293
+  },
+  {
+    "poi_name": "Mangwon Market (망원 시장)",
+    "poi_type": "shopping",
+    "name_en": "Mangwon Market",
+    "name_ko": "망원 시장",
+    "lat": 37.556240105046,
+    "lng": 126.90562802052875
+  },
+  {
+    "poi_name": "Hongdae Street Performance (홍대 거리공연)",
+    "poi_type": "street",
+    "name_en": "Hongdae Street Performance",
+    "name_ko": "홍대 거리공연",
+    "lat": 37.553377165270106,
+    "lng": 126.9225527395797
+  },
+  {
+    "poi_name": "Riding at Hangang River (한강 라이딩)",
+    "poi_type": "park",
+    "name_en": "Riding at Hangang River",
+    "name_ko": "한강 라이딩",
+    "lat": 37.526347547968754,
+    "lng": 126.93359545342678
+  },
+  {
+    "poi_name": "Food Delivery at Hangang River (한강 배달음식)",
+    "poi_type": "restaurant",
+    "name_en": "Food Delivery at Hangang River",
+    "name_ko": "한강 배달음식",
+    "lat": 37.526347547968754,
+    "lng": 126.93359545342678
+  },
+  {
+    "poi_name": "Traditional Culture Experience (전통문화 체험)",
+    "poi_type": "history",
+    "name_en": "Traditional Culture Experience",
+    "name_ko": "전통문화 체험",
+    "lat": 37.55684031283972,
+    "lng": 126.99361993997445
+  },
+  {
+    "poi_name": "HiKR GROUND (종로 하이커 그라운드)",
+    "poi_type": "kpop_landmark",
+    "name_en": "HiKR GROUND",
+    "name_ko": "종로 하이커 그라운드",
+    "lat": 37.56852774810529,
+    "lng": 126.98162732870608
+  },
+  {
+    "poi_name": "Digital Media City (MBC테마파크)",
+    "poi_type": "kpop_landmark",
+    "name_en": "Digital Media City",
+    "name_ko": "MBC테마파크",
+    "lat": 37.581109081963994,
+    "lng": 126.89108813502187
+  },
+  {
+    "poi_name": "Ewha Womans Univ (이화여대)",
+    "poi_type": "street",
+    "name_en": "Ewha Womans Univ",
+    "name_ko": "이화여대",
+    "lat": 37.56679730109048,
+    "lng": 126.95053763514039
+  },
+  {
+    "poi_name": "Yeouido / 63 Building (여의도 / 63빌딩)",
+    "poi_type": "tourist_spot",
+    "name_en": "Yeouido / 63 Building",
+    "name_ko": "여의도 / 63빌딩",
+    "lat": 37.51957622934884,
+    "lng": 126.93983757956511
+  },
+  {
+    "poi_name": "Jonggak Station Food Alley (종각역 포장마차)",
+    "poi_type": "restaurant",
+    "name_en": "Jonggak Station Food Alley",
+    "name_ko": "종각역 포장마차",
+    "lat": 37.5689698603811,
+    "lng": 126.98662087583821
+  },
+  {
+    "poi_name": "HYBE (하이브)",
+    "poi_type": "kpop_landmark",
+    "name_en": "HYBE",
+    "name_ko": "하이브",
+    "lat": 37.52459623277265,
+    "lng": 126.96422883472589
+  },
+  {
+    "poi_name": "Korea House (한국의집)",
+    "poi_type": "culture",
+    "name_en": "Korea House",
+    "name_ko": "한국의집",
+    "lat": 37.57755982674375,
+    "lng": 126.97631055236648
+  },
+  {
+    "poi_name": "Nodeul Island (노들섬)",
+    "poi_type": "tourist_spot",
+    "name_en": "Nodeul Island",
+    "name_ko": "노들섬",
+    "lat": 37.51766606364029,
+    "lng": 126.95803661676074
+  },
+  {
+    "poi_name": "Songpa Naru Park (Seokchonhosu Lake) (송파나루공원 (석촌호수))",
+    "poi_type": "park",
+    "name_en": "Songpa Naru Park",
+    "name_ko": "Seokchonhosu Lake) (송파나루공원 (석촌호수)",
+    "lat": 37.506005334511215,
+    "lng": 127.08711895296707
+  },
+  {
+    "poi_name": "Seoul Museum of Art (SeMA) (서울시립 북서울미술관)",
+    "poi_type": "museum",
+    "name_en": "Seoul Museum of Art",
+    "name_ko": "SeMA) (서울시립 북서울미술관",
+    "lat": 37.64067143112064,
+    "lng": 127.06685902905562
+  },
+  {
+    "poi_name": "Leeum, Samsung Museum of Art (삼성미술관 리움)",
+    "poi_type": "museum",
+    "name_en": "Leeum, Samsung Museum of Art",
+    "name_ko": "삼성미술관 리움",
+    "lat": 37.5385627749698,
+    "lng": 126.99880648717829
+  },
+  {
+    "poi_name": "Biscuit Floor (비스킷 플로어)",
+    "poi_type": "cafe",
+    "name_en": "Biscuit Floor",
+    "name_ko": "비스킷 플로어",
+    "lat": 37.625081458295924,
+    "lng": 127.07373743635722
+  },
+  {
+    "poi_name": "Seosulla-gil Road (서순라길)",
+    "poi_type": "street",
+    "name_en": "Seosulla-gil Road",
+    "name_ko": "서순라길",
+    "lat": 37.57036690728911,
+    "lng": 126.99420217698834
+  },
+  {
+    "poi_name": "Sewoon Plaza (세운전자상가)",
+    "poi_type": "tourist_spot",
+    "name_en": "Sewoon Plaza",
+    "name_ko": "세운전자상가",
+    "lat": 37.56928164061096,
+    "lng": 126.9952396372887
+  },
+  {
+    "poi_name": "Hanyangdoseong Seoul City Wall Stamp Tour (서울 한양도성 순성길)",
+    "poi_type": "tourist_spot",
+    "name_en": "Hanyangdoseong Seoul City Wall Stamp Tour",
+    "name_ko": "서울 한양도성 순성길",
+    "lat": 37.54959230575524,
+    "lng": 127.00528103428749
+  },
+  {
+    "poi_name": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+    "poi_type": "street",
+    "name_en": "Ikseon-dong Hanok Street",
+    "name_ko": "익선동 한옥거리",
+    "lat": 37.573393345968874,
+    "lng": 126.99091885285405
+  },
+  {
+    "poi_name": "Bosingak Belfry (보신각 터)",
+    "poi_type": "history",
+    "name_en": "Bosingak Belfry",
+    "name_ko": "보신각 터",
+    "lat": 37.56976540705418,
+    "lng": 126.98367608168581
+  },
+  {
+    "poi_name": "The Sool Gallery (전통주갤러리)",
+    "poi_type": "museum",
+    "name_en": "The Sool Gallery",
+    "name_ko": "전통주갤러리",
+    "lat": 37.578395167343,
+    "lng": 126.9859377981112
+  },
+  {
+    "poi_name": "Yonsei University (연세대학교)",
+    "poi_type": "tourist_spot",
+    "name_en": "Yonsei University",
+    "name_ko": "연세대학교",
+    "lat": 37.5707259776821,
+    "lng": 126.94083103545043
+  },
+  {
+    "poi_name": "Sogang University (서강대학교)",
+    "poi_type": "tourist_spot",
+    "name_en": "Sogang University",
+    "name_ko": "서강대학교",
+    "lat": 37.549623956335125,
+    "lng": 126.93892643194428
+  },
+  {
+    "poi_name": "Ewha Womans University (이화여자대학교)",
+    "poi_type": "tourist_spot",
+    "name_en": "Ewha Womans University",
+    "name_ko": "이화여자대학교",
+    "lat": 37.56679730109048,
+    "lng": 126.95053763514039
+  },
+  {
+    "poi_name": "Seoul National University (서울대학교)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul National University",
+    "name_ko": "서울대학교",
+    "lat": 37.46000707486644,
+    "lng": 126.94813440599299
+  },
+  {
+    "poi_name": "Lotte World (롯데월드 어드벤처)",
+    "poi_type": "tourist_spot",
+    "name_en": "Lotte World",
+    "name_ko": "롯데월드 어드벤처",
+    "lat": 37.511481833760485,
+    "lng": 127.09822412562512
+  },
+  {
+    "poi_name": "Yeouido Hangang Park (여의도한강공원)",
+    "poi_type": "park",
+    "name_en": "Yeouido Hangang Park",
+    "name_ko": "여의도한강공원",
+    "lat": 37.526347547968754,
+    "lng": 126.93359545342678
+  },
+  {
+    "poi_name": "Myeongdong Nanta Theatre (명동난타극장)",
+    "poi_type": "tourist_spot",
+    "name_en": "Myeongdong Nanta Theatre",
+    "name_ko": "명동난타극장",
+    "lat": 37.56344535817166,
+    "lng": 126.98376665210576
+  },
+  {
+    "poi_name": "K-POP Square Hongdae [Tax Refund Shop] (케이팝 스퀘어 홍대)",
+    "poi_type": "shopping",
+    "name_en": "K-POP Square Hongdae [Tax Refund Shop]",
+    "name_ko": "케이팝 스퀘어 홍대",
+    "lat": 37.55575410747659,
+    "lng": 126.92166987902587
+  },
+  {
+    "poi_name": "Seoul Plaza (서울광장)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul Plaza",
+    "name_ko": "서울광장",
+    "lat": 37.565648719806816,
+    "lng": 126.98814254820141
+  },
+  {
+    "poi_name": "Songnidan-gil Street (송리단길)",
+    "poi_type": "street",
+    "name_en": "Songnidan-gil Street",
+    "name_ko": "송리단길",
+    "lat": 37.509085675259655,
+    "lng": 127.10821886182913
+  },
+  {
+    "poi_name": "Soma Museum of Art (소마미술관)",
+    "poi_type": "museum",
+    "name_en": "Soma Museum of Art",
+    "name_ko": "소마미술관",
+    "lat": 37.52281746095689,
+    "lng": 127.12726884050593
+  },
+  {
+    "poi_name": "Dong-Lim Knot Museum (동림매듭박물관)",
+    "poi_type": "museum",
+    "name_en": "Dong-Lim Knot Museum",
+    "name_ko": "동림매듭박물관",
+    "lat": 37.581784590518,
+    "lng": 126.98559037526351
+  },
+  {
+    "poi_name": "Samcheong-dong Street (삼청동길)",
+    "poi_type": "street",
+    "name_en": "Samcheong-dong Street",
+    "name_ko": "삼청동길",
+    "lat": 37.588873528671215,
+    "lng": 126.98280558585998
+  },
+  {
+    "poi_name": "Ssamzigil (쌈지길)",
+    "poi_type": "shopping",
+    "name_en": "Ssamzigil",
+    "name_ko": "쌈지길",
+    "lat": 37.574251039742435,
+    "lng": 126.9848357918581
+  },
+  {
+    "poi_name": "Jongno 3 (sam)-ga Pocha Street (종로3가 포장마차 거리)",
+    "poi_type": "street",
+    "name_en": "Jongno 3",
+    "name_ko": "sam)-ga Pocha Street (종로3가 포장마차 거리",
+    "lat": 37.56883678628914,
+    "lng": 126.99200020439353
+  },
+  {
+    "poi_name": "Spa 1978 (SPA 1978)",
+    "poi_type": "tourist_spot",
+    "name_en": "Spa 1978",
+    "name_ko": "SPA 1978",
+    "lat": 37.506559969850585,
+    "lng": 127.06534370720348
+  },
+  {
+    "poi_name": "Café Dior (카페 디올)",
+    "poi_type": "cafe",
+    "name_en": "Café Dior",
+    "name_ko": "카페 디올",
+    "lat": 37.524701849246036,
+    "lng": 127.0463743600998
+  },
+  {
+    "poi_name": "OME Cooking Lab (오미요리연구소)",
+    "poi_type": "restaurant",
+    "name_en": "OME Cooking Lab",
+    "name_ko": "오미요리연구소",
+    "lat": 37.58315312832501,
+    "lng": 127.04094262828013
+  },
+  {
+    "poi_name": "Sulwhasoo Dosan Flagship Store (설화수 도산 플래그십 스토어)",
+    "poi_type": "shopping",
+    "name_en": "Sulwhasoo Dosan Flagship Store",
+    "name_ko": "설화수 도산 플래그십 스토어",
+    "lat": 37.5237249961938,
+    "lng": 127.0358168623736
+  },
+  {
+    "poi_name": "Bukchon Cultural Center (북촌문화센터)",
+    "poi_type": "culture",
+    "name_en": "Bukchon Cultural Center",
+    "name_ko": "북촌문화센터",
+    "lat": 37.579018508290275,
+    "lng": 126.98661052339429
+  },
+  {
+    "poi_name": "Osulloc Tea House – Bukchon Branch (오설록 티하우스 북촌점)",
+    "poi_type": "cafe",
+    "name_en": "Osulloc Tea House – Bukchon Branch",
+    "name_ko": "오설록 티하우스 북촌점",
+    "lat": 37.58104676298559,
+    "lng": 126.98466099452799
+  },
+  {
+    "poi_name": "Sejong Village Food Street (세종마을 음식문화거리)",
+    "poi_type": "restaurant",
+    "name_en": "Sejong Village Food Street",
+    "name_ko": "세종마을 음식문화거리",
+    "lat": 37.57651168092666,
+    "lng": 126.97104854444359
+  },
+  {
+    "poi_name": "Cheongwadae Sarangchae (청와대사랑채)",
+    "poi_type": "museum",
+    "name_en": "Cheongwadae Sarangchae",
+    "name_ko": "청와대사랑채",
+    "lat": 37.58257022008668,
+    "lng": 126.97294300342962
+  },
+  {
+    "poi_name": "Sooyeon Sanbang (수연산방)",
+    "poi_type": "cafe",
+    "name_en": "Sooyeon Sanbang",
+    "name_ko": "수연산방",
+    "lat": 37.59503994431988,
+    "lng": 126.99484607976842
+  },
+  {
+    "poi_name": "Seonungak (한옥카페 선운각)",
+    "poi_type": "cafe",
+    "name_en": "Seonungak",
+    "name_ko": "한옥카페 선운각",
+    "lat": 37.65796162509271,
+    "lng": 127.0020341110936
+  },
+  {
+    "poi_name": "Passi 0914 (파시0914)",
+    "poi_type": "restaurant",
+    "name_en": "Passi 0914",
+    "name_ko": "파시0914",
+    "lat": 37.52322251400889,
+    "lng": 127.03511850474595
+  },
+  {
+    "poi_name": "Seoul Wave Art Center (서울웨이브아트센터)",
+    "poi_type": "museum",
+    "name_en": "Seoul Wave Art Center",
+    "name_ko": "서울웨이브아트센터",
+    "lat": 37.518690540911635,
+    "lng": 127.00703588530087
+  },
+  {
+    "poi_name": "HANSIK Space E:eum (한식문화공간 이음)",
+    "poi_type": "restaurant",
+    "name_en": "HANSIK Space E:eum",
+    "name_ko": "한식문화공간 이음",
+    "lat": 37.578395167343,
+    "lng": 126.9859377981112
+  },
+  {
+    "poi_name": "Songhyeon Green Plaza (열린송현 녹지광장)",
+    "poi_type": "park",
+    "name_en": "Songhyeon Green Plaza",
+    "name_ko": "열린송현 녹지광장",
+    "lat": 37.57666004321396,
+    "lng": 126.98140072800669
+  },
+  {
+    "poi_name": "Amsa-dong Prehistoric Site Museum (암사동선사유적박물관)",
+    "poi_type": "museum",
+    "name_en": "Amsa-dong Prehistoric Site Museum",
+    "name_ko": "암사동선사유적박물관",
+    "lat": 37.56105720201647,
+    "lng": 127.13063755994526
+  },
+  {
+    "poi_name": "Cheonho-dong Rose Village (천호동 장미마을)",
+    "poi_type": "tourist_spot",
+    "name_en": "Cheonho-dong Rose Village",
+    "name_ko": "천호동 장미마을",
+    "lat": 37.54554267806451,
+    "lng": 127.1354863287803
+  },
+  {
+    "poi_name": "Gobundari Market (고분다리 전통시장)",
+    "poi_type": "shopping",
+    "name_en": "Gobundari Market",
+    "name_ko": "고분다리 전통시장",
+    "lat": 37.54235014886689,
+    "lng": 127.13164061553167
+  },
+  {
+    "poi_name": "Songwol Naengmyeon (송월냉면)",
+    "poi_type": "restaurant",
+    "name_en": "Songwol Naengmyeon",
+    "name_ko": "송월냉면",
+    "lat": 37.54239238538325,
+    "lng": 127.12958535005998
+  },
+  {
+    "poi_name": "Cheonggyecheon Old Books Street (청계천헌책방거리)",
+    "poi_type": "street",
+    "name_en": "Cheonggyecheon Old Books Street",
+    "name_ko": "청계천헌책방거리",
+    "lat": 37.568642182450176,
+    "lng": 127.00774674353862
+  },
+  {
+    "poi_name": "Bangsan Market (방산시장)",
+    "poi_type": "shopping",
+    "name_en": "Bangsan Market",
+    "name_ko": "방산시장",
+    "lat": 37.570467421762785,
+    "lng": 127.00033715844381
+  },
+  {
+    "poi_name": "Euljiro Nogari Alley (을지로 노가리골목)",
+    "poi_type": "street",
+    "name_en": "Euljiro Nogari Alley",
+    "name_ko": "을지로 노가리골목",
+    "lat": 37.56627396416613,
+    "lng": 126.99265012679388
+  },
+  {
+    "poi_name": "Unhyeongung Royal Residence (서울 운현궁)",
+    "poi_type": "history",
+    "name_en": "Unhyeongung Royal Residence",
+    "name_ko": "서울 운현궁",
+    "lat": 37.575728719976084,
+    "lng": 126.98711355458869
+  },
+  {
+    "poi_name": "Insadong Cultural Street (인사동 문화의 거리)",
+    "poi_type": "street",
+    "name_en": "Insadong Cultural Street",
+    "name_ko": "인사동 문화의 거리",
+    "lat": 37.57258309317737,
+    "lng": 126.98596085808038
+  },
+  {
+    "poi_name": "Marronnier Park (마로니에공원)",
+    "poi_type": "park",
+    "name_en": "Marronnier Park",
+    "name_ko": "마로니에공원",
+    "lat": 37.580361098526346,
+    "lng": 127.00251153453169
+  },
+  {
+    "poi_name": "Arko Arts Theater (아르코예술극장)",
+    "poi_type": "tourist_spot",
+    "name_en": "Arko Arts Theater",
+    "name_ko": "아르코예술극장",
+    "lat": 37.58120599016959,
+    "lng": 127.00297367804146
+  },
+  {
+    "poi_name": "Daehakro Arts Theater (대학로예술극장)",
+    "poi_type": "tourist_spot",
+    "name_en": "Daehakro Arts Theater",
+    "name_ko": "대학로예술극장",
+    "lat": 37.582094790802614,
+    "lng": 127.00317872868854
+  },
+  {
+    "poi_name": "Seoul City Wall Museum (한양도성박물관)",
+    "poi_type": "museum",
+    "name_en": "Seoul City Wall Museum",
+    "name_ko": "한양도성박물관",
+    "lat": 37.57287588484442,
+    "lng": 127.0085103571985
+  },
+  {
+    "poi_name": "Namdaemun Market Gourmand Alley (Kalguksu Alley) (남대문시장 먹자골목(칼국수 골목))",
+    "poi_type": "restaurant",
+    "name_en": "Namdaemun Market Gourmand Alley",
+    "name_ko": "Kalguksu Alley) (남대문시장 먹자골목(칼국수 골목)",
+    "lat": 37.558288439377776,
+    "lng": 126.97693975275556
+  },
+  {
+    "poi_name": "Understand Avenue (언더스탠드에비뉴)",
+    "poi_type": "tourist_spot",
+    "name_en": "Understand Avenue",
+    "name_ko": "언더스탠드에비뉴",
+    "lat": 37.54362045687968,
+    "lng": 127.04359075691826
+  },
+  {
+    "poi_name": "Mangnidan Street (망리단길)",
+    "poi_type": "street",
+    "name_en": "Mangnidan Street",
+    "name_ko": "망리단길",
+    "lat": 37.555821447008,
+    "lng": 126.9010388276151
+  },
+  {
+    "poi_name": "Mangwon Hangang Park (한강시민공원 망원지구 (망원한강공원))",
+    "poi_type": "park",
+    "name_en": "Mangwon Hangang Park",
+    "name_ko": "한강시민공원 망원지구 (망원한강공원)",
+    "lat": 37.552343677962696,
+    "lng": 126.89988649187372
+  },
+  {
+    "poi_name": "Geumdwaeji Sikdang (금돼지식당)",
+    "poi_type": "restaurant",
+    "name_en": "Geumdwaeji Sikdang",
+    "name_ko": "금돼지식당",
+    "lat": 37.557093134177435,
+    "lng": 127.01167762485548
+  },
+  {
+    "poi_name": "Yoojung Restaurant (유정식당)",
+    "poi_type": "restaurant",
+    "name_en": "Yoojung Restaurant",
+    "name_ko": "유정식당",
+    "lat": 37.51838082077182,
+    "lng": 127.02805722131993
+  },
+  {
+    "poi_name": "Shinuiju Chapsal Sundae (신의주찹쌀순대)",
+    "poi_type": "restaurant",
+    "name_en": "Shinuiju Chapsal Sundae",
+    "name_ko": "신의주찹쌀순대",
+    "lat": 37.52247778230324,
+    "lng": 127.05515608077464
+  },
+  {
+    "poi_name": "Gwanghwamun Gate (광화문)",
+    "poi_type": "tourist_spot",
+    "name_en": "Gwanghwamun Gate",
+    "name_ko": "광화문",
+    "lat": 37.57755982674375,
+    "lng": 126.97631055236648
+  },
+  {
+    "poi_name": "Ground Seesaw Seochon (그라운드시소 서촌)",
+    "poi_type": "museum",
+    "name_en": "Ground Seesaw Seochon",
+    "name_ko": "그라운드시소 서촌",
+    "lat": 37.577840434234815,
+    "lng": 126.97291610539864
+  },
+  {
+    "poi_name": "Seoul K-Medi Center (서울한방진흥센터)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul K-Medi Center",
+    "name_ko": "서울한방진흥센터",
+    "lat": 37.58052413319827,
+    "lng": 127.0376527076262
+  },
+  {
+    "poi_name": "Tea Therapy (티테라피)",
+    "poi_type": "cafe",
+    "name_en": "Tea Therapy",
+    "name_ko": "티테라피",
+    "lat": 37.5791873927543,
+    "lng": 126.98356830604604
+  },
+  {
+    "poi_name": "Aromind (아로마인드)",
+    "poi_type": "tourist_spot",
+    "name_en": "Aromind",
+    "name_ko": "아로마인드",
+    "lat": 37.57914067845168,
+    "lng": 126.98421397115791
+  },
+  {
+    "poi_name": "Mosim (모심)",
+    "poi_type": "restaurant",
+    "name_en": "Mosim",
+    "name_ko": "모심",
+    "lat": 37.58673086728804,
+    "lng": 127.02953704368616
+  },
+  {
+    "poi_name": "Daelim Changgo Gallery (성수동 대림창고 갤러리)",
+    "poi_type": "cafe",
+    "name_en": "Daelim Changgo Gallery",
+    "name_ko": "성수동 대림창고 갤러리",
+    "lat": 37.54196104032842,
+    "lng": 127.05653705769294
+  },
+  {
+    "poi_name": "Seongsu-dong Handmade Shoes Street (성수동 수제화거리)",
+    "poi_type": "street",
+    "name_en": "Seongsu-dong Handmade Shoes Street",
+    "name_ko": "성수동 수제화거리",
+    "lat": 37.5465473367351,
+    "lng": 127.05772254920214
+  },
+  {
+    "poi_name": "Oil Tank Culture Park (문화비축기지)",
+    "poi_type": "park",
+    "name_en": "Oil Tank Culture Park",
+    "name_ko": "문화비축기지",
+    "lat": 37.57110627153124,
+    "lng": 126.894239097082
+  },
+  {
+    "poi_name": "World Cup Park (월드컵공원)",
+    "poi_type": "park",
+    "name_en": "World Cup Park",
+    "name_ko": "월드컵공원",
+    "lat": 37.56346704123328,
+    "lng": 126.89845584921181
+  },
+  {
+    "poi_name": "Nanji Hangang Park (난지한강공원)",
+    "poi_type": "park",
+    "name_en": "Nanji Hangang Park",
+    "name_ko": "난지한강공원",
+    "lat": 37.56287830759727,
+    "lng": 126.88529913720191
+  },
+  {
+    "poi_name": "Banpo Hangang Park (반포한강공원)",
+    "poi_type": "park",
+    "name_en": "Banpo Hangang Park",
+    "name_ko": "반포한강공원",
+    "lat": 37.50770522731566,
+    "lng": 126.99273997522754
+  },
+  {
+    "poi_name": "Seoul Upcycling Plaza (서울새활용플라자)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul Upcycling Plaza",
+    "name_ko": "서울새활용플라자",
+    "lat": 37.55869290265427,
+    "lng": 127.05783039926044
+  },
+  {
+    "poi_name": "Cheongdam Fashion Street (청담패션거리)",
+    "poi_type": "shopping",
+    "name_en": "Cheongdam Fashion Street",
+    "name_ko": "청담패션거리",
+    "lat": 37.52299041753568,
+    "lng": 127.05225837419201
+  },
+  {
+    "poi_name": "Rakkojae Seoul Bukchon Hanok Hotel (락고재 서울 북촌 한옥호텔)",
+    "poi_type": "tourist_spot",
+    "name_en": "Rakkojae Seoul Bukchon Hanok Hotel",
+    "name_ko": "락고재 서울 북촌 한옥호텔",
+    "lat": 37.580114427607526,
+    "lng": 126.98622215434288
+  },
+  {
+    "poi_name": "Namsan Outdoor Botanical Garden (남산 야외식물원)",
+    "poi_type": "park",
+    "name_en": "Namsan Outdoor Botanical Garden",
+    "name_ko": "남산 야외식물원",
+    "lat": 37.5414454900027,
+    "lng": 126.99696240059866
+  },
+  {
+    "poi_name": "Gyeongnidan Street (경리단길)",
+    "poi_type": "street",
+    "name_en": "Gyeongnidan Street",
+    "name_ko": "경리단길",
+    "lat": 37.540005442554005,
+    "lng": 126.99238753441595
+  },
+  {
+    "poi_name": "Itaewon Shopping Street (이태원 쇼핑거리)",
+    "poi_type": "shopping",
+    "name_en": "Itaewon Shopping Street",
+    "name_ko": "이태원 쇼핑거리",
+    "lat": 37.53065791712886,
+    "lng": 126.99119672396387
+  },
+  {
+    "poi_name": "COEX Aquarium (코엑스 아쿠아리움)",
+    "poi_type": "tourist_spot",
+    "name_en": "COEX Aquarium",
+    "name_ko": "코엑스 아쿠아리움",
+    "lat": 37.512018348059286,
+    "lng": 127.0590370189726
+  },
+  {
+    "poi_name": "Sinsa-dong Garosu-gil Road (신사동 가로수길)",
+    "poi_type": "street",
+    "name_en": "Sinsa-dong Garosu-gil Road",
+    "name_ko": "신사동 가로수길",
+    "lat": 37.51965606799503,
+    "lng": 127.02274244352047
+  },
+  {
+    "poi_name": "Yanghwa Hangang Park (한강시민공원 양화지구(양화한강공원))",
+    "poi_type": "park",
+    "name_en": "Yanghwa Hangang Park",
+    "name_ko": "한강시민공원 양화지구(양화한강공원)",
+    "lat": 37.53833349376815,
+    "lng": 126.90225716183281
+  },
+  {
+    "poi_name": "The Hyundai Seoul (더현대 서울)",
+    "poi_type": "shopping",
+    "name_en": "The Hyundai Seoul",
+    "name_ko": "더현대 서울",
+    "lat": 37.52705399379279,
+    "lng": 126.92784760336099
+  },
+  {
+    "poi_name": "IFC Mall (IFC몰)",
+    "poi_type": "shopping",
+    "name_en": "IFC Mall",
+    "name_ko": "IFC몰",
+    "lat": 37.525058436298806,
+    "lng": 126.92593686013313
+  },
+  {
+    "poi_name": "Culture Station Seoul 284 (문화역 서울 284)",
+    "poi_type": "museum",
+    "name_en": "Culture Station Seoul 284",
+    "name_ko": "문화역 서울 284",
+    "lat": 37.55604091654651,
+    "lng": 126.97159453695092
+  },
+  {
+    "poi_name": "Seosomun Historical Park (서소문역사공원)",
+    "poi_type": "park",
+    "name_en": "Seosomun Historical Park",
+    "name_ko": "서소문역사공원",
+    "lat": 37.56056786627037,
+    "lng": 126.9688671744849
+  },
+  {
+    "poi_name": "Hongdae (Hongik University Street) (홍대)",
+    "poi_type": "street",
+    "name_en": "Hongdae",
+    "name_ko": "Hongik University Street) (홍대",
+    "lat": 37.553922523080644,
+    "lng": 126.9134558741011
+  },
+  {
+    "poi_name": "Gyeongui Line Forest Park (Yeontral Park) (경의선숲길(연트럴파크))",
+    "poi_type": "park",
+    "name_en": "Gyeongui Line Forest Park",
+    "name_ko": "Yeontral Park) (경의선숲길(연트럴파크)",
+    "lat": 37.56392172640174,
+    "lng": 126.92291721675069
+  },
+  {
+    "poi_name": "Hwarangdae Railroad Park (화랑대 철도공원)",
+    "poi_type": "park",
+    "name_en": "Hwarangdae Railroad Park",
+    "name_ko": "화랑대 철도공원",
+    "lat": 37.62444166482504,
+    "lng": 127.0930907816746
+  },
+  {
+    "poi_name": "Gwanghwamun Market (광화문 마켓)",
+    "poi_type": "shopping",
+    "name_en": "Gwanghwamun Market",
+    "name_ko": "광화문 마켓",
+    "lat": 37.57342622322956,
+    "lng": 126.97595910272963
+  },
+  {
+    "poi_name": "Bukhansan Dulle Trail Section 1 (북한산 둘레길 1 소나무숲길)",
+    "poi_type": "tourist_spot",
+    "name_en": "Bukhansan Dulle Trail Section 1",
+    "name_ko": "북한산 둘레길 1 소나무숲길",
+    "lat": 37.66338266403983,
+    "lng": 127.01189248568653
+  },
+  {
+    "poi_name": "Hyundai Yacht Seoul Branch (현대요트 서울지점)",
+    "poi_type": "tourist_spot",
+    "name_en": "Hyundai Yacht Seoul Branch",
+    "name_ko": "현대요트 서울지점",
+    "lat": 37.50576767208182,
+    "lng": 126.98108757037474
+  },
+  {
+    "poi_name": "Samcheonggak (삼청각)",
+    "poi_type": "culture",
+    "name_en": "Samcheonggak",
+    "name_ko": "삼청각",
+    "lat": 37.59678160388299,
+    "lng": 126.98467310926749
+  },
+  {
+    "poi_name": "Four Seasons Charles H. (포시즌스 찰스 H.)",
+    "poi_type": "nightlife",
+    "name_en": "Four Seasons Charles H.",
+    "name_ko": "포시즌스 찰스 H.",
+    "lat": 37.57069024871687,
+    "lng": 126.9753951464675
+  },
+  {
+    "poi_name": "National Memorial of Korean Provisional Government (국립대한민국임시정부기념관)",
+    "poi_type": "museum",
+    "name_en": "National Memorial of Korean Provisional Government",
+    "name_ko": "국립대한민국임시정부기념관",
+    "lat": 37.5759996497834,
+    "lng": 126.9544172159667
+  },
+  {
+    "poi_name": "Dongnimmun Gate (독립문)",
+    "poi_type": "history",
+    "name_en": "Dongnimmun Gate",
+    "name_ko": "독립문",
+    "lat": 37.57514262535188,
+    "lng": 126.95561808988049
+  },
+  {
+    "poi_name": "Dongnimmun Yeongcheon Market (독립문영천시장)",
+    "poi_type": "market",
+    "name_en": "Dongnimmun Yeongcheon Market",
+    "name_ko": "독립문영천시장",
+    "lat": 37.57032540620695,
+    "lng": 126.96184522944482
+  },
+  {
+    "poi_name": "Sangchonjae House (상촌재)",
+    "poi_type": "history",
+    "name_en": "Sangchonjae House",
+    "name_ko": "상촌재",
+    "lat": 37.58185134289447,
+    "lng": 126.96951762521817
+  },
+  {
+    "poi_name": "Suseongdonggyegok Valley (수성동계곡)",
+    "poi_type": "park",
+    "name_en": "Suseongdonggyegok Valley",
+    "name_ko": "수성동계곡",
+    "lat": 37.582246147999925,
+    "lng": 126.96310670520168
+  },
+  {
+    "poi_name": "Inwangsan Mountain Chosochaekbang (인왕산 더숲 초소책방)",
+    "poi_type": "cafe",
+    "name_en": "Inwangsan Mountain Chosochaekbang",
+    "name_ko": "인왕산 더숲 초소책방",
+    "lat": 37.585953295307775,
+    "lng": 126.96427738596299
+  },
+  {
+    "poi_name": "Suraksan Mountain (수락산)",
+    "poi_type": "nature",
+    "name_en": "Suraksan Mountain",
+    "name_ko": "수락산",
+    "lat": 37.68937329527532,
+    "lng": 127.08077449515949
+  },
+  {
+    "poi_name": "Seoul Marina Club & Yacht (서울마리나 요트&클럽)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul Marina Club & Yacht",
+    "name_ko": "서울마리나 요트&클럽",
+    "lat": 37.53480784266169,
+    "lng": 126.91158532201422
+  },
+  {
+    "poi_name": "Yongsan Family Park (용산가족공원)",
+    "poi_type": "park",
+    "name_en": "Yongsan Family Park",
+    "name_ko": "용산가족공원",
+    "lat": 37.52231956986523,
+    "lng": 126.98409430108842
+  },
+  {
+    "poi_name": "Seoul Battleship Park (서울함공원)",
+    "poi_type": "tourist_spot",
+    "name_en": "Seoul Battleship Park",
+    "name_ko": "서울함공원",
+    "lat": 37.55578810827803,
+    "lng": 126.89395375611852
+  },
+  {
+    "poi_name": "Supsok Hanbang Land (숲속한방랜드)",
+    "poi_type": "tourist_spot",
+    "name_en": "Supsok Hanbang Land",
+    "name_ko": "숲속한방랜드",
+    "lat": 37.57022368891852,
+    "lng": 126.94567778950855
+  },
+  {
+    "poi_name": "Seoul Namsan Park (남산공원(서울))",
+    "poi_type": "park",
+    "name_en": "Seoul Namsan Park",
+    "name_ko": "남산공원(서울)",
+    "lat": 37.555623591809535,
+    "lng": 126.99219949115763
+  },
+  {
+    "poi_name": "Maison Hannam (메종 한남)",
+    "poi_type": "restaurant",
+    "name_en": "Maison Hannam",
+    "name_ko": "메종 한남",
+    "lat": 37.53424135143638,
+    "lng": 127.01291483173077
+  },
+  {
+    "poi_name": "Cheolgil Tteokbokki (철길떡볶이)",
+    "poi_type": "restaurant",
+    "name_en": "Cheolgil Tteokbokki",
+    "name_ko": "철길떡볶이",
+    "lat": 37.56230194210451,
+    "lng": 126.9636033751693
+  }
+]

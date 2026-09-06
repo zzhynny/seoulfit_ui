@@ -1,0 +1,47 @@
+[
+  {
+    "poi_name": "Insadong Ssamziegil (인사동 쌈지길)",
+    "poi_type": "shopping",
+    "resembles": "Insa-dong (인사동)"
+  },
+  {
+    "poi_name": "Seongsu-dong (성수동)",
+    "poi_type": "street",
+    "resembles": "Seongsu-dong Galbi Alley (성수동 갈비골목)"
+  },
+  {
+    "poi_name": "Jongno (종로)",
+    "poi_type": "street",
+    "resembles": "Jongno Area (종로)"
+  },
+  {
+    "poi_name": "Yongsan Baekbin Railroad (용산땡땡거리)",
+    "poi_type": "street",
+    "resembles": "Yongsan (용산)"
+  },
+  {
+    "poi_name": "Apgujeong Select Shop (압구정 편집샵)",
+    "poi_type": "shopping",
+    "resembles": "Apgujeong (압구정)"
+  },
+  {
+    "poi_name": "Insa-dong Culture Street (인사동 문화의거리)",
+    "poi_type": "shopping",
+    "resembles": "Insa-dong (인사동)"
+  },
+  {
+    "poi_name": "Myeongdong Nanta Theatre (명동난타극장)",
+    "poi_type": "tourist_spot",
+    "resembles": "Myeong-dong (명동)"
+  },
+  {
+    "poi_name": "Samcheong-dong Street (삼청동길)",
+    "poi_type": "street",
+    "resembles": "Samcheong-dong (삼청동)"
+  },
+  {
+    "poi_name": "Sinsa-dong Garosu-gil Road (신사동 가로수길)",
+    "poi_type": "street",
+    "resembles": "Insa-dong (인사동)"
+  }
+]

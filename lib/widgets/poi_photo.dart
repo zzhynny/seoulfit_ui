@@ -18,12 +18,17 @@ class PoiPhoto extends StatefulWidget {
   const PoiPhoto({
     super.key,
     required this.name,
+    this.type = '',
     this.asset,
     this.size,
     this.borderRadius = 12,
   });
 
   final String name;
+
+  /// The planner's raw `poi_type`. /poi-image ranks candidates with it, and
+  /// a bare Seoul name without it pulls back whatever matches the words.
+  final String type;
   final String? asset;
   final double? size;
   final double borderRadius;
@@ -47,7 +52,7 @@ class _PoiPhotoState extends State<PoiPhoto> {
     if (api == null) return;
 
     try {
-      final url = await api.fetchPoiImage(widget.name);
+      final url = await api.fetchPoiImage(widget.name, type: widget.type);
       if (mounted && url.isNotEmpty) setState(() => _url = url);
     } catch (_) {
       // A missing photo is not worth surfacing — the placeholder is the

@@ -113,7 +113,10 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
                 ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: RouteMap(itinerary: widget.itinerary),
+                child: RouteMap(
+                  itinerary: widget.itinerary,
+                  onlyDay: selectedDay,
+                ),
               ),
               if (_showTransitTip)
                 Padding(

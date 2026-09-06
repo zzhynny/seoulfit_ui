@@ -138,6 +138,7 @@ class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
               children: [
                 PoiPhoto(
                   name: activity.title,
+                  type: activity.poiType,
                   asset: activity.imageAsset,
                   size: 72,
                 ),

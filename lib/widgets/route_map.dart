@@ -12,14 +12,26 @@ import '../theme/theme.dart';
 /// which is every stop under `--dart-define=USE_MOCKS=true`, since the mock
 /// itinerary is display copy with no geography behind it.
 class RouteMap extends StatelessWidget {
-  const RouteMap({super.key, required this.itinerary, this.height = 200});
+  const RouteMap({
+    super.key,
+    required this.itinerary,
+    this.height = 200,
+    this.onlyDay,
+  });
 
   final Itinerary itinerary;
   final double height;
 
+  /// Show just this day's stops. Null shows the whole trip.
+  ///
+  /// The day tabs above the map filter the stop list, and leaving every
+  /// day's markers on the map while the list showed one made the two
+  /// disagree about what the traveller had selected.
+  final int? onlyDay;
+
   @override
   Widget build(BuildContext context) {
-    final days = mappableDays(itinerary);
+    final days = mappableDays(itinerary, onlyDay: onlyDay);
     final allPoints = [
       for (final day in days)
         for (final stop in day) stop.point,
@@ -62,7 +74,7 @@ class RouteMap extends StatelessWidget {
                     Polyline(
                       points: [for (final stop in days[i]) stop.point],
                       strokeWidth: 3.5,
-                      color: kDayColors[i % kDayColors.length],
+                      color: _dayColor(days[i].first.dayNumber),
                     ),
               ],
             ),
@@ -77,7 +89,7 @@ class RouteMap extends StatelessWidget {
                       alignment: Alignment.center,
                       child: _NumberedMarker(
                         number: stop.order,
-                        color: kDayColors[i % kDayColors.length],
+                        color: _dayColor(stop.dayNumber),
                       ),
                     ),
               ],
@@ -128,23 +140,39 @@ class RouteMap extends StatelessWidget {
   );
 }
 
+/// Day 1 takes the first colour, day 2 the second, and so on — keyed off the
+/// day number rather than list position so a filtered map keeps each day's
+/// colour.
+Color _dayColor(int dayNumber) =>
+    kDayColors[(dayNumber - 1).clamp(0, 1 << 30) % kDayColors.length];
+
 /// One plottable stop: its number in the printed route list, and where it is.
 @visibleForTesting
 class MappedStop {
-  const MappedStop(this.order, this.point);
+  const MappedStop(this.order, this.point, this.dayNumber);
   final int order;
   final LatLng point;
+
+  /// The itinerary day this stop belongs to. Drives its colour, so filtering
+  /// to one day keeps that day the colour it had on the full-trip map.
+  final int dayNumber;
 }
 
 /// Stops that can actually be plotted, grouped by day and numbered
 /// continuously across the trip so the marker numbers line up with the route
 /// list printed under the map.
 @visibleForTesting
-List<List<MappedStop>> mappableDays(Itinerary itinerary) {
+List<List<MappedStop>> mappableDays(Itinerary itinerary, {int? onlyDay}) {
   final days = <List<MappedStop>>[];
   var order = 1;
 
   for (final day in itinerary.days) {
+    // Numbering still counts the skipped days, so a marker keeps the same
+    // number whether the map is filtered or not.
+    if (onlyDay != null && day.dayNumber != onlyDay) {
+      order += day.activities.where((a) => a.included).length;
+      continue;
+    }
     final stops = <MappedStop>[];
     for (final activity in day.activities) {
       if (!activity.included) continue;
@@ -155,7 +183,7 @@ List<List<MappedStop>> mappableDays(Itinerary itinerary) {
       // number after it out of step with the list.
       final current = order++;
       if (lat == null || lng == null) continue;
-      stops.add(MappedStop(current, LatLng(lat, lng)));
+      stops.add(MappedStop(current, LatLng(lat, lng), day.dayNumber));
     }
     if (stops.isNotEmpty) days.add(stops);
   }

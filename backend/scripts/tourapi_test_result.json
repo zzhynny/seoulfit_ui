@@ -1,0 +1,353 @@
+[
+  {
+    "poi_name": "Seongsu-dong Galbi Alley (성수동 갈비골목)",
+    "name_ko": "성수동 갈비골목",
+    "name_en": "Seongsu-dong Galbi Alley",
+    "poi_type": "restaurant",
+    "lat": 37.54617287080923,
+    "lng": 127.04848717018473,
+    "search_ko": {
+      "query": "성수동 갈비골목",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "search_en": {
+      "query": "Seongsu-dong Galbi Alley",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "matched": false,
+    "matched_source": null,
+    "contentid": null,
+    "contenttypeid": null,
+    "matched_title": null,
+    "detail_intro": null
+  },
+  {
+    "poi_name": "Baeknyeonok (백년옥)",
+    "name_ko": "백년옥",
+    "name_en": "Baeknyeonok",
+    "poi_type": "restaurant",
+    "lat": 37.481198993988976,
+    "lng": 127.01378468198091,
+    "search_ko": {
+      "query": "백년옥",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "search_en": {
+      "query": "Baeknyeonok",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "matched": false,
+    "matched_source": null,
+    "contentid": null,
+    "contenttypeid": null,
+    "matched_title": null,
+    "detail_intro": null
+  },
+  {
+    "poi_name": "Osulloc Tea House – Bukchon Branch (오설록 티하우스 북촌점)",
+    "name_ko": "오설록 티하우스 북촌점",
+    "name_en": "Osulloc Tea House – Bukchon Branch",
+    "poi_type": "cafe",
+    "lat": 37.58104676298559,
+    "lng": 126.98466099452799,
+    "search_ko": {
+      "query": "오설록 티하우스 북촌점",
+      "ok": true,
+      "total_count": 1,
+      "items": [
+        {
+          "contentid": "4031227",
+          "contenttypeid": "79",
+          "title": "O'sulloc Tea House Bukchon Branch [Tax Refund Shop](오설록 티하우스 북촌점)",
+          "addr1": "45, Bukchon-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Osulloc Tea House – Bukchon Branch",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "matched": true,
+    "matched_source": "ko",
+    "contentid": "4031227",
+    "contenttypeid": "79",
+    "matched_title": "O'sulloc Tea House Bukchon Branch [Tax Refund Shop](오설록 티하우스 북촌점)",
+    "detail_intro": {
+      "ok": true,
+      "fields": {
+        "contentid": "4031227",
+        "contenttypeid": "79",
+        "fairday": "Monday - Sunday",
+        "infocentershopping": "070-4121-2019",
+        "opendateshopping": "",
+        "opentime": "11:00~20:00",
+        "parkingshopping": "Not available",
+        "restdateshopping": "",
+        "restroom": "Available",
+        "saleitem": "Food products",
+        "scaleshopping": "",
+        "shopguide": ""
+      },
+      "operating_hours_fields": {
+        "opentime": "11:00~20:00"
+      },
+      "closed_day_fields": {
+        "restdateshopping": ""
+      }
+    }
+  },
+  {
+    "poi_name": "Geumdwaeji Sikdang (금돼지식당)",
+    "name_ko": "금돼지식당",
+    "name_en": "Geumdwaeji Sikdang",
+    "poi_type": "restaurant",
+    "lat": 37.557093134177435,
+    "lng": 127.01167762485548,
+    "search_ko": {
+      "query": "금돼지식당",
+      "ok": true,
+      "total_count": 1,
+      "items": [
+        {
+          "contentid": "3104225",
+          "contenttypeid": "82",
+          "title": "Geumdwaeji Sikdang (금돼지식당)",
+          "addr1": "149 Dasan-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Geumdwaeji Sikdang",
+      "ok": true,
+      "total_count": 1,
+      "items": [
+        {
+          "contentid": "3104225",
+          "contenttypeid": "82",
+          "title": "Geumdwaeji Sikdang (금돼지식당)",
+          "addr1": "149 Dasan-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3104225",
+    "contenttypeid": "82",
+    "matched_title": "Geumdwaeji Sikdang (금돼지식당)",
+    "detail_intro": {
+      "ok": true,
+      "fields": {
+        "contentid": "3104225",
+        "contenttypeid": "82",
+        "firstmenu": "Nunkkon moksal (Grilled pork shoulder)",
+        "infocenterfood": "+82-507-1307-8750",
+        "opendatefood": "",
+        "opentimefood": "11:30~23:00 (Last order 22:20)",
+        "parkingfood": "Not available",
+        "reservationfood": "",
+        "restdatefood": "N/A (Open all year round)",
+        "scalefood": "",
+        "seat": "",
+        "smoking": "",
+        "treatmenu": "Bonsamgyeop (Grilled bone-in pork belly), Deungmoksal (Short loin and pork shoulder)",
+        "lcnsno": ""
+      },
+      "operating_hours_fields": {
+        "opentimefood": "11:30~23:00 (Last order 22:20)"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    }
+  },
+  {
+    "poi_name": "Sooyeon Sanbang (수연산방)",
+    "name_ko": "수연산방",
+    "name_en": "Sooyeon Sanbang",
+    "poi_type": "cafe",
+    "lat": 37.59503994431988,
+    "lng": 126.99484607976842,
+    "search_ko": {
+      "query": "수연산방",
+      "ok": true,
+      "total_count": 1,
+      "items": [
+        {
+          "contentid": "1721080",
+          "contenttypeid": "82",
+          "title": "Sooyeon Sanbang (수연산방)",
+          "addr1": "8 Seongbuk-ro 26-gil, Seongbuk-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Sooyeon Sanbang",
+      "ok": true,
+      "total_count": 1,
+      "items": [
+        {
+          "contentid": "1721080",
+          "contenttypeid": "82",
+          "title": "Sooyeon Sanbang (수연산방)",
+          "addr1": "8 Seongbuk-ro 26-gil, Seongbuk-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1721080",
+    "contenttypeid": "82",
+    "matched_title": "Sooyeon Sanbang (수연산방)",
+    "detail_intro": {
+      "ok": true,
+      "fields": {
+        "contentid": "1721080",
+        "contenttypeid": "82",
+        "firstmenu": "Danhobak bingsu (Shaved ice with pumpkin)",
+        "infocenterfood": "• 1330 Travel Hotline: +82-2-1330  (Korean, English, Japanese, Chinese)  • For more info: +82-2-764-1736",
+        "opendatefood": "November 3, 1998",
+        "opentimefood": "Wednesday-Friday 11:30-17:50 (Last order 17:00)  Saturday 11:30-21:50 (Break time 18:00~19:00, Last order 21:00) Sunday 11:30-19:40 (Last order 18:50)",
+        "parkingfood": "Available",
+        "reservationfood": "",
+        "restdatefood": "Mondays, Tuesdays",
+        "scalefood": "",
+        "seat": "",
+        "smoking": "",
+        "treatmenu": "Danhobak bingsu (Shaved ice with pumpkin), Injeolmi (Bean-powder-coated rice cake)",
+        "lcnsno": "19980050573"
+      },
+      "operating_hours_fields": {
+        "opentimefood": "Wednesday-Friday 11:30-17:50 (Last order 17:00)  Saturday 11:30-21:50 (Break time 18:00~19:00, Last order 21:00) Sunday 11:30-19:40 (Last order 18:50)"
+      },
+      "closed_day_fields": {
+        "restdatefood": "Mondays, Tuesdays"
+      }
+    }
+  },
+  {
+    "poi_name": "Seoul Forest Cafe Streets (서울숲 카페거리)",
+    "name_ko": "서울숲 카페거리",
+    "name_en": "Seoul Forest Cafe Streets",
+    "poi_type": "cafe",
+    "lat": 37.54664460997843,
+    "lng": 127.0427551436349,
+    "search_ko": {
+      "query": "서울숲 카페거리",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "search_en": {
+      "query": "Seoul Forest Cafe Streets",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "matched": false,
+    "matched_source": null,
+    "contentid": null,
+    "contenttypeid": null,
+    "matched_title": null,
+    "detail_intro": null
+  },
+  {
+    "poi_name": "Tea Therapy (티테라피)",
+    "name_ko": "티테라피",
+    "name_en": "Tea Therapy",
+    "poi_type": "cafe",
+    "lat": 37.5791873927543,
+    "lng": 126.98356830604604,
+    "search_ko": {
+      "query": "티테라피",
+      "ok": true,
+      "total_count": 1,
+      "items": [
+        {
+          "contentid": "3091335",
+          "contenttypeid": "82",
+          "title": "Tea Therapy (티테라피)",
+          "addr1": "74 Yunboseon-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Tea Therapy",
+      "ok": true,
+      "total_count": 1,
+      "items": [
+        {
+          "contentid": "3091335",
+          "contenttypeid": "82",
+          "title": "Tea Therapy (티테라피)",
+          "addr1": "74 Yunboseon-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3091335",
+    "contenttypeid": "82",
+    "matched_title": "Tea Therapy (티테라피)",
+    "detail_intro": {
+      "ok": true,
+      "fields": {
+        "contentid": "3091335",
+        "contenttypeid": "82",
+        "firstmenu": "Hyangtong Tea, Omija Tea, Medicinal Herb Tea, Jujube Tea",
+        "infocenterfood": "+82-2-730-7507",
+        "opendatefood": "",
+        "opentimefood": "Monday–Saturday 10:00-21:00 Sundays 10:00-20:00",
+        "parkingfood": "Unavailable",
+        "reservationfood": "",
+        "restdatefood": "N/A (Open all year round)",
+        "scalefood": "",
+        "seat": "",
+        "smoking": "",
+        "treatmenu": "",
+        "lcnsno": ""
+      },
+      "operating_hours_fields": {
+        "opentimefood": "Monday–Saturday 10:00-21:00 Sundays 10:00-20:00"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    }
+  },
+  {
+    "poi_name": "Café Dior (카페 디올)",
+    "name_ko": "카페 디올",
+    "name_en": "Café Dior",
+    "poi_type": "cafe",
+    "lat": 37.524701849246036,
+    "lng": 127.0463743600998,
+    "search_ko": {
+      "query": "카페 디올",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "search_en": {
+      "query": "Café Dior",
+      "ok": true,
+      "total_count": 0,
+      "items": []
+    },
+    "matched": false,
+    "matched_source": null,
+    "contentid": null,
+    "contenttypeid": null,
+    "matched_title": null,
+    "detail_intro": null
+  }
+]

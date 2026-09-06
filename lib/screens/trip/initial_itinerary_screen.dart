@@ -3,6 +3,7 @@ import '../../models/trip.dart';
 import '../../theme/theme.dart';
 import '../../widgets/activity_card.dart';
 import '../../widgets/day_tabs.dart';
+import '../../widgets/route_map.dart';
 import '../../widgets/primary_button.dart';
 import 'place_detail_sheet.dart';
 
@@ -58,13 +59,13 @@ class _InitialItineraryScreenState extends State<InitialItineraryScreen> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: SizedBox(
-              height: 128,
-              width: double.infinity,
-              child: Image.asset('assets/images/map-seoul.png', fit: BoxFit.cover),
-            ),
+          // Was Image.asset('map-seoul.png') — a Figma illustration of a map,
+          // not the trip. Same real map as Final Route, following the day
+          // tabs below it.
+          child: RouteMap(
+            itinerary: widget.itinerary,
+            height: 128,
+            onlyDay: _selectedDay,
           ),
         ),
         Padding(

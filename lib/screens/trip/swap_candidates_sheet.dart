@@ -198,7 +198,7 @@ class _CandidateRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PoiPhoto(name: candidate.name, size: 64),
+            PoiPhoto(name: candidate.name, type: candidate.type, size: 64),
             const SizedBox(width: AppSpacing.smMd),
             Expanded(
               child: Column(

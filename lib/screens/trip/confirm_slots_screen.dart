@@ -168,29 +168,38 @@ class _SummaryRow extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.chipBackground,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 16, color: AppColors.primary),
-              ),
-              const SizedBox(width: 12),
-              Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
-            ],
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.chipBackground,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: AppColors.primary),
           ),
-          Row(
-            children: [
-              Text(value, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(width: 8),
-              const Icon(Icons.edit_outlined, size: 14, color: AppColors.textSecondary),
-            ],
+          const SizedBox(width: 12),
+          Text(label,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary)),
+          const SizedBox(width: 12),
+          // Takes the remaining width and wraps. The dates slot holds the
+          // picker's full contract string — "September 10, 2026 to September
+          // 12, 2026" — which overflowed this row when nothing could flex.
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Padding(
+            padding: EdgeInsets.only(top: 3),
+            child: Icon(Icons.edit_outlined,
+                size: 14, color: AppColors.textSecondary),
           ),
         ],
       ),

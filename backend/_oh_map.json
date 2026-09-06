@@ -1,0 +1,653 @@
+{
+  "Seoul Robot & AI Museum (RAIM) (서울로봇인공지능과학관)": {
+    "hours": "09:30-17:30",
+    "closed": "Every Monday\r\nJanuary 1, Lunar New Year’s Day/Chuseok Day\r\nIf Monday is a public holiday, the museum will be closed the following day",
+    "source": "seoul.json",
+    "source_title": "SEOUL ROBOT & AI MUSEUM (RAIM)",
+    "match_tier": "loose_en"
+  },
+  "Seoul Science Center (서울시립과학관)": {
+    "hours": "화요일~금요일 09:30~17:30",
+    "closed": "매주 월요일 휴관, 1월 1일, 설·추석 당일",
+    "source": "seoul.json",
+    "source_title": "서울시립과학관",
+    "match_tier": "exact_ko"
+  },
+  "National Aviation Museum of Korea (국립항공박물관)": {
+    "hours": "Daily 10:00 - 18:00",
+    "closed": "Closed Mondays\r\nJanuary 1, Lunar New Year’s Day\r\n*If Monday is a public holiday, the museum will be open on that Monday and closed on Tuesday.*",
+    "source": "seoul.json",
+    "source_title": "National Aviation Museum of Korea ",
+    "match_tier": "exact_en"
+  },
+  "National Assembly Building (국회의사당)": {
+    "hours": "Weekdays: 10:00 AM - 17:00 (Entry available at 10:00, 11:00, 14:00, 15:00, 16:00, and 17:00.; Maximum 150 people per session)  \r\nSaturdays: 10:00 - 12:00 (Entry available at 10:00, 11:00, and 12:00; Maximum 150 people per session)",
+    "closed": "Closed Sundays, holidays & May 31st",
+    "source": "seoul.json",
+    "source_title": "National Assembly Building",
+    "match_tier": "exact_en"
+  },
+  "Hangang River Bus (한강버스)": {
+    "hours": "[Operating Hours]\r\nEast Route (Jamsil - Yeouido(16 Round Trips)) 10:00 - 17:30\r\nWest Route (Magok - Yeouido(16 Round Trips)) 10:20 - 17:40",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Hangang River Bus",
+    "match_tier": "exact_en"
+  },
+  "Seoul Sky (서울스카이)": {
+    "hours": "Sun-Thu: 10:30-22:00, Fri-Sat: 10:30-23:00 KST",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Seoul Sky",
+    "match_tier": "exact_en"
+  },
+  "Namsangol Hanok Village (남산골한옥마을)": {
+    "hours": "Summer season (April to October) 09:00 - 21:00 KST\r\nWinter season (November to March) 09:00 - 20:00 KST",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Namsangol Hanok Village",
+    "match_tier": "exact_en"
+  },
+  "DDP (Dongdaemun Design Plaza) (DDP 동대문디자인플라자)": {
+    "hours": "10:00-20:00 KST (Vary by space, see the website)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Dongdaemun Design Plaza (DDP)",
+    "match_tier": "loose_ko"
+  },
+  "Deoksugung Palace (덕수궁)": {
+    "hours": "Daily 9:00 - 21:00 (Last entry 20:00)",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Deoksugung Palace",
+    "match_tier": "exact_en"
+  },
+  "Netmarble Game Museum (넷마블게임박물관)": {
+    "hours": "10:00-18:00",
+    "closed": "매주 월요일",
+    "source": "seoul.json",
+    "source_title": "넷마블게임박물관",
+    "match_tier": "exact_ko"
+  },
+  "e-Sports Hall of Fame (e스포츠 명예의 전당)": {
+    "hours": "11:00-18:00",
+    "closed": "매주 월요일",
+    "source": "seoul.json",
+    "source_title": "e스포츠 명예의 전당",
+    "match_tier": "exact_ko"
+  },
+  "N Seoul Tower (N서울타워)": {
+    "hours": "Weekdays 10:00-22:30, Weekends 10:00-23:00\r\n*Last entry 30 minutes before close",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Namsan Seoul Tower ",
+    "match_tier": "loose_en"
+  },
+  "Gwanghwamun Square (광화문광장)": {
+    "hours": "Open 24 hours a day, throughout the year, as a city square",
+    "closed": "Open year-around",
+    "source": "seoul.json",
+    "source_title": "Gwanghwamun Square",
+    "match_tier": "exact_en"
+  },
+  "Bukchon Hanok Village (북촌한옥마을)": {
+    "hours": "10:00 ~ 17:00 (Restricted Hours: 17:00 ~ 10:00 the following day; visitors are prohibited from entering restricted areas during these hours)\r\n(The Hanok Village is a residential space for local citizens before it is a tourist attraction.)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Bukchon Hanok Village",
+    "match_tier": "exact_en"
+  },
+  "COEX (코엑스)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "exact_en"
+  },
+  "Starfield Library (별마당도서관)": {
+    "hours": "10:30~22:00",
+    "closed": "全年無休",
+    "source": "seoul.json",
+    "source_title": "STARFIELD LIBRARY",
+    "match_tier": "exact_en"
+  },
+  "Space K Seoul (스페이스K 서울)": {
+    "hours": "10:00-18:00",
+    "closed": "周日",
+    "source": "seoul.json",
+    "source_title": "Space K Seoul",
+    "match_tier": "exact_en"
+  },
+  "National Gugak Museum (국립국악원 국악박물관)": {
+    "hours": "Daily 10:00 - 18:00 (Last Entry at 17:30)",
+    "closed": "Closed Mondays & New Year's Day",
+    "source": "seoul.json",
+    "source_title": "National Gugak Museum",
+    "match_tier": "exact_en"
+  },
+  "Hangaram Art Museum (한가람미술관)": {
+    "hours": "10:00 - 19:00 (KST)",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Hangaram Art Museum",
+    "match_tier": "exact_en"
+  },
+  "Seoul Arts Center (예술의전당)": {
+    "hours": "Tues-Sun 10:00-19:00",
+    "closed": "Monday",
+    "source": "seoul.json",
+    "source_title": "Seoul Arts Center - Seoul Calligraphy Art Museum",
+    "match_tier": "loose_en"
+  },
+  "Seoul Calligraphy Art Museum (서울서예박물관)": {
+    "hours": "Tues-Sun 10:00-19:00",
+    "closed": "Monday",
+    "source": "seoul.json",
+    "source_title": "Seoul Arts Center - Seoul Calligraphy Art Museum",
+    "match_tier": "loose_en"
+  },
+  "Namsangol Hanok Village (남산골 한옥마을)": {
+    "hours": "Summer season (April to October) 09:00 - 21:00 KST\r\nWinter season (November to March) 09:00 - 20:00 KST",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Namsangol Hanok Village",
+    "match_tier": "exact_en"
+  },
+  "Dongdaemun Design Plaza (DDP) (동대문디자인플라자)": {
+    "hours": "10:00-20:00 KST (Vary by space, see the website)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Dongdaemun Design Plaza (DDP)",
+    "match_tier": "loose_en"
+  },
+  "Haneul Park (하늘공원)": {
+    "hours": "Daily, 05:00 to 20:30\r\n* For more details, please refer to our website",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Night Views at Haneul Park",
+    "match_tier": "loose_en"
+  },
+  "The War Memorial of Korea (전쟁기념관)": {
+    "hours": "Tue-Sun 09:30 - 18:00 \r\n*For more details, please refer to our website.",
+    "closed": "Closed Mondays & the day following national holidays",
+    "source": "seoul.json",
+    "source_title": "The War Memorial of Korea",
+    "match_tier": "exact_en"
+  },
+  "Bongeunsa Temple (봉은사)": {
+    "hours": "Usage times may vary depending on temple schedules such as Buddhist services, prayer services, etc.",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Bongeunsa Temple",
+    "match_tier": "exact_en"
+  },
+  "Gyeongbokgung Palace (경복궁)": {
+    "hours": "January & February: 09:00 - 17:00\r\nMarch - May: 09:00 - 18:00\r\nJune - August: 09:00 - 18:30 \r\nSeptember & October: 09:00 - 18:00\r\nNovember & December: 09:00 - 17:00\r\n*Last entry one hour before closing*",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Gyeongbokgung Palace",
+    "match_tier": "exact_en"
+  },
+  "Namsan Cable Car (남산케이블카)": {
+    "hours": "Daily 10:00 - 23:00 KST",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Namsan Cable Car",
+    "match_tier": "exact_en"
+  },
+  "Coex Mall (CALT) (코엑스몰)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_en"
+  },
+  "Dosan Park (도산공원)": {
+    "hours": "Dosan Ahn Chang-ho Memorial Hall: Open daily from 10:00 to 18:00",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Dosan Park",
+    "match_tier": "exact_en"
+  },
+  "Changdeokgung Palace and Secret Garden (창덕궁 후원)": {
+    "hours": "한국어\r\n11~2월 10:00~15:00 (1시간 간격으로 입장 가능) \r\n3~10월 10:00~16:00 (1시간 간격으로 입장 가능)\r\n\r\n영어\r\n12~2월 10:30 / 11:30 / 14:30 \r\n3~11월 10:30 / 11:30 / 14:30 / 15:30\r\n\r\n일본어\r\n1~12월 13:30 (매주 수,금,일요일 운영)\r\n\r\n중국어\r\n1~12월 12:30 (매주 화,목,토요일 운영)\r\n\r\n* 언어권별 입장 제한 1회당 100명 (인터넷 예매 50명+현장발매 50명)\r\n* 후원 외국인 관람 시간 내국인 입장 불가 (단, 외국인 동반자가 있는 경우 내국인 최대 2명까지 입장 가능)",
+    "closed": "매주 월요일 휴관(정기휴관일이 공휴일 및 대체휴일과 겹칠 경우에는 개방하며, 그다음의 첫번째 비공휴일이 정기휴일임)",
+    "source": "seoul.json",
+    "source_title": "창덕궁 후원 ",
+    "match_tier": "exact_ko"
+  },
+  "Seodaemun Prison History Hall (서대문형무소)": {
+    "hours": "March - October 09:30 – 18:00\r\nNovember - February 09:30 – 17:00",
+    "closed": "Closed Mondays, Lunar New Year, January 1st & Chuseok",
+    "source": "seoul.json",
+    "source_title": "Seodaemun Prison History Hall",
+    "match_tier": "exact_en"
+  },
+  "The War Memorial of Korea and Yongsan Park (전쟁기념관과 용산공원)": {
+    "hours": "Tue-Sun 09:30 - 18:00 \r\n*For more details, please refer to our website.",
+    "closed": "Closed Mondays & the day following national holidays",
+    "source": "seoul.json",
+    "source_title": "The War Memorial of Korea",
+    "match_tier": "loose_en"
+  },
+  "National Museum of Korea (국립중앙박물관)": {
+    "hours": "월, 화, 목, 금, 일요일 : 10:00 - 18:00 \r\n수, 토요일 : 10:00 - 21:00 \r\n옥외 전시장(정원)은 오전 7시부터 오후 10시까지 관람 가능",
+    "closed": "1월1일, 설날, 추석 \r\n상설전시실 정기휴실일 : 매년 4, 11월 첫째 월요일\r\n상설전시관 내 특별전시실 2 휴실\r\n특별전시실 1(특별전시 미운영시 휴실), 야외전시장은 정상 개관",
+    "source": "seoul.json",
+    "source_title": "국립중앙박물관",
+    "match_tier": "exact_ko"
+  },
+  "Donuimun Museum Village (돈의문박물관마을)": {
+    "hours": "Daily 09:00 - 18:00 (KST) (Last admission 17:30)",
+    "closed": "Closed from September 25 to April 30, 2026",
+    "source": "seoul.json",
+    "source_title": "Donuimun Museum",
+    "match_tier": "loose_en"
+  },
+  "Seoul Museum of History (서울역사박물관)": {
+    "hours": "09:00~18:00 (입장마감 17:30)\r\n매주 금요일 21시까지 연장 운영\r\n* 자세한 사항은 홈페이지를 참고해 주세요.",
+    "closed": "-월요일 \r\n-1월 1일",
+    "source": "seoul.json",
+    "source_title": "서울역사박물관",
+    "match_tier": "exact_ko"
+  },
+  "Sewoon Plaza (세운상가)": {
+    "hours": "09:00 ~ 19:00 (상점마다 상이함)",
+    "closed": "일요일, 공휴일",
+    "source": "seoul.json",
+    "source_title": "세운상가",
+    "match_tier": "exact_ko"
+  },
+  "Seoullo 7017 (서울로7017)": {
+    "hours": "Open 24 hours",
+    "closed": "Open year round",
+    "source": "seoul.json",
+    "source_title": "Seoullo 7017",
+    "match_tier": "exact_en"
+  },
+  "Changdeokgung Palace (창덕궁)": {
+    "hours": "February - May, 09:00 - 18:00 (Last entry at 17:00)\r\nJune - August, 09:00 - 18:30 (Last entry at 17:30)\r\nSeptember - October, 09:00 - 18:00 (Last entry at 17:00)\r\nNovember - January, 09:00 - 17:30 (Last entry at 16:30)",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Changdeokgung Palace ",
+    "match_tier": "exact_en"
+  },
+  "Jogyesa Temple (조계사)": {
+    "hours": "Opening hours vary depending on what Buddhist ceremonies are taking place and the temple schedule",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Jogyesa Temple",
+    "match_tier": "exact_en"
+  },
+  "Starfield Coex Mall (코엑스 스타필드)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_en"
+  },
+  "Unhyeongung Palace (운현궁)": {
+    "hours": "Daily 09:00 - 19:00 KST (Last entry 18:30 KST ) *Closed Mondays*",
+    "closed": "Closed Mondays \r\n* Open on Mondays falling on public holidays",
+    "source": "seoul.json",
+    "source_title": "Unhyeongung Palace",
+    "match_tier": "exact_en"
+  },
+  "Seoul Museum of Craft Art (서울공예박물관)": {
+    "hours": "10:00 ~ 18:00 (17:30 입장 마감)\r\n금요일은 21:00까지 야간개관합니다.",
+    "closed": "월요일 (공휴일인 경우 운영) , 1월 1일",
+    "source": "seoul.json",
+    "source_title": "서울공예박물관 ",
+    "match_tier": "exact_ko"
+  },
+  "Hwanghakjeong Pavilion (황학정)": {
+    "hours": "국궁전시관 10:00~17:00",
+    "closed": "월요일, 1월 1일, 설 당일, 추석 당일",
+    "source": "seoul.json",
+    "source_title": "황학정",
+    "match_tier": "exact_ko"
+  },
+  "Coex Mall (코엑스몰)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_en"
+  },
+  "Leeum Museum of Art (리움미술관)": {
+    "hours": "Tue-Sun 10:00 - 18:00",
+    "closed": "Closed Mondays, New Year's weekend, New Year's Day & Chuseok",
+    "source": "seoul.json",
+    "source_title": "Leeum Museum of Art ",
+    "match_tier": "exact_en"
+  },
+  "Yongsan Park (용산공원)": {
+    "hours": "Inside facilities 9:00 - 17:00 / Outside space 9:00 - 18:00 (Last entry 17:00) (KST)",
+    "closed": "Mondays, Sundays, January 1, Lunar New Year's Day and Chuseok",
+    "source": "seoul.json",
+    "source_title": "Yongsan Park Partially Open Site",
+    "match_tier": "loose_en"
+  },
+  "Bukchon Hanok Village (북촌 한옥마을)": {
+    "hours": "10:00 ~ 17:00 (Restricted Hours: 17:00 ~ 10:00 the following day; visitors are prohibited from entering restricted areas during these hours)\r\n(The Hanok Village is a residential space for local citizens before it is a tourist attraction.)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Bukchon Hanok Village",
+    "match_tier": "exact_en"
+  },
+  "Gwanghwamun Square (광화문 광장)": {
+    "hours": "Open 24 hours a day, throughout the year, as a city square",
+    "closed": "Open year-around",
+    "source": "seoul.json",
+    "source_title": "Gwanghwamun Square",
+    "match_tier": "exact_en"
+  },
+  "Namsan Cable Car / N Seoul Tower (남산 케이블카 / N서울타워)": {
+    "hours": "Daily 10:00 - 23:00 KST",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Namsan Cable Car",
+    "match_tier": "loose_en"
+  },
+  "Starfield Coex Mall (코엑스몰)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_en"
+  },
+  "Dongdaemun Design Plaza (동대문DDP)": {
+    "hours": "10:00-20:00 KST (Vary by space, see the website)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Dongdaemun Design Plaza (DDP)",
+    "match_tier": "loose_en"
+  },
+  "National Hangeul Museum (국립한글박물관)": {
+    "hours": "10:00 - 18:00\r\n- Closed for construction from October 2024 to October 8, 2025",
+    "closed": "January 1, Lunar New Year's Day, Chuseok\r\n* Closed days of the Hangeul Library: Saturdays, Sundays, and public holidays (except Hangeul Day)",
+    "source": "seoul.json",
+    "source_title": "National Hangeul Museum",
+    "match_tier": "exact_en"
+  },
+  "National Museum of Modern and Contemporary Art, Korea (국립현대미술관)": {
+    "hours": "월요일, 화요일, 목요일, 금요일, 일요일 : 10:00 ~ 18:00\r\n수요일, 토요일 : 10:00 ~ 21:00 (18:00 ~ 21:00 야간개장)\r\n* 발권시간 : 관람종료 1시간 전까지 가능",
+    "closed": "1월1일, 설날, 추석",
+    "source": "seoul.json",
+    "source_title": "국립현대미술관 서울관",
+    "match_tier": "loose_ko"
+  },
+  "Gwanghwamun Square (광화문)": {
+    "hours": "Open 24 hours a day, throughout the year, as a city square",
+    "closed": "Open year-around",
+    "source": "seoul.json",
+    "source_title": "Gwanghwamun Square",
+    "match_tier": "exact_en"
+  },
+  "Starfield Coex Mall (스타필드 코엑스)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_en"
+  },
+  "Seoul Central Mosque (한국이슬람교 서울중앙성원)": {
+    "hours": "방문가능시간 10:30~17:00",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "서울중앙성원",
+    "match_tier": "loose_ko"
+  },
+  "Namsan Cable Car (남산 케이블카)": {
+    "hours": "Daily 10:00 - 23:00 KST",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Namsan Cable Car",
+    "match_tier": "exact_en"
+  },
+  "Starfield Coex Mall (코엑스 스타필드몰)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_en"
+  },
+  "Gana Art Center (가나아트센터)": {
+    "hours": "Tue-Sun 10:00 - 19:00 KST",
+    "closed": "Mondays",
+    "source": "seoul.json",
+    "source_title": "Gana Art Center",
+    "match_tier": "exact_en"
+  },
+  "PKM Gallery (PKM갤러리)": {
+    "hours": "Tuesday - Sunday 10:00 - 18:00 (KST)",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "PKM Gallery",
+    "match_tier": "exact_en"
+  },
+  "Jongmyo Shrine (종묘)": {
+    "hours": "Monday, Wednesday to Friday: Timed Tours (Enter at designated times, accompanied by a guide, and exit together as a group)\r\n- Korean Guided Tour Times: 9:20 / 10:20 / 11:20 / 12:20 / 13:20 / 14:20 / 15:20 / 16:20 / (March to September) 16:40 *Duration: 1 hour\r\n- English Guided Tour Times: 10:00 / 12:00 / 14:00 / 16:00\r\n- Japanese Guided Tour Times: 09:30 / 11:40 / 13:40 / 15:40\r\n- Chinese Guided Tour Times: 11:00 / 15:00\r\n\r\nRegular Admission on Saturdays, Sundays, Public Holidays, and the last Wednesday of every month:\r\n- February to May, September to October: 09:00-18:00 (Last entry at 17:00)\r\n- June to August: 09:00-18:30 (Last entry at 17:30)\r\n- November to January: 09:30-17:30 (Last entry at 16:30)\r\n(※ Please refer to the website for detailed information.)",
+    "closed": "Tuesdays",
+    "source": "seoul.json",
+    "source_title": "Jongmyo Shrine",
+    "match_tier": "exact_en"
+  },
+  "Changdeokgung Palace Complex [UNESCO World Heritage Site] (창덕궁과 후원 [유네스코 세계유산])": {
+    "hours": "February - May, 09:00 - 18:00 (Last entry at 17:00)\r\nJune - August, 09:00 - 18:30 (Last entry at 17:30)\r\nSeptember - October, 09:00 - 18:00 (Last entry at 17:00)\r\nNovember - January, 09:00 - 17:30 (Last entry at 16:30)",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Changdeokgung Palace ",
+    "match_tier": "loose_en"
+  },
+  "Changgyeonggung Palace (창경궁)": {
+    "hours": "Daily 09:00 - 21:00 (Last entry at 20:00)",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Changgyeonggung Palace",
+    "match_tier": "exact_en"
+  },
+  "Seoul Museum of Art (서울시립미술관(서소문본관))": {
+    "hours": "[하절기 (3월 ~ 10월)] 화~ 목10:00~20:00 / 금 10:00-21:00 (토·일·공휴일 19:00까지) \r\n[동절기 (11월 ~ 2월)] 화~금 10:00~20:00 / 금 10:00-21:00(토·일·공휴일 18:00까지)",
+    "closed": "월요일 / 1월 1일",
+    "source": "seoul.json",
+    "source_title": "서울시립미술관 (서소문본관)",
+    "match_tier": "exact_ko"
+  },
+  "Starfield COEX Mall (스타필드 코엑스몰)": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_en"
+  },
+  "E-Land Cruise (Hangang River Ferry Cruise) (이랜드크루즈 (한강유람선))": {
+    "hours": "10:00 AM - 22:00 (Varies per course)\r\n- Duration may vary depending on the departure point and whether it's a round-trip or one-way route.  \r\n- For detailed schedule information, please refer to the website or call.",
+    "closed": "In case of natural disasters or severe weather conditions.",
+    "source": "seoul.json",
+    "source_title": "Hangang Eland Cruise",
+    "match_tier": "loose_en"
+  },
+  "Lotte World Tower & Mall (롯데월드타워&롯데월드몰)": {
+    "hours": "Please refer to the website.",
+    "closed": "Open year round",
+    "source": "seoul.json",
+    "source_title": "Lotte World Tower",
+    "match_tier": "loose_en"
+  },
+  "Seoul Metropolitan Library (서울도서관)": {
+    "hours": "* Weekdays 09:00 - 21:00 KST\r\n* Weekends 09:00 - 18:00 KST",
+    "closed": "Closed Mondays",
+    "source": "seoul.json",
+    "source_title": "Seoul Metropolitan Library",
+    "match_tier": "exact_en"
+  },
+  "N Seoul Tower (남산서울타워)": {
+    "hours": "평일 10:00-22:30,  주말 10:00~23:00\r\n* 마감시간 30분 전까지 입장 가능\r\n* 레스토랑 운영시간은 매장마다 상이하므로 홈페이지 참고",
+    "closed": "연중무휴",
+    "source": "seoul.json",
+    "source_title": "남산서울타워 ",
+    "match_tier": "exact_ko"
+  },
+  "Lotte World Tower SEOUL SKY (롯데월드타워 서울스카이)": {
+    "hours": "Please refer to the website.",
+    "closed": "Open year round",
+    "source": "seoul.json",
+    "source_title": "Lotte World Tower",
+    "match_tier": "loose_en"
+  },
+  "Museum Kimchikan (뮤지엄 김치간)": {
+    "hours": "10:00～18:00 (KST)",
+    "closed": "月曜日、1月1日、クリスマス、旧正月および秋夕(旧暦8月15日)連休",
+    "source": "seoul.json",
+    "source_title": "MUSEUM KIMCHIKAN",
+    "match_tier": "exact_en"
+  },
+  "The Children's Museum of the National Folk Museum of Korea (국립민속박물관&국립민속박물관 어린이박물관)": {
+    "hours": "09:00 - 18:00 from March to October \r\n09:00 - 17:00 from November to February \r\nExtended evening hours: 09:00 to 20:00 on Saturdays between March and October. \r\n(No extended evening hours from November to February)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "National Folk Museum of Korea",
+    "match_tier": "loose_en"
+  },
+  "Korea Furniture Museum (한국가구박물관)": {
+    "hours": "*The museum is currently closed for renovation.",
+    "closed": "Closed Mondays, Sundays & Public Holidays",
+    "source": "seoul.json",
+    "source_title": "Korea Furniture Museum",
+    "match_tier": "exact_en"
+  },
+  "Baek In-je House (백인제가옥)": {
+    "hours": "09:00-18:00 (Last entry at 17:30)\r\n※ Visitors not on a guided tour may only tour the grounds \r\n※ Fridays & Saturdays until 20:00 during August",
+    "closed": "Closed Mondays & New Year's Day",
+    "source": "seoul.json",
+    "source_title": "Baek In-je House",
+    "match_tier": "exact_en"
+  },
+  "K.O.N.G Gallery (공근혜갤러리)": {
+    "hours": "화요일~토요일 10:30~17:30",
+    "closed": "일요일, 월요일",
+    "source": "seoul.json",
+    "source_title": "공근혜갤러리",
+    "match_tier": "exact_ko"
+  },
+  "Seoul Museum of Craft Art (SeMoCA) (서울공예박물관)": {
+    "hours": "10:00 - 18:00 (Last admission at 17:30)\r\nFri 10:00 - 21:00",
+    "closed": "Mondays, January 1st, Open on Public Holidays",
+    "source": "seoul.json",
+    "source_title": "Seoul Museum of Craft",
+    "match_tier": "loose_en"
+  },
+  "Bank of Korea Money Museum (화폐박물관)": {
+    "hours": "10:00 - 17:00 (KST)",
+    "closed": "Mondays, Lunar New Year, Chuseok",
+    "source": "seoul.json",
+    "source_title": "Bank of Korea Money Museum",
+    "match_tier": "exact_en"
+  },
+  "National Museum of Modern and Contemporary Art, Seoul [MMCA Seoul] (국립현대미술관 서울관)": {
+    "hours": "월요일, 화요일, 목요일, 금요일, 일요일 : 10:00 ~ 18:00\r\n수요일, 토요일 : 10:00 ~ 21:00 (18:00 ~ 21:00 야간개장)\r\n* 발권시간 : 관람종료 1시간 전까지 가능",
+    "closed": "1월1일, 설날, 추석",
+    "source": "seoul.json",
+    "source_title": "국립현대미술관 서울관",
+    "match_tier": "exact_ko"
+  },
+  "National Museum of Korean Contemporary History (대한민국역사박물관)": {
+    "hours": "10:00 - 18:00 (Wednesdays and Saturdays: 10:00 - 21:00) \r\n*Last entry 30 minutes before closing",
+    "closed": "Closed on New Year's Day & Chuseok",
+    "source": "seoul.json",
+    "source_title": "National Museum of Korean Contemporary History",
+    "match_tier": "exact_en"
+  },
+  "Hangaram Art Museum in Seoul Arts Center (예술의전당 한가람미술관)": {
+    "hours": "10:00~19:00",
+    "closed": "월요일",
+    "source": "seoul.json",
+    "source_title": "예술의전당 한가람미술관",
+    "match_tier": "exact_ko"
+  },
+  "Some Sevit (세빛섬)": {
+    "hours": "11:00 ~ 22:00",
+    "closed": "연중무휴",
+    "source": "seoul.json",
+    "source_title": "세빛섬",
+    "match_tier": "exact_ko"
+  },
+  "Jogyesa Temple (조계사(서울))": {
+    "hours": "Opening hours vary depending on what Buddhist ceremonies are taking place and the temple schedule",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Jogyesa Temple",
+    "match_tier": "exact_en"
+  },
+  "Convention and Exhibition Center (COEX) (한국종합무역센터(코엑스))": {
+    "hours": "每日10:00-18:00（活動結束時間不定）",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "COEX",
+    "match_tier": "loose_ko"
+  },
+  "Seoul Bongeunsa Temple (봉은사 (서울))": {
+    "hours": "Usage times may vary depending on temple schedules such as Buddhist services, prayer services, etc.",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Bongeunsa Temple",
+    "match_tier": "loose_en"
+  },
+  "National Meteorological Museum of Korea (국립기상박물관)": {
+    "hours": "10:00  - 18:00",
+    "closed": "Mondays, January 1, Lunar New Year’s Day and Chuseok",
+    "source": "seoul.json",
+    "source_title": "National Meteorological Museum of Korea",
+    "match_tier": "exact_en"
+  },
+  "Dongdaemun Design Plaza (동대문디자인플라자 (DDP))": {
+    "hours": "10:00 ~ 20:00 (공간별 운영시간 상이, 홈페이지 참조)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "동대문디자인플라자 (DDP)",
+    "match_tier": "exact_ko"
+  },
+  "Daerim Market (대림시장)": {
+    "hours": "Daily 09:00 - 18:00 (Varies by store)",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Daerim Market & Gamjaguk Street",
+    "match_tier": "loose_en"
+  },
+  "Seodaemun Prison History Museum (서대문형무소역사관)": {
+    "hours": "여름철(3월~10월): 09:30~18:00\r\n겨울철(11월~2월): 09:30~17:00\r\n입장 마감은 관람 종료 30분 전",
+    "closed": "-월요일(공휴일인 경우 그 다음날)\r\n-1월1일\r\n-설날·추석 당일",
+    "source": "seoul.json",
+    "source_title": "서대문형무소역사관",
+    "match_tier": "exact_ko"
+  },
+  "Seodaemun Independence Park (서대문독립공원)": {
+    "hours": "Open 24 hours",
+    "closed": null,
+    "source": "seoul.json",
+    "source_title": "Seodaemun Independence Park",
+    "match_tier": "exact_en"
+  },
+  "Boan1942 (보안1942)": {
+    "hours": "12:00 - 18:00 KST",
+    "closed": "Mondays",
+    "source": "seoul.json",
+    "source_title": "BOAN 1942",
+    "match_tier": "exact_en"
+  },
+  "Cheongun Literature Library (청운문학도서관)": {
+    "hours": "화-금 09:00~21:00 주말 09:00~19:00",
+    "closed": "매주 월요일, 1월1일, 설 연휴, 추석 연휴",
+    "source": "seoul.json",
+    "source_title": "청운문학도서관",
+    "match_tier": "exact_ko"
+  },
+  "Amorepacific Museum of Art (아모레퍼시픽미술관)": {
+    "hours": "10:00~18:00",
+    "closed": "-월요일\r\n-1월 1일\r\n-설날, 추석 연휴",
+    "source": "seoul.json",
+    "source_title": "아모레퍼시픽미술관",
+    "match_tier": "exact_ko"
+  }
+}

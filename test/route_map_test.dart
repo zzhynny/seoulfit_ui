@@ -118,4 +118,40 @@ void main() {
     // them so they don't fail the assertions above.
     while (tester.takeException() != null) {}
   });
+
+  group('onlyDay', () {
+    Itinerary threeDays() => itineraryOf([
+          [stop('A', lat: 37.57, lng: 126.97), stop('B', lat: 37.58, lng: 126.98)],
+          [stop('C', lat: 37.55, lng: 126.92)],
+          [stop('D', lat: 37.50, lng: 127.03)],
+        ]);
+
+    test('filters the map to the day the tabs are showing', () {
+      // The tabs filtered the stop list but every day stayed on the map, so
+      // the two disagreed about what was selected.
+      final days = mappableDays(threeDays(), onlyDay: 2);
+
+      expect(days, hasLength(1));
+      expect(days.single.single.dayNumber, 2);
+    });
+
+    test('markers keep their trip-wide numbers when filtered', () {
+      // Day 2's stop is the third of the trip. Renumbering it 1 would
+      // disagree with the route list printed under the map.
+      expect(mappableDays(threeDays(), onlyDay: 2).single.single.order, 3);
+      expect(mappableDays(threeDays(), onlyDay: 3).single.single.order, 4);
+    });
+
+    test('null shows the whole trip', () {
+      expect(mappableDays(threeDays()), hasLength(3));
+    });
+
+    test('day number rides along so colours survive filtering', () {
+      // Colour is keyed off the day number, not list position, so day 3 is
+      // the same colour whether or not days 1 and 2 are on screen.
+      final all = mappableDays(threeDays());
+      expect(all.last.single.dayNumber, 3);
+      expect(mappableDays(threeDays(), onlyDay: 3).single.single.dayNumber, 3);
+    });
+  });
 }

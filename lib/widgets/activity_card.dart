@@ -27,7 +27,12 @@ class ActivityCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PoiPhoto(name: activity.title, size: 80, asset: activity.imageAsset),
+          PoiPhoto(
+            name: activity.title,
+            type: activity.poiType,
+            size: 80,
+            asset: activity.imageAsset,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -107,7 +112,12 @@ class ToggleActivityCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                PoiPhoto(name: activity.title, size: 64, asset: activity.imageAsset),
+                PoiPhoto(
+            name: activity.title,
+            type: activity.poiType,
+            size: 64,
+            asset: activity.imageAsset,
+          ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -201,7 +211,12 @@ class CheckInActivityCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            PoiPhoto(name: activity.title, size: 64, asset: activity.imageAsset),
+            PoiPhoto(
+            name: activity.title,
+            type: activity.poiType,
+            size: 64,
+            asset: activity.imageAsset,
+          ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

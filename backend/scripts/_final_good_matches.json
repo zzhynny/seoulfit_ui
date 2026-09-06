@@ -1,0 +1,4560 @@
+[
+  {
+    "poi_name": "Seoul Botanic Park (서울식물원)",
+    "poi_type": "park",
+    "name_ko": "서울식물원",
+    "name_en": "Seoul Botanic Park",
+    "search_ko": {
+      "query": "서울식물원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3006358",
+          "contenttypeid": "76",
+          "title": "Seoul Botanic Park (서울식물원)",
+          "addr1": "161 Magokdong-ro, Gangseo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul Botanic Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3006358",
+          "contenttypeid": "76",
+          "title": "Seoul Botanic Park (서울식물원)",
+          "addr1": "161 Magokdong-ro, Gangseo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3006358",
+    "contenttypeid": "76",
+    "matched_title": "Seoul Botanic Park (서울식물원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "[Greenhouse & Themed Garden]<br> March-October 09:30-18:00 / November-February 09:30-17:00<br> * Last admission is one hour before closing"
+      },
+      "closed_day_fields": {
+        "restdate": "[Greenhouse & Themed Garden] Mondays <br> [Open Forest / Lake Garden / Wetland Garden] N/A (Open all year round) <br> * Refer to the official website for schedule"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Euljiro Nogari Alley (을지로 노가리 골목)",
+    "poi_type": "restaurant",
+    "name_ko": "을지로 노가리 골목",
+    "name_en": "Euljiro Nogari Alley",
+    "search_ko": {
+      "query": "을지로 노가리 골목",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Euljiro Nogari Alley",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3013976",
+          "contenttypeid": "76",
+          "title": "Euljiro Nogari Alley (을지로 노가리골목)",
+          "addr1": "Eulji-ro 129, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3013976",
+    "contenttypeid": "76",
+    "matched_title": "Euljiro Nogari Alley (을지로 노가리골목)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "HiKR Ground (하이커 그라운드)",
+    "poi_type": "kpop_landmark",
+    "name_ko": "하이커 그라운드",
+    "name_en": "HiKR Ground",
+    "search_ko": {
+      "query": "하이커 그라운드",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2842534",
+          "contenttypeid": "78",
+          "title": "HiKR Ground (하이커 그라운드)",
+          "addr1": "40 Cheonggyecheon-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "HiKR Ground",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2842534",
+          "contenttypeid": "78",
+          "title": "HiKR Ground (하이커 그라운드)",
+          "addr1": "40 Cheonggyecheon-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2842534",
+    "contenttypeid": "78",
+    "matched_title": "HiKR Ground (하이커 그라운드)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "[F1, F5 : Midea Wall, Hiker Lounge]<br>\n- 10:00~20:00(Last entry 19:40)<br>\n[F5 Tourist Information Center]<br>\n- 10:00~19:00<br>\n[F2~F4 exhibition hall]<br>\n- 화~일요일 10:00~20:00(Last entry 19:40)"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Monday"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "LoL Park (롤파크)",
+    "poi_type": "tourist_spot",
+    "name_ko": "롤파크",
+    "name_en": "LoL Park",
+    "search_ko": {
+      "query": "롤파크",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3103039",
+          "contenttypeid": "75",
+          "title": "LoL Park (롤파크)",
+          "addr1": "33 Jong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "LoL Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3103039",
+          "contenttypeid": "75",
+          "title": "LoL Park (롤파크)",
+          "addr1": "33 Jong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3103039",
+    "contenttypeid": "75",
+    "matched_title": "LoL Park (롤파크)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeleports": "11:00-20:00<br>* Time may vary during the LCK league season depending on the game"
+      },
+      "closed_day_fields": {
+        "restdateleports": "January 1"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Naksan Park (낙산공원)",
+    "poi_type": "park",
+    "name_ko": "낙산공원",
+    "name_en": "Naksan Park",
+    "search_ko": {
+      "query": "낙산공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264478",
+          "contenttypeid": "76",
+          "title": "Naksan Park (낙산공원)",
+          "addr1": "41 Naksan-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Naksan Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264478",
+          "contenttypeid": "76",
+          "title": "Naksan Park (낙산공원)",
+          "addr1": "41 Naksan-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264478",
+    "contenttypeid": "76",
+    "matched_title": "Naksan Park (낙산공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr  * Naksan Gallery 09:00-17:00"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Olympic Park (올림픽공원)",
+    "poi_type": "park",
+    "name_ko": "올림픽공원",
+    "name_en": "Olympic Park",
+    "search_ko": {
+      "query": "올림픽공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3028170",
+          "contenttypeid": "75",
+          "title": "KSPO Dome (Olympic Gymnastics Arena) (올림픽공원체조경기장)",
+          "addr1": "424 Olympic-ro, Songpa-gu, Seoul"
+        },
+        {
+          "contentid": "789703",
+          "contenttypeid": "76",
+          "title": "Olympic Park (올림픽공원)",
+          "addr1": "424 Olympic-ro, Songpa-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Olympic Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "789703",
+          "contenttypeid": "76",
+          "title": "Olympic Park (올림픽공원)",
+          "addr1": "424 Olympic-ro, Songpa-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "789703",
+    "contenttypeid": "76",
+    "matched_title": "Olympic Park (올림픽공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Pedestrian and bicycle access: 05:00–22:00 (Plaza area until 24:00)<br>Vehicle access: 06:00-22:00<br>* Prohibited from entering park except for Peace Square and Meeting Square after 22:00 for safety"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "LG Arts Center (LG아트센터)",
+    "poi_type": "tourist_spot",
+    "name_ko": "LG아트센터",
+    "name_en": "LG Arts Center",
+    "search_ko": {
+      "query": "LG아트센터",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "268118",
+          "contenttypeid": "78",
+          "title": "LG Arts Center (LG아트센터)",
+          "addr1": "(LG Arts Center Seoul), 136, Magokjungang-ro, Gangseo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "LG Arts Center",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "268118",
+          "contenttypeid": "78",
+          "title": "LG Arts Center (LG아트센터)",
+          "addr1": "(LG Arts Center Seoul), 136, Magokjungang-ro, Gangseo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "268118",
+    "contenttypeid": "78",
+    "matched_title": "LG Arts Center (LG아트센터)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:00-23:00"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Mondays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Mangwon Market (망원시장)",
+    "poi_type": "shopping",
+    "name_ko": "망원시장",
+    "name_en": "Mangwon Market",
+    "search_ko": {
+      "query": "망원시장",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2592401",
+          "contenttypeid": "79",
+          "title": "Mangwon Market (망원시장)",
+          "addr1": "27 Poeun-ro 6-gil, Mapo-gu, Seoul"
+        },
+        {
+          "contentid": "4030839",
+          "contenttypeid": "79",
+          "title": "Mangwonsijang Pharmacy [Tax Refund Shop](망원시장약국)",
+          "addr1": "56, World Cup-ro 13-gil, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Mangwon Market",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2592401",
+          "contenttypeid": "79",
+          "title": "Mangwon Market (망원시장)",
+          "addr1": "27 Poeun-ro 6-gil, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2592401",
+    "contenttypeid": "79",
+    "matched_title": "Mangwon Market (망원시장)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdateshopping": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Yeonnam-dong (연남동)",
+    "poi_type": "street",
+    "name_ko": "연남동",
+    "name_en": "Yeonnam-dong",
+    "search_ko": {
+      "query": "연남동",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2484384",
+          "contenttypeid": "76",
+          "title": "Yeonnam-dong (연남동)",
+          "addr1": "Yeonnam-dong, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Yeonnam-dong",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2484384",
+          "contenttypeid": "76",
+          "title": "Yeonnam-dong (연남동)",
+          "addr1": "Yeonnam-dong, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2484384",
+    "contenttypeid": "76",
+    "matched_title": "Yeonnam-dong (연남동)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by shop and facility"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul World Cup Stadium (서울월드컵경기장)",
+    "poi_type": "tourist_spot",
+    "name_ko": "서울월드컵경기장",
+    "name_en": "Seoul World Cup Stadium",
+    "search_ko": {
+      "query": "서울월드컵경기장",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "266926",
+          "contenttypeid": "75",
+          "title": "Seoul World Cup Stadium (서울월드컵경기장)",
+          "addr1": "240 World Cup-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul World Cup Stadium",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "266926",
+          "contenttypeid": "75",
+          "title": "Seoul World Cup Stadium (서울월드컵경기장)",
+          "addr1": "240 World Cup-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "266926",
+    "contenttypeid": "75",
+    "matched_title": "Seoul World Cup Stadium (서울월드컵경기장)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeleports": "09:00-18:00"
+      },
+      "closed_day_fields": {
+        "restdateleports": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Jamsil Hangang Park (잠실 한강공원)",
+    "poi_type": "park",
+    "name_ko": "잠실 한강공원",
+    "name_en": "Jamsil Hangang Park",
+    "search_ko": {
+      "query": "잠실 한강공원",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Jamsil Hangang Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1000299",
+          "contenttypeid": "76",
+          "title": "Jamsil Hangang Park (잠실한강공원)",
+          "addr1": "65, Hangaram-ro, Songpa-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1000299",
+    "contenttypeid": "76",
+    "matched_title": "Jamsil Hangang Park (잠실한강공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seonyudo Park (선유도공원)",
+    "poi_type": "park",
+    "name_ko": "선유도공원",
+    "name_en": "Seonyudo Park",
+    "search_ko": {
+      "query": "선유도공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3006542",
+          "contenttypeid": "76",
+          "title": "Seonyudo Park (선유도공원)",
+          "addr1": "343 Seonyu-ro, Yeongdeungpo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seonyudo Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3006542",
+          "contenttypeid": "76",
+          "title": "Seonyudo Park (선유도공원)",
+          "addr1": "343 Seonyu-ro, Yeongdeungpo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3006542",
+    "contenttypeid": "76",
+    "matched_title": "Seonyudo Park (선유도공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "06:00-24:00"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Gwangjang Market (광장시장)",
+    "poi_type": "shopping",
+    "name_ko": "광장시장",
+    "name_en": "Gwangjang Market",
+    "search_ko": {
+      "query": "광장시장",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "273761",
+          "contenttypeid": "79",
+          "title": "Gwangjang Market (광장시장)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "4031304",
+          "contenttypeid": "79",
+          "title": "PLEATS MAMA EEUT Gwangjang Market Branch [Tax Refund Shop](플리츠마마 이웃 광장시장점)",
+          "addr1": "24-1, Jongno 32-gil, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "2954752",
+          "contenttypeid": "79",
+          "title": "RAWROW Gwangjang Market Branch[Tax Refund Shop](로우로우 광장시장점)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Gwangjang Market",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "273761",
+          "contenttypeid": "79",
+          "title": "Gwangjang Market (광장시장)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "4031304",
+          "contenttypeid": "79",
+          "title": "PLEATS MAMA EEUT Gwangjang Market Branch [Tax Refund Shop](플리츠마마 이웃 광장시장점)",
+          "addr1": "24-1, Jongno 32-gil, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "2954752",
+          "contenttypeid": "79",
+          "title": "RAWROW Gwangjang Market Branch[Tax Refund Shop](로우로우 광장시장점)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "273761",
+    "contenttypeid": "79",
+    "matched_title": "Gwangjang Market (광장시장)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "09:00-18:00Charity stores 10:00-19:00Food street 09:00-23:00"
+      },
+      "closed_day_fields": {
+        "restdateshopping": "Sundays (Food Street open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Ichon Hangang Park (이촌 한강공원)",
+    "poi_type": "park",
+    "name_ko": "이촌 한강공원",
+    "name_en": "Ichon Hangang Park",
+    "search_ko": {
+      "query": "이촌 한강공원",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Ichon Hangang Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1011895",
+          "contenttypeid": "76",
+          "title": "Ichon Hangang Park (이촌한강공원)",
+          "addr1": "62 Ichon-ro 72-gil, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1011895",
+    "contenttypeid": "76",
+    "matched_title": "Ichon Hangang Park (이촌한강공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Inwangsan Mountain (인왕산)",
+    "poi_type": "park",
+    "name_ko": "인왕산",
+    "name_en": "Inwangsan Mountain",
+    "search_ko": {
+      "query": "인왕산",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1348417",
+          "contenttypeid": "76",
+          "title": "Inwangsan Mountain (인왕산)",
+          "addr1": "San 2-1, Muak-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Inwangsan Mountain",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1348417",
+          "contenttypeid": "76",
+          "title": "Inwangsan Mountain (인왕산)",
+          "addr1": "San 2-1, Muak-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1348417",
+    "contenttypeid": "76",
+    "matched_title": "Inwangsan Mountain (인왕산)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Yongma Land (용마랜드)",
+    "poi_type": "tourist_spot",
+    "name_ko": "용마랜드",
+    "name_en": "Yongma Land",
+    "search_ko": {
+      "query": "용마랜드",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3110049",
+          "contenttypeid": "76",
+          "title": "Yongma Land (용마랜드)",
+          "addr1": "118 Mangu-ro 70-gil, Jungnang-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Yongma Land",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3110049",
+          "contenttypeid": "76",
+          "title": "Yongma Land (용마랜드)",
+          "addr1": "118 Mangu-ro 70-gil, Jungnang-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3110049",
+    "contenttypeid": "76",
+    "matched_title": "Yongma Land (용마랜드)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "10:00-18:00 * Subject to change depending on filming schedule"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Yeouido Hangang Park (여의도 한강공원)",
+    "poi_type": "park",
+    "name_ko": "여의도 한강공원",
+    "name_en": "Yeouido Hangang Park",
+    "search_ko": {
+      "query": "여의도 한강공원",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Yeouido Hangang Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1064767",
+          "contenttypeid": "76",
+          "title": "Yeouido Hangang Park (여의도한강공원)",
+          "addr1": "330 Yeouidong-ro, Yeongdeungpo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1064767",
+    "contenttypeid": "76",
+    "matched_title": "Yeouido Hangang Park (여의도한강공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Culture Station Seoul 284 (문화역서울284)",
+    "poi_type": "museum",
+    "name_ko": "문화역서울284",
+    "name_en": "Culture Station Seoul 284",
+    "search_ko": {
+      "query": "문화역서울284",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Culture Station Seoul 284",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1340416",
+          "contenttypeid": "76",
+          "title": "Culture Station Seoul 284 (문화역 서울 284)",
+          "addr1": "1 Tongil-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1340416",
+    "contenttypeid": "76",
+    "matched_title": "Culture Station Seoul 284 (문화역 서울 284)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "11:00-19:00 (Entry closed 1 hour ago)"
+      },
+      "closed_day_fields": {
+        "restdate": "Mondays ※Request to visit after checking the exhibition period (not operating the exhibition preparation period)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Tongin Market (통인시장)",
+    "poi_type": "shopping",
+    "name_ko": "통인시장",
+    "name_en": "Tongin Market",
+    "search_ko": {
+      "query": "통인시장",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1823985",
+          "contenttypeid": "79",
+          "title": "Tongin Market (통인시장)",
+          "addr1": "18 Jahamun-ro 15-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Tongin Market",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1823985",
+          "contenttypeid": "79",
+          "title": "Tongin Market (통인시장)",
+          "addr1": "18 Jahamun-ro 15-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1823985",
+    "contenttypeid": "79",
+    "matched_title": "Tongin Market (통인시장)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "[Tongin Market] 07:00-21:00 [Dosirak Cafe] 11:00-15:00"
+      },
+      "closed_day_fields": {
+        "restdateshopping": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Mangwon Market (망원 시장)",
+    "poi_type": "shopping",
+    "name_ko": "망원 시장",
+    "name_en": "Mangwon Market",
+    "search_ko": {
+      "query": "망원 시장",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Mangwon Market",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2592401",
+          "contenttypeid": "79",
+          "title": "Mangwon Market (망원시장)",
+          "addr1": "27 Poeun-ro 6-gil, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2592401",
+    "contenttypeid": "79",
+    "matched_title": "Mangwon Market (망원시장)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdateshopping": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "HiKR GROUND (종로 하이커 그라운드)",
+    "poi_type": "kpop_landmark",
+    "name_ko": "종로 하이커 그라운드",
+    "name_en": "HiKR GROUND",
+    "search_ko": {
+      "query": "종로 하이커 그라운드",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "HiKR GROUND",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2842534",
+          "contenttypeid": "78",
+          "title": "HiKR Ground (하이커 그라운드)",
+          "addr1": "40 Cheonggyecheon-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2842534",
+    "contenttypeid": "78",
+    "matched_title": "HiKR Ground (하이커 그라운드)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "[F1, F5 : Midea Wall, Hiker Lounge]<br>\n- 10:00~20:00(Last entry 19:40)<br>\n[F5 Tourist Information Center]<br>\n- 10:00~19:00<br>\n[F2~F4 exhibition hall]<br>\n- 화~일요일 10:00~20:00(Last entry 19:40)"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Monday"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Korea House (한국의집)",
+    "poi_type": "culture",
+    "name_ko": "한국의집",
+    "name_en": "Korea House",
+    "search_ko": {
+      "query": "한국의집",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "268146",
+          "contenttypeid": "78",
+          "title": "Korea House (한국의집)",
+          "addr1": "10, Toegye-ro 36-gil, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Korea House",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "268146",
+          "contenttypeid": "78",
+          "title": "Korea House (한국의집)",
+          "addr1": "10, Toegye-ro 36-gil, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "268146",
+    "contenttypeid": "78",
+    "matched_title": "Korea House (한국의집)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "Traditional Korean Cuisine: Lunch 12:00-15:00 / Dinner 18:00-22:00  Traditional Snacks: 3 sessions (11:00-13:00 / 13:30-15:30 / 16:30 - 18:30)  * The operating hours for traditional snacks may vary by season."
+      },
+      "closed_day_fields": {
+        "restdateculture": "The Day of Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day), Mondays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Nodeul Island (노들섬)",
+    "poi_type": "tourist_spot",
+    "name_ko": "노들섬",
+    "name_en": "Nodeul Island",
+    "search_ko": {
+      "query": "노들섬",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2813573",
+          "contenttypeid": "76",
+          "title": "Nodeul Island (노들섬)",
+          "addr1": "445 Yangnyeong-ro, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Nodeul Island",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2813573",
+          "contenttypeid": "76",
+          "title": "Nodeul Island (노들섬)",
+          "addr1": "445 Yangnyeong-ro, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2813573",
+    "contenttypeid": "76",
+    "matched_title": "Nodeul Island (노들섬)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "[March-October] Tuesday-Friday 10:00-21:00 / Weekends & public holidays 10:00-22:00 <br>  [November-February] Tuesday-Sunday 10:00-20:00<br>* Outdoor areas are open 24/7  <br>* Operating hours may vary by facility"
+      },
+      "closed_day_fields": {
+        "restdate": "Mondays, January 1, the day of Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Songpa Naru Park (Seokchonhosu Lake) (송파나루공원 (석촌호수))",
+    "poi_type": "park",
+    "name_ko": "Seokchonhosu Lake) (송파나루공원 (석촌호수)",
+    "name_en": "Songpa Naru Park",
+    "search_ko": {
+      "query": "Seokchonhosu Lake) (송파나루공원 (석촌호수)",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1542646",
+          "contenttypeid": "76",
+          "title": "Songpa Naru Park (Seokchonhosu Lake) (송파나루공원 (석촌호수))",
+          "addr1": "136 Samhaksa-ro, Songpa-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Songpa Naru Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1542646",
+          "contenttypeid": "76",
+          "title": "Songpa Naru Park (Seokchonhosu Lake) (송파나루공원 (석촌호수))",
+          "addr1": "136 Samhaksa-ro, Songpa-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1542646",
+    "contenttypeid": "76",
+    "matched_title": "Songpa Naru Park (Seokchonhosu Lake) (송파나루공원 (석촌호수))",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hours"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Leeum, Samsung Museum of Art (삼성미술관 리움)",
+    "poi_type": "museum",
+    "name_ko": "삼성미술관 리움",
+    "name_en": "Leeum, Samsung Museum of Art",
+    "search_ko": {
+      "query": "삼성미술관 리움",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "268217",
+          "contenttypeid": "78",
+          "title": "Leeum, Samsung Museum of Art (삼성미술관 리움)",
+          "addr1": "60-16, Itaewon-ro 55-gil, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Leeum, Samsung Museum of Art",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "268217",
+          "contenttypeid": "78",
+          "title": "Leeum, Samsung Museum of Art (삼성미술관 리움)",
+          "addr1": "60-16, Itaewon-ro 55-gil, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "268217",
+    "contenttypeid": "78",
+    "matched_title": "Leeum, Samsung Museum of Art (삼성미술관 리움)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:30-18:00 <br>* Last admission is 30 min before closing"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Mondays, New Year's Day,  Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day) holidays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seosulla-gil Road (서순라길)",
+    "poi_type": "street",
+    "name_ko": "서순라길",
+    "name_en": "Seosulla-gil Road",
+    "search_ko": {
+      "query": "서순라길",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3046933",
+          "contenttypeid": "76",
+          "title": "Seosulla-gil Road (서순라길)",
+          "addr1": "150-3 Jong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seosulla-gil Road",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3046933",
+          "contenttypeid": "76",
+          "title": "Seosulla-gil Road (서순라길)",
+          "addr1": "150-3 Jong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3046933",
+    "contenttypeid": "76",
+    "matched_title": "Seosulla-gil Road (서순라길)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hours"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Sewoon Plaza (세운전자상가)",
+    "poi_type": "tourist_spot",
+    "name_ko": "세운전자상가",
+    "name_en": "Sewoon Plaza",
+    "search_ko": {
+      "query": "세운전자상가",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Sewoon Plaza",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3074200",
+          "contenttypeid": "76",
+          "title": "Sewoon Plaza (세운상가)",
+          "addr1": "159 Cheonggyecheon-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3074200",
+    "contenttypeid": "76",
+    "matched_title": "Sewoon Plaza (세운상가)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "09:00~19:00"
+      },
+      "closed_day_fields": {
+        "restdate": "Sunday, a public holiday"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Hanyangdoseong Seoul City Wall Stamp Tour (서울 한양도성 순성길)",
+    "poi_type": "tourist_spot",
+    "name_ko": "서울 한양도성 순성길",
+    "name_en": "Hanyangdoseong Seoul City Wall Stamp Tour",
+    "search_ko": {
+      "query": "서울 한양도성 순성길",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2997406",
+          "contenttypeid": "75",
+          "title": "Hanyangdoseong Seoul City Wall Stamp Tour (서울 한양도성 순성길)",
+          "addr1": "Nusang-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Hanyangdoseong Seoul City Wall Stamp Tour",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2997406",
+          "contenttypeid": "75",
+          "title": "Hanyangdoseong Seoul City Wall Stamp Tour (서울 한양도성 순성길)",
+          "addr1": "Nusang-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2997406",
+    "contenttypeid": "75",
+    "matched_title": "Hanyangdoseong Seoul City Wall Stamp Tour (서울 한양도성 순성길)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeleports": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdateleports": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+    "poi_type": "street",
+    "name_ko": "익선동 한옥거리",
+    "name_en": "Ikseon-dong Hanok Street",
+    "search_ko": {
+      "query": "익선동 한옥거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943972",
+          "contenttypeid": "76",
+          "title": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+          "addr1": "Ikseon-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Ikseon-dong Hanok Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943972",
+          "contenttypeid": "76",
+          "title": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+          "addr1": "Ikseon-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2943972",
+    "contenttypeid": "76",
+    "matched_title": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by shop"
+      },
+      "closed_day_fields": {
+        "restdate": "Open all year round (Varies by shop)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Bosingak Belfry (보신각 터)",
+    "poi_type": "history",
+    "name_ko": "보신각 터",
+    "name_en": "Bosingak Belfry",
+    "search_ko": {
+      "query": "보신각 터",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264135",
+          "contenttypeid": "76",
+          "title": "Bosingak Belfry (보신각 터)",
+          "addr1": "54, Jong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Bosingak Belfry",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264135",
+          "contenttypeid": "76",
+          "title": "Bosingak Belfry (보신각 터)",
+          "addr1": "54, Jong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264135",
+    "contenttypeid": "76",
+    "matched_title": "Bosingak Belfry (보신각 터)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "The Sool Gallery (전통주갤러리)",
+    "poi_type": "museum",
+    "name_ko": "전통주갤러리",
+    "name_en": "The Sool Gallery",
+    "search_ko": {
+      "query": "전통주갤러리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3080695",
+          "contenttypeid": "78",
+          "title": "The Sool Gallery (전통주갤러리)",
+          "addr1": "18 Bukchon-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "The Sool Gallery",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3080695",
+          "contenttypeid": "78",
+          "title": "The Sool Gallery (전통주갤러리)",
+          "addr1": "18 Bukchon-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3080695",
+    "contenttypeid": "78",
+    "matched_title": "The Sool Gallery (전통주갤러리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:00-19:00"
+      },
+      "closed_day_fields": {
+        "restdateculture": ""
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Yeouido Hangang Park (여의도한강공원)",
+    "poi_type": "park",
+    "name_ko": "여의도한강공원",
+    "name_en": "Yeouido Hangang Park",
+    "search_ko": {
+      "query": "여의도한강공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1064767",
+          "contenttypeid": "76",
+          "title": "Yeouido Hangang Park (여의도한강공원)",
+          "addr1": "330 Yeouidong-ro, Yeongdeungpo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Yeouido Hangang Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1064767",
+          "contenttypeid": "76",
+          "title": "Yeouido Hangang Park (여의도한강공원)",
+          "addr1": "330 Yeouidong-ro, Yeongdeungpo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1064767",
+    "contenttypeid": "76",
+    "matched_title": "Yeouido Hangang Park (여의도한강공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "K-POP Square Hongdae [Tax Refund Shop] (케이팝 스퀘어 홍대)",
+    "poi_type": "shopping",
+    "name_ko": "케이팝 스퀘어 홍대",
+    "name_en": "K-POP Square Hongdae [Tax Refund Shop]",
+    "search_ko": {
+      "query": "케이팝 스퀘어 홍대",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3323643",
+          "contenttypeid": "79",
+          "title": "K-POP Square Hongdae [Tax Refund Shop](케이팝 스퀘어 홍대)",
+          "addr1": "141, Yanghwa-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "K-POP Square Hongdae [Tax Refund Shop]",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3323643",
+          "contenttypeid": "79",
+          "title": "K-POP Square Hongdae [Tax Refund Shop](케이팝 스퀘어 홍대)",
+          "addr1": "141, Yanghwa-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3323643",
+    "contenttypeid": "79",
+    "matched_title": "K-POP Square Hongdae [Tax Refund Shop](케이팝 스퀘어 홍대)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "11:00~22:00"
+      },
+      "closed_day_fields": {
+        "restdateshopping": ""
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Songnidan-gil Street (송리단길)",
+    "poi_type": "street",
+    "name_ko": "송리단길",
+    "name_en": "Songnidan-gil Street",
+    "search_ko": {
+      "query": "송리단길",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "4014179",
+          "contenttypeid": "79",
+          "title": "Olive Young Songnidan Street Branch [Tax Refund Shop](올리브영 송리단길점)",
+          "addr1": "1F, 425, Baekjegobun-ro, Songpa-gu, Seoul"
+        },
+        {
+          "contentid": "3033225",
+          "contenttypeid": "76",
+          "title": "Songnidan-gil Street (송리단길)",
+          "addr1": "Baekjegobun-ro 43-gil, Songpa-gu, Seoul, and surrounding areas"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Songnidan-gil Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3033225",
+          "contenttypeid": "76",
+          "title": "Songnidan-gil Street (송리단길)",
+          "addr1": "Baekjegobun-ro 43-gil, Songpa-gu, Seoul, and surrounding areas"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3033225",
+    "contenttypeid": "76",
+    "matched_title": "Songnidan-gil Street (송리단길)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "N/A (Open all year round)"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Dong-Lim Knot Museum (동림매듭박물관)",
+    "poi_type": "museum",
+    "name_ko": "동림매듭박물관",
+    "name_en": "Dong-Lim Knot Museum",
+    "search_ko": {
+      "query": "동림매듭박물관",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "562863",
+          "contenttypeid": "78",
+          "title": "Dong-Lim Knot Museum (동림매듭박물관)",
+          "addr1": "10, Bukchon-ro 12-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Dong-Lim Knot Museum",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "562863",
+          "contenttypeid": "78",
+          "title": "Dong-Lim Knot Museum (동림매듭박물관)",
+          "addr1": "10, Bukchon-ro 12-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "562863",
+    "contenttypeid": "78",
+    "matched_title": "Dong-Lim Knot Museum (동림매듭박물관)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:00-18:00"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Mondays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Jongno 3 (sam)-ga Pocha Street (종로3가 포장마차 거리)",
+    "poi_type": "street",
+    "name_ko": "sam)-ga Pocha Street (종로3가 포장마차 거리",
+    "name_en": "Jongno 3",
+    "search_ko": {
+      "query": "sam)-ga Pocha Street (종로3가 포장마차 거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3403035",
+          "contenttypeid": "76",
+          "title": "Jongno 3 (sam)-ga Pocha Street (종로3가 포장마차 거리)",
+          "addr1": "Gwan-su-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Jongno 3",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3403035",
+          "contenttypeid": "76",
+          "title": "Jongno 3 (sam)-ga Pocha Street (종로3가 포장마차 거리)",
+          "addr1": "Gwan-su-dong, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "273730",
+          "contenttypeid": "79",
+          "title": "Jongno 3(sam)-ga Jewelry District (종로3가 귀금속 전문상가)",
+          "addr1": "Jongno3-ga, Jongno-gu, Seoul-si"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3403035",
+    "contenttypeid": "76",
+    "matched_title": "Jongno 3 (sam)-ga Pocha Street (종로3가 포장마차 거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Spa 1978 (SPA 1978)",
+    "poi_type": "tourist_spot",
+    "name_ko": "SPA 1978",
+    "name_en": "Spa 1978",
+    "search_ko": {
+      "query": "SPA 1978",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3114291",
+          "contenttypeid": "76",
+          "title": "Spa 1978 (SPA 1978)",
+          "addr1": "416 Yeongdong-daero, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Spa 1978",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3114291",
+          "contenttypeid": "76",
+          "title": "Spa 1978 (SPA 1978)",
+          "addr1": "416 Yeongdong-daero, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3114291",
+    "contenttypeid": "76",
+    "matched_title": "Spa 1978 (SPA 1978)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "10:00-21:00"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Bukchon Cultural Center (북촌문화센터)",
+    "poi_type": "culture",
+    "name_ko": "북촌문화센터",
+    "name_en": "Bukchon Cultural Center",
+    "search_ko": {
+      "query": "북촌문화센터",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "610704",
+          "contenttypeid": "76",
+          "title": "Bukchon Cultural Center (북촌문화센터)",
+          "addr1": "37 Gyedong-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Bukchon Cultural Center",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "610704",
+          "contenttypeid": "76",
+          "title": "Bukchon Cultural Center (북촌문화센터)",
+          "addr1": "37 Gyedong-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "610704",
+    "contenttypeid": "76",
+    "matched_title": "Bukchon Cultural Center (북촌문화센터)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Tuesday, Thursday, Friday: 09:00-18:00<br>\nWednesday: 09:00-20:00<br>\nSaturday, Sunday: 09:00-17:00"
+      },
+      "closed_day_fields": {
+        "restdate": ""
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Sejong Village Food Street (세종마을 음식문화거리)",
+    "poi_type": "restaurant",
+    "name_ko": "세종마을 음식문화거리",
+    "name_en": "Sejong Village Food Street",
+    "search_ko": {
+      "query": "세종마을 음식문화거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3498835",
+          "contenttypeid": "76",
+          "title": "Sejong Village Food Street (세종마을 음식문화거리)",
+          "addr1": "Chebu-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Sejong Village Food Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3498835",
+          "contenttypeid": "76",
+          "title": "Sejong Village Food Street (세종마을 음식문화거리)",
+          "addr1": "Chebu-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3498835",
+    "contenttypeid": "76",
+    "matched_title": "Sejong Village Food Street (세종마을 음식문화거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Vary by store"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Cheongwadae Sarangchae (청와대사랑채)",
+    "poi_type": "museum",
+    "name_ko": "청와대사랑채",
+    "name_en": "Cheongwadae Sarangchae",
+    "search_ko": {
+      "query": "청와대사랑채",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "941509",
+          "contenttypeid": "78",
+          "title": "Cheongwadae Sarangchae (청와대사랑채)",
+          "addr1": "45 Hyoja-ro 13-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Cheongwadae Sarangchae",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "941509",
+          "contenttypeid": "78",
+          "title": "Cheongwadae Sarangchae (청와대사랑채)",
+          "addr1": "45 Hyoja-ro 13-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "941509",
+    "contenttypeid": "78",
+    "matched_title": "Cheongwadae Sarangchae (청와대사랑채)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "09:00-18:00 (last admission 17:30)"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Tuesdays (open if Tuesday is a national holiday and will be closed on the following weekday instead), January 1"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Sooyeon Sanbang (수연산방)",
+    "poi_type": "cafe",
+    "name_ko": "수연산방",
+    "name_en": "Sooyeon Sanbang",
+    "search_ko": {
+      "query": "수연산방",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1721080",
+          "contenttypeid": "82",
+          "title": "Sooyeon Sanbang (수연산방)",
+          "addr1": "8 Seongbuk-ro 26-gil, Seongbuk-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Sooyeon Sanbang",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1721080",
+          "contenttypeid": "82",
+          "title": "Sooyeon Sanbang (수연산방)",
+          "addr1": "8 Seongbuk-ro 26-gil, Seongbuk-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1721080",
+    "contenttypeid": "82",
+    "matched_title": "Sooyeon Sanbang (수연산방)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "Wednesday-Friday 11:30-17:50 (Last order 17:00)  Saturday 11:30-21:50 (Break time 18:00~19:00, Last order 21:00) Sunday 11:30-19:40 (Last order 18:50)"
+      },
+      "closed_day_fields": {
+        "restdatefood": "Mondays, Tuesdays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seonungak (한옥카페 선운각)",
+    "poi_type": "cafe",
+    "name_ko": "한옥카페 선운각",
+    "name_en": "Seonungak",
+    "search_ko": {
+      "query": "한옥카페 선운각",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3337241",
+          "contenttypeid": "82",
+          "title": "Seonungak (한옥카페 선운각)",
+          "addr1": "223 Samyang-ro 173-gil, Gangbuk-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seonungak",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3337241",
+          "contenttypeid": "82",
+          "title": "Seonungak (한옥카페 선운각)",
+          "addr1": "223 Samyang-ro 173-gil, Gangbuk-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3337241",
+    "contenttypeid": "82",
+    "matched_title": "Seonungak (한옥카페 선운각)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "11:00-19:00 (Last order 18:00)"
+      },
+      "closed_day_fields": {
+        "restdatefood": "Wednesdays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Passi 0914 (파시0914)",
+    "poi_type": "restaurant",
+    "name_ko": "파시0914",
+    "name_en": "Passi 0914",
+    "search_ko": {
+      "query": "파시0914",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3340120",
+          "contenttypeid": "82",
+          "title": "Passi 0914 (파시0914)",
+          "addr1": "15 Dosan-daero 45-gil, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Passi 0914",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3340120",
+          "contenttypeid": "82",
+          "title": "Passi 0914 (파시0914)",
+          "addr1": "15 Dosan-daero 45-gil, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3340120",
+    "contenttypeid": "82",
+    "matched_title": "Passi 0914 (파시0914)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "Monday-Saturday 11:00-22:00 / Sundays 11:00-21:00<br>* Break time 15:30-18:00 / Last order 14:30 (lunch), 21:00 (dinner)"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul Wave Art Center (서울웨이브아트센터)",
+    "poi_type": "museum",
+    "name_ko": "서울웨이브아트센터",
+    "name_en": "Seoul Wave Art Center",
+    "search_ko": {
+      "query": "서울웨이브아트센터",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3340158",
+          "contenttypeid": "76",
+          "title": "Seoul Wave Art Center (서울웨이브아트센터)",
+          "addr1": "145-35 Jamwon-ro, Seocho-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul Wave Art Center",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3340158",
+          "contenttypeid": "76",
+          "title": "Seoul Wave Art Center (서울웨이브아트센터)",
+          "addr1": "145-35 Jamwon-ro, Seocho-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3340158",
+    "contenttypeid": "76",
+    "matched_title": "Seoul Wave Art Center (서울웨이브아트센터)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by exhibition; refer to the website"
+      },
+      "closed_day_fields": {
+        "restdate": ""
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "HANSIK Space E:eum (한식문화공간 이음)",
+    "poi_type": "restaurant",
+    "name_ko": "한식문화공간 이음",
+    "name_en": "HANSIK Space E:eum",
+    "search_ko": {
+      "query": "한식문화공간 이음",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3497992",
+          "contenttypeid": "78",
+          "title": "HANSIK Space E:eum (한식문화공간 이음)",
+          "addr1": "18 Bukchon-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "HANSIK Space E:eum",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3497992",
+          "contenttypeid": "78",
+          "title": "HANSIK Space E:eum (한식문화공간 이음)",
+          "addr1": "18 Bukchon-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3497992",
+    "contenttypeid": "78",
+    "matched_title": "HANSIK Space E:eum (한식문화공간 이음)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:00 -19:00"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Mondays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Songhyeon Green Plaza (열린송현 녹지광장)",
+    "poi_type": "park",
+    "name_ko": "열린송현 녹지광장",
+    "name_en": "Songhyeon Green Plaza",
+    "search_ko": {
+      "query": "열린송현 녹지광장",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3498842",
+          "contenttypeid": "76",
+          "title": "Songhyeon Green Plaza (열린송현 녹지광장)",
+          "addr1": "Songhyeon-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Songhyeon Green Plaza",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3498842",
+          "contenttypeid": "76",
+          "title": "Songhyeon Green Plaza (열린송현 녹지광장)",
+          "addr1": "Songhyeon-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3498842",
+    "contenttypeid": "76",
+    "matched_title": "Songhyeon Green Plaza (열린송현 녹지광장)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Amsa-dong Prehistoric Site Museum (암사동선사유적박물관)",
+    "poi_type": "museum",
+    "name_ko": "암사동선사유적박물관",
+    "name_en": "Amsa-dong Prehistoric Site Museum",
+    "search_ko": {
+      "query": "암사동선사유적박물관",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3074275",
+          "contenttypeid": "78",
+          "title": "Amsa-dong Prehistoric Site Museum (암사동선사유적박물관)",
+          "addr1": "875 Olympic-ro, Gangdong-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Amsa-dong Prehistoric Site Museum",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3074275",
+          "contenttypeid": "78",
+          "title": "Amsa-dong Prehistoric Site Museum (암사동선사유적박물관)",
+          "addr1": "875 Olympic-ro, Gangdong-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3074275",
+    "contenttypeid": "78",
+    "matched_title": "Amsa-dong Prehistoric Site Museum (암사동선사유적박물관)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "09:30-18:00 (Ticket booth closes 17:30)"
+      },
+      "closed_day_fields": {
+        "restdateculture": "January 1, Mondays <br> * Closed next day if Monday is a holiday"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Cheonho-dong Rose Village (천호동 장미마을)",
+    "poi_type": "tourist_spot",
+    "name_ko": "천호동 장미마을",
+    "name_en": "Cheonho-dong Rose Village",
+    "search_ko": {
+      "query": "천호동 장미마을",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3082350",
+          "contenttypeid": "76",
+          "title": "Cheonho-dong Rose Village (천호동 장미마을)",
+          "addr1": "Cheonho-dong, Gangdong-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Cheonho-dong Rose Village",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3082350",
+          "contenttypeid": "76",
+          "title": "Cheonho-dong Rose Village (천호동 장미마을)",
+          "addr1": "Cheonho-dong, Gangdong-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3082350",
+    "contenttypeid": "76",
+    "matched_title": "Cheonho-dong Rose Village (천호동 장미마을)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24/7"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Cheonggyecheon Old Books Street (청계천헌책방거리)",
+    "poi_type": "street",
+    "name_ko": "청계천헌책방거리",
+    "name_en": "Cheonggyecheon Old Books Street",
+    "search_ko": {
+      "query": "청계천헌책방거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3074203",
+          "contenttypeid": "76",
+          "title": "Cheonggyecheon Old Books Street (청계천헌책방거리)",
+          "addr1": "20 Jangchungdan-ro 13-gil, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Cheonggyecheon Old Books Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3074203",
+          "contenttypeid": "76",
+          "title": "Cheonggyecheon Old Books Street (청계천헌책방거리)",
+          "addr1": "20 Jangchungdan-ro 13-gil, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3074203",
+    "contenttypeid": "76",
+    "matched_title": "Cheonggyecheon Old Books Street (청계천헌책방거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Euljiro Nogari Alley (을지로 노가리골목)",
+    "poi_type": "street",
+    "name_ko": "을지로 노가리골목",
+    "name_en": "Euljiro Nogari Alley",
+    "search_ko": {
+      "query": "을지로 노가리골목",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3013976",
+          "contenttypeid": "76",
+          "title": "Euljiro Nogari Alley (을지로 노가리골목)",
+          "addr1": "Eulji-ro 129, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Euljiro Nogari Alley",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3013976",
+          "contenttypeid": "76",
+          "title": "Euljiro Nogari Alley (을지로 노가리골목)",
+          "addr1": "Eulji-ro 129, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3013976",
+    "contenttypeid": "76",
+    "matched_title": "Euljiro Nogari Alley (을지로 노가리골목)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Unhyeongung Royal Residence (서울 운현궁)",
+    "poi_type": "history",
+    "name_ko": "서울 운현궁",
+    "name_en": "Unhyeongung Royal Residence",
+    "search_ko": {
+      "query": "서울 운현궁",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264223",
+          "contenttypeid": "76",
+          "title": "Unhyeongung Royal Residence (서울 운현궁)",
+          "addr1": "464 Samil-daero, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Unhyeongung Royal Residence",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264223",
+          "contenttypeid": "76",
+          "title": "Unhyeongung Royal Residence (서울 운현궁)",
+          "addr1": "464 Samil-daero, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264223",
+    "contenttypeid": "76",
+    "matched_title": "Unhyeongung Royal Residence (서울 운현궁)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "April-October: 09:00–19:00 / November-March: 09:00-18:00* Last admission 30 minutes before closing. Refer to the offical website for updates."
+      },
+      "closed_day_fields": {
+        "restdate": "Mondays (closed the next business day if Monday is a holiday)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Insadong Cultural Street (인사동 문화의 거리)",
+    "poi_type": "street",
+    "name_ko": "인사동 문화의 거리",
+    "name_en": "Insadong Cultural Street",
+    "search_ko": {
+      "query": "인사동 문화의 거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3075115",
+          "contenttypeid": "76",
+          "title": "Insadong Cultural Street (인사동 문화의 거리)",
+          "addr1": "Insa-dong, Jongno-gu, Seoul Metropolitan City"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Insadong Cultural Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3075115",
+          "contenttypeid": "76",
+          "title": "Insadong Cultural Street (인사동 문화의 거리)",
+          "addr1": "Insa-dong, Jongno-gu, Seoul Metropolitan City"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3075115",
+    "contenttypeid": "76",
+    "matched_title": "Insadong Cultural Street (인사동 문화의 거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "Open all year round"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul City Wall Museum (한양도성박물관)",
+    "poi_type": "museum",
+    "name_ko": "한양도성박물관",
+    "name_en": "Seoul City Wall Museum",
+    "search_ko": {
+      "query": "한양도성박물관",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1939723",
+          "contenttypeid": "78",
+          "title": "Seoul City Wall Museum (한양도성박물관)",
+          "addr1": "283, Yulgok-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul City Wall Museum",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1939723",
+          "contenttypeid": "78",
+          "title": "Seoul City Wall Museum (한양도성박물관)",
+          "addr1": "283, Yulgok-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1939723",
+    "contenttypeid": "78",
+    "matched_title": "Seoul City Wall Museum (한양도성박물관)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "[Museum] 09:00-18:00 (Last admission 17:30)<br>\n[Hanyangdoseong Reference Room] 10:00-17:00"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Mondays, January 1 <br> * Hanyangdoseong Reference Room is closed every Monday and on public holidays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Mangnidan Street (망리단길)",
+    "poi_type": "street",
+    "name_ko": "망리단길",
+    "name_en": "Mangnidan Street",
+    "search_ko": {
+      "query": "망리단길",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2992439",
+          "contenttypeid": "76",
+          "title": "Mangnidan Street (망리단길)",
+          "addr1": "Poeun-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Mangnidan Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2992439",
+          "contenttypeid": "76",
+          "title": "Mangnidan Street (망리단길)",
+          "addr1": "Poeun-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2992439",
+    "contenttypeid": "76",
+    "matched_title": "Mangnidan Street (망리단길)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Mangwon Hangang Park (한강시민공원 망원지구 (망원한강공원))",
+    "poi_type": "park",
+    "name_ko": "한강시민공원 망원지구 (망원한강공원)",
+    "name_en": "Mangwon Hangang Park",
+    "search_ko": {
+      "query": "한강시민공원 망원지구 (망원한강공원)",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1064349",
+          "contenttypeid": "76",
+          "title": "Mangwon Hangang Park (한강시민공원 망원지구 (망원한강공원))",
+          "addr1": "467 Maponaru-gil, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Mangwon Hangang Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1064349",
+          "contenttypeid": "76",
+          "title": "Mangwon Hangang Park (한강시민공원 망원지구 (망원한강공원))",
+          "addr1": "467 Maponaru-gil, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1064349",
+    "contenttypeid": "76",
+    "matched_title": "Mangwon Hangang Park (한강시민공원 망원지구 (망원한강공원))",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Geumdwaeji Sikdang (금돼지식당)",
+    "poi_type": "restaurant",
+    "name_ko": "금돼지식당",
+    "name_en": "Geumdwaeji Sikdang",
+    "search_ko": {
+      "query": "금돼지식당",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3104225",
+          "contenttypeid": "82",
+          "title": "Geumdwaeji Sikdang (금돼지식당)",
+          "addr1": "149 Dasan-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Geumdwaeji Sikdang",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3104225",
+          "contenttypeid": "82",
+          "title": "Geumdwaeji Sikdang (금돼지식당)",
+          "addr1": "149 Dasan-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3104225",
+    "contenttypeid": "82",
+    "matched_title": "Geumdwaeji Sikdang (금돼지식당)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "11:30~23:00 (Last order 22:20)"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Yoojung Restaurant (유정식당)",
+    "poi_type": "restaurant",
+    "name_ko": "유정식당",
+    "name_en": "Yoojung Restaurant",
+    "search_ko": {
+      "query": "유정식당",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3333569",
+          "contenttypeid": "82",
+          "title": "Yoojung Restaurant (유정식당)",
+          "addr1": "14 Dosan-daero 28-gil, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Yoojung Restaurant",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3333569",
+          "contenttypeid": "82",
+          "title": "Yoojung Restaurant (유정식당)",
+          "addr1": "14 Dosan-daero 28-gil, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3333569",
+    "contenttypeid": "82",
+    "matched_title": "Yoojung Restaurant (유정식당)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "Monday ~ Friday 10:00-21:30 (Last order 21:05)<br>Saturday ~ Sunday 10:00 ~ 20:00 (Last order 19:35)"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Shinuiju Chapsal Sundae (신의주찹쌀순대)",
+    "poi_type": "restaurant",
+    "name_ko": "신의주찹쌀순대",
+    "name_en": "Shinuiju Chapsal Sundae",
+    "search_ko": {
+      "query": "신의주찹쌀순대",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3333570",
+          "contenttypeid": "82",
+          "title": "Shinuiju Chapsal Sundae (신의주찹쌀순대)",
+          "addr1": "725 Yeongdong-daero, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Shinuiju Chapsal Sundae",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3333570",
+          "contenttypeid": "82",
+          "title": "Shinuiju Chapsal Sundae (신의주찹쌀순대)",
+          "addr1": "725 Yeongdong-daero, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3333570",
+    "contenttypeid": "82",
+    "matched_title": "Shinuiju Chapsal Sundae (신의주찹쌀순대)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "00:00-24:00"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Gwanghwamun Gate (광화문)",
+    "poi_type": "tourist_spot",
+    "name_ko": "광화문",
+    "name_en": "Gwanghwamun Gate",
+    "search_ko": {
+      "query": "광화문",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "4031347",
+          "contenttypeid": "79",
+          "title": "CU Gwanghwamun Square Branch[Tax Refund Shop](CU 광화문광장점)",
+          "addr1": "103-1, Saemunan-ro, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "4031306",
+          "contenttypeid": "79",
+          "title": "FIBRENO Gwanghwamun D Tower Branch [Tax Refund Shop](피브레노 광화문 D타워점)",
+          "addr1": "1F, D-Tower, 17, Jongno 3-gil, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "2959898",
+          "contenttypeid": "79",
+          "title": "Frisbee Gwanghwamun Branch[Tax Refund Shop](프리스비 광화문점)",
+          "addr1": "1F, 8, Cheonggyecheon-ro, Jung-gu, Seoul"
+        },
+        {
+          "contentid": "2954717",
+          "contenttypeid": "79",
+          "title": "Godiva - Gwanghwamun Branch [Tax Refund Shop](고디바 광화문점)",
+          "addr1": "159, Sejong-daero, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "4031254",
+          "contenttypeid": "79",
+          "title": "Gwanghwamun 2F Pharmacy [Tax Refund Shop](광화문이층약국)",
+          "addr1": "2F, Jeongwoo Building, 89, Saemunan-ro, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "264329",
+          "contenttypeid": "76",
+          "title": "Gwanghwamun Gate (광화문)",
+          "addr1": "161 Sajik-ro, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "2671927",
+          "contenttypeid": "82",
+          "title": "Gwanghwamun Hanokjip (광화문한옥집)",
+          "addr1": "7, Saemunanro5ga-gil, Jongro-gu, Seoul"
+        },
+        {
+          "contentid": "3043397",
+          "contenttypeid": "85",
+          "title": "Gwanghwamun Market (광화문 마켓)",
+          "addr1": "B172 Sejong-daero, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "929909",
+          "contenttypeid": "76",
+          "title": "Gwanghwamun Square (광화문 광장)",
+          "addr1": "172 Sejong-daero, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "4031399",
+          "contenttypeid": "79",
+          "title": "Kyobo Book Centre Gwanghwamun Branch[Tax Refund Shop](교보문고 광화문점)",
+          "addr1": "B1, Kyobo Life Insurance Building, 1, Jongno, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Gwanghwamun Gate",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264329",
+          "contenttypeid": "76",
+          "title": "Gwanghwamun Gate (광화문)",
+          "addr1": "161 Sajik-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264329",
+    "contenttypeid": "76",
+    "matched_title": "Gwanghwamun Gate (광화문)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "January-February, November-December: 09:00-17:00<br> March-May, September-October: 09:00-18:00<br> June-August: 09:00-18:30<br> *Last admission one hour before closing"
+      },
+      "closed_day_fields": {
+        "restdate": "Tuesdays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Ground Seesaw Seochon (그라운드시소 서촌)",
+    "poi_type": "museum",
+    "name_ko": "그라운드시소 서촌",
+    "name_en": "Ground Seesaw Seochon",
+    "search_ko": {
+      "query": "그라운드시소 서촌",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943971",
+          "contenttypeid": "78",
+          "title": "Ground Seesaw Seochon (그라운드시소 서촌)",
+          "addr1": "18-8, Jahamun-ro 6-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Ground Seesaw Seochon",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943971",
+          "contenttypeid": "78",
+          "title": "Ground Seesaw Seochon (그라운드시소 서촌)",
+          "addr1": "18-8, Jahamun-ro 6-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2943971",
+    "contenttypeid": "78",
+    "matched_title": "Ground Seesaw Seochon (그라운드시소 서촌)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:00-19:00 (Last admission: 18:00)"
+      },
+      "closed_day_fields": {
+        "restdateculture": "First Monday of every month"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul K-Medi Center (서울한방진흥센터)",
+    "poi_type": "tourist_spot",
+    "name_ko": "서울한방진흥센터",
+    "name_en": "Seoul K-Medi Center",
+    "search_ko": {
+      "query": "서울한방진흥센터",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3086254",
+          "contenttypeid": "78",
+          "title": "Seoul K-Medi Center (서울한방진흥센터)",
+          "addr1": "26 Yangnyeongjungang-ro, Dongdaemun-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul K-Medi Center",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3086254",
+          "contenttypeid": "78",
+          "title": "Seoul K-Medi Center (서울한방진흥센터)",
+          "addr1": "26 Yangnyeongjungang-ro, Dongdaemun-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3086254",
+    "contenttypeid": "78",
+    "matched_title": "Seoul K-Medi Center (서울한방진흥센터)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "March-October 10:00-18:00November-February 10:00-17:00 * Last admission 1 hr before closing"
+      },
+      "closed_day_fields": {
+        "restdateculture": "January 1, Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day) holidays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Tea Therapy (티테라피)",
+    "poi_type": "cafe",
+    "name_ko": "티테라피",
+    "name_en": "Tea Therapy",
+    "search_ko": {
+      "query": "티테라피",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3091335",
+          "contenttypeid": "82",
+          "title": "Tea Therapy (티테라피)",
+          "addr1": "74 Yunboseon-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Tea Therapy",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3091335",
+          "contenttypeid": "82",
+          "title": "Tea Therapy (티테라피)",
+          "addr1": "74 Yunboseon-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3091335",
+    "contenttypeid": "82",
+    "matched_title": "Tea Therapy (티테라피)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "Monday–Saturday 10:00-21:00 Sundays 10:00-20:00"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Aromind (아로마인드)",
+    "poi_type": "tourist_spot",
+    "name_ko": "아로마인드",
+    "name_en": "Aromind",
+    "search_ko": {
+      "query": "아로마인드",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3091370",
+          "contenttypeid": "76",
+          "title": "Aromind (아로마인드)",
+          "addr1": "19-7 Bukchon-ro 5-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Aromind",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3091370",
+          "contenttypeid": "76",
+          "title": "Aromind (아로마인드)",
+          "addr1": "19-7 Bukchon-ro 5-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3091370",
+    "contenttypeid": "76",
+    "matched_title": "Aromind (아로마인드)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "11:00–20:00 (Break time 12:30–13:30)"
+      },
+      "closed_day_fields": {
+        "restdate": "Sundays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Mosim (모심)",
+    "poi_type": "restaurant",
+    "name_ko": "모심",
+    "name_en": "Mosim",
+    "search_ko": {
+      "query": "모심",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3091710",
+          "contenttypeid": "82",
+          "title": "Mosim (모심)",
+          "addr1": "8 Gaeunsa-gil, Seongbuk-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Mosim",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3091710",
+          "contenttypeid": "82",
+          "title": "Mosim (모심)",
+          "addr1": "8 Gaeunsa-gil, Seongbuk-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3091710",
+    "contenttypeid": "82",
+    "matched_title": "Mosim (모심)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "10:30-21:30"
+      },
+      "closed_day_fields": {
+        "restdatefood": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Daelim Changgo Gallery (성수동 대림창고 갤러리)",
+    "poi_type": "cafe",
+    "name_ko": "성수동 대림창고 갤러리",
+    "name_en": "Daelim Changgo Gallery",
+    "search_ko": {
+      "query": "성수동 대림창고 갤러리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2946679",
+          "contenttypeid": "82",
+          "title": "Daelim Changgo Gallery (성수동 대림창고 갤러리)",
+          "addr1": "78 Seongsui-ro, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Daelim Changgo Gallery",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2946679",
+          "contenttypeid": "82",
+          "title": "Daelim Changgo Gallery (성수동 대림창고 갤러리)",
+          "addr1": "78 Seongsui-ro, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2946679",
+    "contenttypeid": "82",
+    "matched_title": "Daelim Changgo Gallery (성수동 대림창고 갤러리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentimefood": "11:00-22:00"
+      },
+      "closed_day_fields": {
+        "restdatefood": "Day of Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seongsu-dong Handmade Shoes Street (성수동 수제화거리)",
+    "poi_type": "street",
+    "name_ko": "성수동 수제화거리",
+    "name_en": "Seongsu-dong Handmade Shoes Street",
+    "search_ko": {
+      "query": "성수동 수제화거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2946682",
+          "contenttypeid": "76",
+          "title": "Seongsu-dong Handmade Shoes Street (성수동 수제화거리)",
+          "addr1": "289-30 Seongsu-dong 2(i)-ga, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seongsu-dong Handmade Shoes Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2946682",
+          "contenttypeid": "76",
+          "title": "Seongsu-dong Handmade Shoes Street (성수동 수제화거리)",
+          "addr1": "289-30 Seongsu-dong 2(i)-ga, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2946682",
+    "contenttypeid": "76",
+    "matched_title": "Seongsu-dong Handmade Shoes Street (성수동 수제화거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Oil Tank Culture Park (문화비축기지)",
+    "poi_type": "park",
+    "name_ko": "문화비축기지",
+    "name_en": "Oil Tank Culture Park",
+    "search_ko": {
+      "query": "문화비축기지",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2593294",
+          "contenttypeid": "76",
+          "title": "Oil Tank Culture Park (문화비축기지)",
+          "addr1": "87 Jeungsan-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Oil Tank Culture Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2593294",
+          "contenttypeid": "76",
+          "title": "Oil Tank Culture Park (문화비축기지)",
+          "addr1": "87 Jeungsan-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2593294",
+    "contenttypeid": "76",
+    "matched_title": "Oil Tank Culture Park (문화비축기지)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "[Oil Tank Culture Park] Open 24 hours<br> [Cafe Tank6] 10:00-19:00<br>[T1-T6 Tanks] 10:00-18:00"
+      },
+      "closed_day_fields": {
+        "restdate": "Open all year round (Cafe Tank6 & exhibition halls closed Mondays)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "World Cup Park (월드컵공원)",
+    "poi_type": "park",
+    "name_ko": "월드컵공원",
+    "name_en": "World Cup Park",
+    "search_ko": {
+      "query": "월드컵공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264454",
+          "contenttypeid": "76",
+          "title": "World Cup Park (월드컵공원)",
+          "addr1": "243-60 World Cup-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "World Cup Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264454",
+          "contenttypeid": "76",
+          "title": "World Cup Park (월드컵공원)",
+          "addr1": "243-60 World Cup-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264454",
+    "contenttypeid": "76",
+    "matched_title": "World Cup Park (월드컵공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "January, February, December 7:00-18:00 / March 6:00-20:00 / April, May, September 5:30-20:00 / June July: 5:00-20:30 / August 5:30-20:30 / October 6:00-19:00 / November 6:30-19:00"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Nanji Hangang Park (난지한강공원)",
+    "poi_type": "park",
+    "name_ko": "난지한강공원",
+    "name_en": "Nanji Hangang Park",
+    "search_ko": {
+      "query": "난지한강공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "767100",
+          "contenttypeid": "76",
+          "title": "Nanji Hangang Park (난지한강공원)",
+          "addr1": "162 Hangangnanji-ro, Mapo-gu, Seoul"
+        },
+        {
+          "contentid": "1989051",
+          "contenttypeid": "75",
+          "title": "Nanji Hangang Park MTB Course Site (난지한강공원 MTB코스장)",
+          "addr1": "162, Hangangnanji-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Nanji Hangang Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "767100",
+          "contenttypeid": "76",
+          "title": "Nanji Hangang Park (난지한강공원)",
+          "addr1": "162 Hangangnanji-ro, Mapo-gu, Seoul"
+        },
+        {
+          "contentid": "1989051",
+          "contenttypeid": "75",
+          "title": "Nanji Hangang Park MTB Course Site (난지한강공원 MTB코스장)",
+          "addr1": "162, Hangangnanji-ro, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "767100",
+    "contenttypeid": "76",
+    "matched_title": "Nanji Hangang Park (난지한강공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Banpo Hangang Park (반포한강공원)",
+    "poi_type": "park",
+    "name_ko": "반포한강공원",
+    "name_en": "Banpo Hangang Park",
+    "search_ko": {
+      "query": "반포한강공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1013338",
+          "contenttypeid": "76",
+          "title": "Banpo Hangang Park (반포한강공원)",
+          "addr1": "40 Sinbanpo-ro 11-gil, Seocho-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Banpo Hangang Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1013338",
+          "contenttypeid": "76",
+          "title": "Banpo Hangang Park (반포한강공원)",
+          "addr1": "40 Sinbanpo-ro 11-gil, Seocho-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1013338",
+    "contenttypeid": "76",
+    "matched_title": "Banpo Hangang Park (반포한강공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul Upcycling Plaza (서울새활용플라자)",
+    "poi_type": "tourist_spot",
+    "name_ko": "서울새활용플라자",
+    "name_en": "Seoul Upcycling Plaza",
+    "search_ko": {
+      "query": "서울새활용플라자",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3078769",
+          "contenttypeid": "76",
+          "title": "Seoul Upcycling Plaza (서울새활용플라자)",
+          "addr1": "49 Jadongchasijang-gil, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul Upcycling Plaza",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3078769",
+          "contenttypeid": "76",
+          "title": "Seoul Upcycling Plaza (서울새활용플라자)",
+          "addr1": "49 Jadongchasijang-gil, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3078769",
+    "contenttypeid": "76",
+    "matched_title": "Seoul Upcycling Plaza (서울새활용플라자)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "10:00-18:00"
+      },
+      "closed_day_fields": {
+        "restdate": "Sundays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Cheongdam Fashion Street (청담패션거리)",
+    "poi_type": "shopping",
+    "name_ko": "청담패션거리",
+    "name_en": "Cheongdam Fashion Street",
+    "search_ko": {
+      "query": "청담패션거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1389275",
+          "contenttypeid": "76",
+          "title": "Cheongdam Fashion Street (청담패션거리)",
+          "addr1": "Cheongdam-dong, Gangnam-gu, Seoul-si"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Cheongdam Fashion Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1389275",
+          "contenttypeid": "76",
+          "title": "Cheongdam Fashion Street (청담패션거리)",
+          "addr1": "Cheongdam-dong, Gangnam-gu, Seoul-si"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1389275",
+    "contenttypeid": "76",
+    "matched_title": "Cheongdam Fashion Street (청담패션거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by shop"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Gyeongnidan Street (경리단길)",
+    "poi_type": "street",
+    "name_ko": "경리단길",
+    "name_en": "Gyeongnidan Street",
+    "search_ko": {
+      "query": "경리단길",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2944158",
+          "contenttypeid": "76",
+          "title": "Gyeongnidan Street (경리단길)",
+          "addr1": "Itaewon-dong, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Gyeongnidan Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2944158",
+          "contenttypeid": "76",
+          "title": "Gyeongnidan Street (경리단길)",
+          "addr1": "Itaewon-dong, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2944158",
+    "contenttypeid": "76",
+    "matched_title": "Gyeongnidan Street (경리단길)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Itaewon Shopping Street (이태원 쇼핑거리)",
+    "poi_type": "shopping",
+    "name_ko": "이태원 쇼핑거리",
+    "name_en": "Itaewon Shopping Street",
+    "search_ko": {
+      "query": "이태원 쇼핑거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "273721",
+          "contenttypeid": "79",
+          "title": "Itaewon Shopping Street (이태원 쇼핑거리)",
+          "addr1": "Itaewon-dong, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Itaewon Shopping Street",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "273721",
+          "contenttypeid": "79",
+          "title": "Itaewon Shopping Street (이태원 쇼핑거리)",
+          "addr1": "Itaewon-dong, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "273721",
+    "contenttypeid": "79",
+    "matched_title": "Itaewon Shopping Street (이태원 쇼핑거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "Varies by store"
+      },
+      "closed_day_fields": {
+        "restdateshopping": "Varies by store"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "COEX Aquarium (코엑스 아쿠아리움)",
+    "poi_type": "tourist_spot",
+    "name_ko": "코엑스 아쿠아리움",
+    "name_en": "COEX Aquarium",
+    "search_ko": {
+      "query": "코엑스 아쿠아리움",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "736274",
+          "contenttypeid": "78",
+          "title": "COEX Aquarium (코엑스 아쿠아리움)",
+          "addr1": "513 Yeongdong-daero, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "COEX Aquarium",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "736274",
+          "contenttypeid": "78",
+          "title": "COEX Aquarium (코엑스 아쿠아리움)",
+          "addr1": "513 Yeongdong-daero, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "736274",
+    "contenttypeid": "78",
+    "matched_title": "COEX Aquarium (코엑스 아쿠아리움)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:00-20:00 <br>\n* Last admission one hour before closing"
+      },
+      "closed_day_fields": {
+        "restdateculture": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Culture Station Seoul 284 (문화역 서울 284)",
+    "poi_type": "museum",
+    "name_ko": "문화역 서울 284",
+    "name_en": "Culture Station Seoul 284",
+    "search_ko": {
+      "query": "문화역 서울 284",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1340416",
+          "contenttypeid": "76",
+          "title": "Culture Station Seoul 284 (문화역 서울 284)",
+          "addr1": "1 Tongil-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Culture Station Seoul 284",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1340416",
+          "contenttypeid": "76",
+          "title": "Culture Station Seoul 284 (문화역 서울 284)",
+          "addr1": "1 Tongil-ro, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1340416",
+    "contenttypeid": "76",
+    "matched_title": "Culture Station Seoul 284 (문화역 서울 284)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "11:00-19:00 (Entry closed 1 hour ago)"
+      },
+      "closed_day_fields": {
+        "restdate": "Mondays ※Request to visit after checking the exhibition period (not operating the exhibition preparation period)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Gwanghwamun Market (광화문 마켓)",
+    "poi_type": "shopping",
+    "name_ko": "광화문 마켓",
+    "name_en": "Gwanghwamun Market",
+    "search_ko": {
+      "query": "광화문 마켓",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3043397",
+          "contenttypeid": "85",
+          "title": "Gwanghwamun Market (광화문 마켓)",
+          "addr1": "B172 Sejong-daero, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Gwanghwamun Market",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3043397",
+          "contenttypeid": "85",
+          "title": "Gwanghwamun Market (광화문 마켓)",
+          "addr1": "B172 Sejong-daero, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3043397",
+    "contenttypeid": "85",
+    "matched_title": "Gwanghwamun Market (광화문 마켓)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimefestival": "Free"
+      },
+      "closed_day_fields": {}
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Bukhansan Dulle Trail Section 1 (북한산 둘레길 1 소나무숲길)",
+    "poi_type": "tourist_spot",
+    "name_ko": "북한산 둘레길 1 소나무숲길",
+    "name_en": "Bukhansan Dulle Trail Section 1",
+    "search_ko": {
+      "query": "북한산 둘레길 1 소나무숲길",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Bukhansan Dulle Trail Section 1",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3078595",
+          "contenttypeid": "75",
+          "title": "Bukhansan Dulle Trail Section 1 ([북한산 둘레길] 1 소나무숲길 )",
+          "addr1": "12 Samyang-ro 173-gil, Gangbuk-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3078595",
+    "contenttypeid": "75",
+    "matched_title": "Bukhansan Dulle Trail Section 1 ([북한산 둘레길] 1 소나무숲길 )",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeleports": "Open 24/7"
+      },
+      "closed_day_fields": {
+        "restdateleports": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Hyundai Yacht Seoul Branch (현대요트 서울지점)",
+    "poi_type": "tourist_spot",
+    "name_ko": "현대요트 서울지점",
+    "name_en": "Hyundai Yacht Seoul Branch",
+    "search_ko": {
+      "query": "현대요트 서울지점",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3078609",
+          "contenttypeid": "75",
+          "title": "Hyundai Yacht Seoul Branch (현대요트 서울지점)",
+          "addr1": "350 Dongjak-daero, Seocho-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Hyundai Yacht Seoul Branch",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3078609",
+          "contenttypeid": "75",
+          "title": "Hyundai Yacht Seoul Branch (현대요트 서울지점)",
+          "addr1": "350 Dongjak-daero, Seocho-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3078609",
+    "contenttypeid": "75",
+    "matched_title": "Hyundai Yacht Seoul Branch (현대요트 서울지점)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeleports": "Tuesday-Friday 14:00-22:00 <br> Weekends 19:00-22:00"
+      },
+      "closed_day_fields": {
+        "restdateleports": "Mondays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "National Memorial of Korean Provisional Government (국립대한민국임시정부기념관)",
+    "poi_type": "museum",
+    "name_ko": "국립대한민국임시정부기념관",
+    "name_en": "National Memorial of Korean Provisional Government",
+    "search_ko": {
+      "query": "국립대한민국임시정부기념관",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943974",
+          "contenttypeid": "78",
+          "title": "National Memorial of Korean Provisional Government (국립대한민국임시정부기념관)",
+          "addr1": "279-24, Tongil-ro, Seodaemun-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "National Memorial of Korean Provisional Government",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943974",
+          "contenttypeid": "78",
+          "title": "National Memorial of Korean Provisional Government (국립대한민국임시정부기념관)",
+          "addr1": "279-24, Tongil-ro, Seodaemun-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2943974",
+    "contenttypeid": "78",
+    "matched_title": "National Memorial of Korean Provisional Government (국립대한민국임시정부기념관)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "10:00-18:00 (Last admission is 1 hour before closing)"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Mondays (or following weekday when Monday is a holiday), January 1, Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day) holidays"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Dongnimmun Gate (독립문)",
+    "poi_type": "history",
+    "name_ko": "독립문",
+    "name_en": "Dongnimmun Gate",
+    "search_ko": {
+      "query": "독립문",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264110",
+          "contenttypeid": "76",
+          "title": "Dongnimmun Gate (독립문)",
+          "addr1": "251, Tongil-ro, Seodaemun-gu, Seoul"
+        },
+        {
+          "contentid": "3098181",
+          "contenttypeid": "76",
+          "title": "Dongnimmunbawi Rock [Ullengdo & Dokdo National Geopark] (독립문바위 (울릉도, 독도 국가지질공원))",
+          "addr1": "Dokdo-ri, Ulleung-eup, Ulleung-gun, Gyeongsangbuk-d"
+        },
+        {
+          "contentid": "2961351",
+          "contenttypeid": "79",
+          "title": "Olive Young - Dongnimmun Branch [Tax Refund Shop](올리브영 독립문점)",
+          "addr1": "99, Songwol-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Dongnimmun Gate",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264110",
+          "contenttypeid": "76",
+          "title": "Dongnimmun Gate (독립문)",
+          "addr1": "251, Tongil-ro, Seodaemun-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264110",
+    "contenttypeid": "76",
+    "matched_title": "Dongnimmun Gate (독립문)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hrs"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Sangchonjae House (상촌재)",
+    "poi_type": "history",
+    "name_ko": "상촌재",
+    "name_en": "Sangchonjae House",
+    "search_ko": {
+      "query": "상촌재",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2997814",
+          "contenttypeid": "76",
+          "title": "Sangchonjae House (상촌재)",
+          "addr1": "12-11 , Jahamun-ro 17-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Sangchonjae House",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2997814",
+          "contenttypeid": "76",
+          "title": "Sangchonjae House (상촌재)",
+          "addr1": "12-11 , Jahamun-ro 17-gil, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2997814",
+    "contenttypeid": "76",
+    "matched_title": "Sangchonjae House (상촌재)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "09:00-18:00"
+      },
+      "closed_day_fields": {
+        "restdate": ""
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Suseongdonggyegok Valley (수성동계곡)",
+    "poi_type": "park",
+    "name_ko": "수성동계곡",
+    "name_en": "Suseongdonggyegok Valley",
+    "search_ko": {
+      "query": "수성동계곡",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2997840",
+          "contenttypeid": "76",
+          "title": "Suseongdonggyegok Valley (수성동계곡)",
+          "addr1": "185-3, Ogin-dong, Jongno-gu, Seoul 서울특별시 종로구 옥인동"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Suseongdonggyegok Valley",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2997840",
+          "contenttypeid": "76",
+          "title": "Suseongdonggyegok Valley (수성동계곡)",
+          "addr1": "185-3, Ogin-dong, Jongno-gu, Seoul 서울특별시 종로구 옥인동"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2997840",
+    "contenttypeid": "76",
+    "matched_title": "Suseongdonggyegok Valley (수성동계곡)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": ""
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul Marina Club & Yacht (서울마리나 요트&클럽)",
+    "poi_type": "tourist_spot",
+    "name_ko": "서울마리나 요트&클럽",
+    "name_en": "Seoul Marina Club & Yacht",
+    "search_ko": {
+      "query": "서울마리나 요트&클럽",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1391859",
+          "contenttypeid": "75",
+          "title": "Seoul Marina Club & Yacht (서울마리나 요트&클럽)",
+          "addr1": "160 Yeouiseo-ro, Yeongdeungpo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul Marina Club & Yacht",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1391859",
+          "contenttypeid": "75",
+          "title": "Seoul Marina Club & Yacht (서울마리나 요트&클럽)",
+          "addr1": "160 Yeouiseo-ro, Yeongdeungpo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1391859",
+    "contenttypeid": "75",
+    "matched_title": "Seoul Marina Club & Yacht (서울마리나 요트&클럽)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeleports": "10:00-22:00"
+      },
+      "closed_day_fields": {
+        "restdateleports": "The day of Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Yongsan Family Park (용산가족공원)",
+    "poi_type": "park",
+    "name_ko": "용산가족공원",
+    "name_en": "Yongsan Family Park",
+    "search_ko": {
+      "query": "용산가족공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264131",
+          "contenttypeid": "76",
+          "title": "Yongsan Family Park (용산가족공원)",
+          "addr1": "185, Seobinggo-ro, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Yongsan Family Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264131",
+          "contenttypeid": "76",
+          "title": "Yongsan Family Park (용산가족공원)",
+          "addr1": "185, Seobinggo-ro, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264131",
+    "contenttypeid": "76",
+    "matched_title": "Yongsan Family Park (용산가족공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "24 hrs"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul Battleship Park (서울함공원)",
+    "poi_type": "tourist_spot",
+    "name_ko": "서울함공원",
+    "name_en": "Seoul Battleship Park",
+    "search_ko": {
+      "query": "서울함공원",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2944095",
+          "contenttypeid": "76",
+          "title": "Seoul Battleship Park (서울함공원)",
+          "addr1": "407 Maponaru-gil, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul Battleship Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2944095",
+          "contenttypeid": "76",
+          "title": "Seoul Battleship Park (서울함공원)",
+          "addr1": "407 Maponaru-gil, Mapo-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2944095",
+    "contenttypeid": "76",
+    "matched_title": "Seoul Battleship Park (서울함공원)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "March - October: Weekdays 10:00-19:00 / Weekends 10:00-20:00<br/> November - February: 10:00-18:00"
+      },
+      "closed_day_fields": {
+        "restdate": "Mondays, New Year's Day, Day of Seollal (Lunar New Year's Day), Chuseok (Korean Thanksgiving Day)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Supsok Hanbang Land (숲속한방랜드)",
+    "poi_type": "tourist_spot",
+    "name_ko": "숲속한방랜드",
+    "name_en": "Supsok Hanbang Land",
+    "search_ko": {
+      "query": "숲속한방랜드",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3110038",
+          "contenttypeid": "76",
+          "title": "Supsok Hanbang Land (숲속한방랜드)",
+          "addr1": "75-7 Bongwonsa-gil, Seodaemun-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Supsok Hanbang Land",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3110038",
+          "contenttypeid": "76",
+          "title": "Supsok Hanbang Land (숲속한방랜드)",
+          "addr1": "75-7 Bongwonsa-gil, Seodaemun-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "3110038",
+    "contenttypeid": "76",
+    "matched_title": "Supsok Hanbang Land (숲속한방랜드)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "08:00-21:00"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Seoul Namsan Park (남산공원(서울))",
+    "poi_type": "park",
+    "name_ko": "남산공원(서울)",
+    "name_en": "Seoul Namsan Park",
+    "search_ko": {
+      "query": "남산공원(서울)",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264320",
+          "contenttypeid": "76",
+          "title": "Seoul Namsan Park (남산공원(서울))",
+          "addr1": "231 Samil-daero, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Seoul Namsan Park",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264320",
+          "contenttypeid": "76",
+          "title": "Seoul Namsan Park (남산공원(서울))",
+          "addr1": "231 Samil-daero, Jung-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264320",
+    "contenttypeid": "76",
+    "matched_title": "Seoul Namsan Park (남산공원(서울))",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "exact"
+  },
+  {
+    "poi_name": "Amore Seongsu (아모레 성수)",
+    "poi_type": "shopping",
+    "name_ko": "아모레 성수",
+    "name_en": "Amore Seongsu",
+    "search_ko": {
+      "query": "아모레 성수",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "4030965",
+          "contenttypeid": "79",
+          "title": "AMORE Seongsu [Tax Refund Shop](아모레 성수)",
+          "addr1": "7, Achasan-ro 11-gil, Seongdong-gu, Seoul"
+        },
+        {
+          "contentid": "3078774",
+          "contenttypeid": "76",
+          "title": "Amore Seongsu (아모레 성수)",
+          "addr1": "7 Achasan-ro 11-gil, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Amore Seongsu",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "4030965",
+          "contenttypeid": "79",
+          "title": "AMORE Seongsu [Tax Refund Shop](아모레 성수)",
+          "addr1": "7, Achasan-ro 11-gil, Seongdong-gu, Seoul"
+        },
+        {
+          "contentid": "3078774",
+          "contenttypeid": "76",
+          "title": "Amore Seongsu (아모레 성수)",
+          "addr1": "7 Achasan-ro 11-gil, Seongdong-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "4030965",
+    "contenttypeid": "79",
+    "matched_title": "AMORE Seongsu [Tax Refund Shop](아모레 성수)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "10:30~20:30"
+      },
+      "closed_day_fields": {
+        "restdateshopping": "Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day) holidays"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "National Museum of Modern and Contemporary Art (국립현대미술관)",
+    "poi_type": "museum",
+    "name_ko": "국립현대미술관",
+    "name_en": "National Museum of Modern and Contemporary Art",
+    "search_ko": {
+      "query": "국립현대미술관",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2948291",
+          "contenttypeid": "78",
+          "title": "Museum of Modern and Contemporary Art Cheongju [MMCA Cheongju] (국립현대미술관(청주관))",
+          "addr1": "314 Sangdang-ro, Cheongwon-gu, Cheongju-si, Chungcheongbuk-do"
+        },
+        {
+          "contentid": "268074",
+          "contenttypeid": "78",
+          "title": "National Museum of Modern and Contemporary Art, Deoksugung [MMCA Deoksugung] (국립현대미술관 덕수궁)",
+          "addr1": "99 Sejong-daero, Jung-gu, Seoul"
+        },
+        {
+          "contentid": "268077",
+          "contenttypeid": "78",
+          "title": "National Museum of Modern and Contemporary Art, Gwacheon [MMCA Gwacheon] (국립현대미술관 (과천관))",
+          "addr1": "313 Gwangmyeong-ro, Gwacheon-si, Gyeonggi-do"
+        },
+        {
+          "contentid": "1934745",
+          "contenttypeid": "78",
+          "title": "National Museum of Modern and Contemporary Art, Seoul [MMCA Seoul] (국립현대미술관 서울관)",
+          "addr1": "30 Samcheong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "National Museum of Modern and Contemporary Art",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "268074",
+          "contenttypeid": "78",
+          "title": "National Museum of Modern and Contemporary Art, Deoksugung [MMCA Deoksugung] (국립현대미술관 덕수궁)",
+          "addr1": "99 Sejong-daero, Jung-gu, Seoul"
+        },
+        {
+          "contentid": "268077",
+          "contenttypeid": "78",
+          "title": "National Museum of Modern and Contemporary Art, Gwacheon [MMCA Gwacheon] (국립현대미술관 (과천관))",
+          "addr1": "313 Gwangmyeong-ro, Gwacheon-si, Gyeonggi-do"
+        },
+        {
+          "contentid": "1934745",
+          "contenttypeid": "78",
+          "title": "National Museum of Modern and Contemporary Art, Seoul [MMCA Seoul] (국립현대미술관 서울관)",
+          "addr1": "30 Samcheong-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "268074",
+    "contenttypeid": "78",
+    "matched_title": "National Museum of Modern and Contemporary Art, Deoksugung [MMCA Deoksugung] (국립현대미술관 덕수궁)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetimeculture": "Tuesday, Thursday, Friday, Sunday: 10:00-18:00Wednesday, Saturday: 10:00-21:00 * Last admission: 1 hr before closing* Hours subject to change by exhibition"
+      },
+      "closed_day_fields": {
+        "restdateculture": "Mondays, January 1"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Bugak Skyway (북악스카이웨이)",
+    "poi_type": "tourist_spot",
+    "name_ko": "북악스카이웨이",
+    "name_en": "Bugak Skyway",
+    "search_ko": {
+      "query": "북악스카이웨이",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Bugak Skyway",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "1909500",
+          "contenttypeid": "76",
+          "title": "Bugak Skyway Palgakjeong Pavilion (북악스카이 팔각정)",
+          "addr1": "267 Bugaksan-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "1909500",
+    "contenttypeid": "76",
+    "matched_title": "Bugak Skyway Palgakjeong Pavilion (북악스카이 팔각정)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "광장시장",
+    "poi_type": "shopping",
+    "name_ko": "광장시장",
+    "name_en": "광장시장",
+    "search_ko": {
+      "query": "광장시장",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "273761",
+          "contenttypeid": "79",
+          "title": "Gwangjang Market (광장시장)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "4031304",
+          "contenttypeid": "79",
+          "title": "PLEATS MAMA EEUT Gwangjang Market Branch [Tax Refund Shop](플리츠마마 이웃 광장시장점)",
+          "addr1": "24-1, Jongno 32-gil, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "2954752",
+          "contenttypeid": "79",
+          "title": "RAWROW Gwangjang Market Branch[Tax Refund Shop](로우로우 광장시장점)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "광장시장",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "273761",
+          "contenttypeid": "79",
+          "title": "Gwangjang Market (광장시장)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "4031304",
+          "contenttypeid": "79",
+          "title": "PLEATS MAMA EEUT Gwangjang Market Branch [Tax Refund Shop](플리츠마마 이웃 광장시장점)",
+          "addr1": "24-1, Jongno 32-gil, Jongno-gu, Seoul"
+        },
+        {
+          "contentid": "2954752",
+          "contenttypeid": "79",
+          "title": "RAWROW Gwangjang Market Branch[Tax Refund Shop](로우로우 광장시장점)",
+          "addr1": "88, Changgyeonggung-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "273761",
+    "contenttypeid": "79",
+    "matched_title": "Gwangjang Market (광장시장)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "09:00-18:00Charity stores 10:00-19:00Food street 09:00-23:00"
+      },
+      "closed_day_fields": {
+        "restdateshopping": "Sundays (Food Street open all year round)"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Sejong Village Food and Culture Alley (세종마을 음식문화거리)",
+    "poi_type": "street",
+    "name_ko": "세종마을 음식문화거리",
+    "name_en": "Sejong Village Food and Culture Alley",
+    "search_ko": {
+      "query": "세종마을 음식문화거리",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3498835",
+          "contenttypeid": "76",
+          "title": "Sejong Village Food Street (세종마을 음식문화거리)",
+          "addr1": "Chebu-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Sejong Village Food and Culture Alley",
+      "ok": true,
+      "items": []
+    },
+    "matched": true,
+    "matched_source": "ko",
+    "contentid": "3498835",
+    "contenttypeid": "76",
+    "matched_title": "Sejong Village Food Street (세종마을 음식문화거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Vary by store"
+      },
+      "closed_day_fields": {
+        "restdate": "Varies by store"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Nodeulseom Island (노들섬)",
+    "poi_type": "tourist_spot",
+    "name_ko": "노들섬",
+    "name_en": "Nodeulseom Island",
+    "search_ko": {
+      "query": "노들섬",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2813573",
+          "contenttypeid": "76",
+          "title": "Nodeul Island (노들섬)",
+          "addr1": "445 Yangnyeong-ro, Yongsan-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Nodeulseom Island",
+      "ok": true,
+      "items": []
+    },
+    "matched": true,
+    "matched_source": "ko",
+    "contentid": "2813573",
+    "contenttypeid": "76",
+    "matched_title": "Nodeul Island (노들섬)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "[March-October] Tuesday-Friday 10:00-21:00 / Weekends & public holidays 10:00-22:00 <br>  [November-February] Tuesday-Sunday 10:00-20:00<br>* Outdoor areas are open 24/7  <br>* Operating hours may vary by facility"
+      },
+      "closed_day_fields": {
+        "restdate": "Mondays, January 1, the day of Seollal (Lunar New Year's Day) & Chuseok (Korean Thanksgiving Day)"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Ikseon-dong (익선동)",
+    "poi_type": "history",
+    "name_ko": "익선동",
+    "name_en": "Ikseon-dong",
+    "search_ko": {
+      "query": "익선동",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943972",
+          "contenttypeid": "76",
+          "title": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+          "addr1": "Ikseon-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Ikseon-dong",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "2943972",
+          "contenttypeid": "76",
+          "title": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+          "addr1": "Ikseon-dong, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "2943972",
+    "contenttypeid": "76",
+    "matched_title": "Ikseon-dong Hanok Street (익선동 한옥거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Varies by shop"
+      },
+      "closed_day_fields": {
+        "restdate": "Open all year round (Varies by shop)"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Hangdong Railroad (항동철길)",
+    "poi_type": "street",
+    "name_ko": "항동철길",
+    "name_en": "Hangdong Railroad",
+    "search_ko": {
+      "query": "항동철길",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "3099597",
+          "contenttypeid": "76",
+          "title": "Pureun Arboretum & Hang-dong Railroad (푸른수목원&항동철길)",
+          "addr1": "240 Yeondong-ro, Guro-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Hangdong Railroad",
+      "ok": true,
+      "items": []
+    },
+    "matched": true,
+    "matched_source": "ko",
+    "contentid": "3099597",
+    "contenttypeid": "76",
+    "matched_title": "Pureun Arboretum & Hang-dong Railroad (푸른수목원&항동철길)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "05:00-22:00"
+      },
+      "closed_day_fields": {
+        "restdate": "N/A (Open all year round)"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Seolleung and Jeongneung Royal Tombs (선릉과 정릉)",
+    "poi_type": "history",
+    "name_ko": "선릉과 정릉",
+    "name_en": "Seolleung and Jeongneung Royal Tombs",
+    "search_ko": {
+      "query": "선릉과 정릉",
+      "ok": true,
+      "items": []
+    },
+    "search_en": {
+      "query": "Seolleung and Jeongneung Royal Tombs",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264106",
+          "contenttypeid": "76",
+          "title": "Seolleung and Jeongneung Royal Tombs [UNESCO World Heritage] (서울 선릉과정릉) [유네스코 세계유산]",
+          "addr1": "1 Seolleung-ro 100-gil, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264106",
+    "contenttypeid": "76",
+    "matched_title": "Seolleung and Jeongneung Royal Tombs [UNESCO World Heritage] (서울 선릉과정릉) [유네스코 세계유산]",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "- February 06:00-18:00 <br>- March-October 06:00-21:00 <br>- November-January 06:00-17:30 <br>* Last admission 1 hr before closing"
+      },
+      "closed_day_fields": {
+        "restdate": "Mondays"
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Apgujeong Rodeo (압구정 로데오)",
+    "poi_type": "shopping",
+    "name_ko": "압구정 로데오",
+    "name_en": "Apgujeong Rodeo",
+    "search_ko": {
+      "query": "압구정 로데오",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264107",
+          "contenttypeid": "76",
+          "title": "Apgujeong Rodeo Street (압구정 로데오거리)",
+          "addr1": "Sinsa-dong, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Apgujeong Rodeo",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "264107",
+          "contenttypeid": "76",
+          "title": "Apgujeong Rodeo Street (압구정 로데오거리)",
+          "addr1": "Sinsa-dong, Gangnam-gu, Seoul"
+        },
+        {
+          "contentid": "4030836",
+          "contenttypeid": "79",
+          "title": "HapaKristin Apgujeong Rodeo Branch[Tax Refund Shop](하파크리스틴 압구정로데오점)",
+          "addr1": "1F, 23, Apgujeong-ro 50-gil, Gangnam-gu, Seoul"
+        },
+        {
+          "contentid": "2961631",
+          "contenttypeid": "79",
+          "title": "Olive Young - Apgujeong Rodeo Branch [Tax Refund Shop](올리브영 압구정로데오점)",
+          "addr1": "1F, 9, Apgujeong-ro 50-gil, Gangnam-gu, Seoul"
+        },
+        {
+          "contentid": "4014027",
+          "contenttypeid": "79",
+          "title": "Olive Young Apgujeong Rodeo Station Branch [Tax Refund Shop](올리브영 압구정로데오역점)",
+          "addr1": "Campports Building, 817, Seolleung-ro, Gangnam-gu, Seoul"
+        }
+      ]
+    },
+    "matched": true,
+    "matched_source": "en",
+    "contentid": "264107",
+    "contenttypeid": "76",
+    "matched_title": "Apgujeong Rodeo Street (압구정 로데오거리)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "usetime": "Open 24 hr"
+      },
+      "closed_day_fields": {
+        "restdate": ""
+      }
+    },
+    "_tier": "loose"
+  },
+  {
+    "poi_name": "Osulloc Tea House – Bukchon Branch (오설록 티하우스 북촌점)",
+    "poi_type": "cafe",
+    "name_ko": "오설록 티하우스 북촌점",
+    "name_en": "Osulloc Tea House – Bukchon Branch",
+    "search_ko": {
+      "query": "오설록 티하우스 북촌점",
+      "ok": true,
+      "items": [
+        {
+          "contentid": "4031227",
+          "contenttypeid": "79",
+          "title": "O'sulloc Tea House Bukchon Branch [Tax Refund Shop](오설록 티하우스 북촌점)",
+          "addr1": "45, Bukchon-ro, Jongno-gu, Seoul"
+        }
+      ]
+    },
+    "search_en": {
+      "query": "Osulloc Tea House – Bukchon Branch",
+      "ok": true,
+      "items": []
+    },
+    "matched": true,
+    "matched_source": "ko",
+    "contentid": "4031227",
+    "contenttypeid": "79",
+    "matched_title": "O'sulloc Tea House Bukchon Branch [Tax Refund Shop](오설록 티하우스 북촌점)",
+    "detail_intro": {
+      "ok": true,
+      "operating_hours_fields": {
+        "opentime": "11:00~20:00"
+      },
+      "closed_day_fields": {
+        "restdateshopping": ""
+      }
+    },
+    "_tier": "loose"
+  }
+]
