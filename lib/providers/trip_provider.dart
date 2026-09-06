@@ -117,8 +117,14 @@ class TripProvider extends ChangeNotifier {
     _mutateActivity(activityId, (a) => a.copyWith(included: included));
   }
 
-  void checkIn(String activityId) {
-    _mutateActivity(activityId, (a) => a.copyWith(visited: true));
+  void checkIn(String activityId) => setVisited(activityId, true);
+
+  /// Marks a stop visited, or un-marks it.
+  ///
+  /// Reversible on purpose: this is the only control on the check-in screen,
+  /// so a mis-tap with no way back would strand a wrong stamp in the record.
+  void setVisited(String activityId, bool visited) {
+    _mutateActivity(activityId, (a) => a.copyWith(visited: visited));
     unawaited(_persistCheckins());
   }
 

@@ -1,7 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -221,80 +217,6 @@ class _SourceChip extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Saves the itinerary as JSON.
-class ExportItineraryButton extends StatefulWidget {
-  const ExportItineraryButton({super.key, required this.itinerary});
-
-  final Itinerary itinerary;
-
-  @override
-  State<ExportItineraryButton> createState() => _ExportItineraryButtonState();
-}
-
-class _ExportItineraryButtonState extends State<ExportItineraryButton> {
-  bool _saving = false;
-  bool _saved = false;
-
-  Future<void> _export() async {
-    if (_saving) return;
-    setState(() => _saving = true);
-
-    // The backend payload verbatim, so the export carries what the typed
-    // models drop — critic_report, area_coverage, repair_log. Falls back to
-    // the summary alone for a plan that arrived without one.
-    const encoder = JsonEncoder.withIndent('  ');
-    final json = encoder.convert(
-      widget.itinerary.raw.isNotEmpty
-          ? widget.itinerary.raw
-          : {'summary': widget.itinerary.summary},
-    );
-
-    try {
-      await FileSaver.instance.saveFile(
-        name: 'seoulfit_itinerary_${DateTime.now().millisecondsSinceEpoch}',
-        bytes: Uint8List.fromList(utf8.encode(json)),
-        ext: 'json',
-        mimeType: MimeType.json,
-      );
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _saved = true;
-      });
-      // Back to the idle label after the confirmation beat.
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) setState(() => _saved = false);
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Save failed: $e')));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: _saving ? null : _export,
-      icon: Icon(
-        _saved ? Icons.check_rounded : Icons.download_outlined,
-        size: 16,
-      ),
-      label: Text(_saved ? 'Saved' : 'Save as JSON'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.textSecondary,
-        side: const BorderSide(color: AppColors.border),
-        minimumSize: const Size.fromHeight(44),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadii.md),
-        ),
-        textStyle: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
       ),
     );
   }

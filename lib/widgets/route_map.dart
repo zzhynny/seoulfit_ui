@@ -11,7 +11,7 @@ import '../theme/theme.dart';
 /// Falls back to the Figma route illustration when no stop has coordinates —
 /// which is every stop under `--dart-define=USE_MOCKS=true`, since the mock
 /// itinerary is display copy with no geography behind it.
-class RouteMap extends StatelessWidget {
+class RouteMap extends StatefulWidget {
   const RouteMap({
     super.key,
     required this.itinerary,
@@ -28,6 +28,31 @@ class RouteMap extends StatelessWidget {
   /// day's markers on the map while the list showed one made the two
   /// disagree about what the traveller had selected.
   final int? onlyDay;
+
+  @override
+  State<RouteMap> createState() => _RouteMapState();
+}
+
+class _RouteMapState extends State<RouteMap> {
+  final MapController _controller = MapController();
+
+  Itinerary get itinerary => widget.itinerary;
+  double get height => widget.height;
+  int? get onlyDay => widget.onlyDay;
+
+  void _zoomBy(double delta) {
+    final camera = _controller.camera;
+    _controller.move(
+      camera.center,
+      (camera.zoom + delta).clamp(3.0, 18.0),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +121,26 @@ class RouteMap extends StatelessWidget {
             ),
           ],
             ),
+            Positioned(
+              right: 8,
+              bottom: 8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ZoomButton(
+                    icon: Icons.add,
+                    tooltip: 'Zoom in',
+                    onTap: () => _zoomBy(1),
+                  ),
+                  const SizedBox(height: 6),
+                  _ZoomButton(
+                    icon: Icons.remove,
+                    tooltip: 'Zoom out',
+                    onTap: () => _zoomBy(-1),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -133,11 +178,52 @@ class RouteMap extends StatelessWidget {
     );
   }
 
-  /// Pan and pinch only. The map sits inside a scrolling list, so leaving
-  /// one-finger drag on the map would fight the list for the same gesture.
+  /// Pan, pinch, double-tap and scroll-wheel. Rotation stays off: the route
+  /// reads against north, and a stray two-finger twist inside a scrolling
+  /// list is far more often an accident than an intent.
   static const _interaction = InteractionOptions(
-    flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+    flags: InteractiveFlag.pinchZoom |
+        InteractiveFlag.drag |
+        InteractiveFlag.doubleTapZoom |
+        InteractiveFlag.scrollWheelZoom,
   );
+}
+
+/// A zoom control. Present because the map is only 128-200px tall inside a
+/// scrolling list, where a pinch is both fiddly and easily taken for a scroll.
+class _ZoomButton extends StatelessWidget {
+  const _ZoomButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          child: SizedBox(
+            width: 30,
+            height: 30,
+            child: Icon(icon, size: 17, color: AppColors.textPrimary),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Day 1 takes the first colour, day 2 the second, and so on — keyed off the

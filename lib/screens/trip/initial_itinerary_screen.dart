@@ -95,7 +95,6 @@ class _InitialItineraryScreenState extends State<InitialItineraryScreen> {
                 SourcesCard(sources: widget.itinerary.sources),
                 const SizedBox(height: 12),
               ],
-              ExportItineraryButton(itinerary: widget.itinerary),
             ],
           ),
         ),

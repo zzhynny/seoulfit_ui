@@ -20,14 +20,18 @@ class PoiSummary extends StatefulWidget {
     required this.name,
     required this.fallback,
     this.type = '',
-    this.maxLines = 2,
+    this.maxLines,
     this.style,
   });
 
   final String name;
   final String fallback;
   final String type;
-  final int maxLines;
+
+  /// Null shows the description in full, which is the default: /poi-summary
+  /// returns one or two sentences and clipping them mid-thought is worse
+  /// than a taller card.
+  final int? maxLines;
   final TextStyle? style;
 
   @override
@@ -64,7 +68,9 @@ class _PoiSummaryState extends State<PoiSummary> {
     return Text(
       _summary ?? widget.fallback,
       maxLines: widget.maxLines,
-      overflow: TextOverflow.ellipsis,
+      overflow: widget.maxLines == null
+          ? TextOverflow.clip
+          : TextOverflow.ellipsis,
       style: widget.style ?? AppTextStyles.bodySmall,
     );
   }

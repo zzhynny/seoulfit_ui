@@ -79,7 +79,7 @@ class _ConfirmSlotsScreenState extends State<ConfirmSlotsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Is everything correct?', style: AppTextStyles.headingMedium.copyWith(fontSize: 28)),
+              Text('Your Travel Summary', style: AppTextStyles.headingMedium.copyWith(fontSize: 28)),
               const SizedBox(height: 8),
               Text(
                 "Here's what your SeoulFit AI will use to build your customized day-by-day plan.",
@@ -194,12 +194,6 @@ class _SummaryRow extends StatelessWidget {
               style: AppTextStyles.bodyMedium
                   .copyWith(fontWeight: FontWeight.w600),
             ),
-          ),
-          const SizedBox(width: 8),
-          const Padding(
-            padding: EdgeInsets.only(top: 3),
-            child: Icon(Icons.edit_outlined,
-                size: 14, color: AppColors.textSecondary),
           ),
         ],
       ),

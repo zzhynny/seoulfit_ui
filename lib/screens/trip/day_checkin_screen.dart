@@ -85,10 +85,9 @@ class DayCheckInScreen extends StatelessWidget {
               for (final activity in day.activities) ...[
                 CheckInActivityCard(
                   activity: activity,
-                  onTap: () {
-                    if (activity.visited) return;
-                    onMissedPlace(activity.id);
-                  },
+                  onToggleVisited: () =>
+                      trip.setVisited(activity.id, !activity.visited),
+                  onMissed: () => onMissedPlace(activity.id),
                 ),
                 const SizedBox(height: 12),
               ],

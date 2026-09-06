@@ -188,10 +188,6 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: SourcesCard(sources: itinerary.sources),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: ExportItineraryButton(itinerary: itinerary),
-              ),
               GestureDetector(
                 onTap: widget.onResetItinerary,
                 child: Padding(

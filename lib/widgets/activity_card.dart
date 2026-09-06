@@ -192,15 +192,28 @@ class ToggleActivityCard extends StatelessWidget {
 
 /// A tappable check-in version used on Day Check-in.
 class CheckInActivityCard extends StatelessWidget {
-  const CheckInActivityCard({super.key, required this.activity, required this.onTap});
+  const CheckInActivityCard({
+    super.key,
+    required this.activity,
+    required this.onToggleVisited,
+    required this.onMissed,
+  });
 
   final TripActivity activity;
-  final VoidCallback onTap;
+
+  /// Stamps the stop, or un-stamps it. The whole card is the target.
+  final VoidCallback onToggleVisited;
+
+  /// Records why a stop went unvisited. Deliberately a separate, smaller
+  /// control: tapping a stop means "I was here", and routing that to the
+  /// missed-reason screen — as this card used to — left no way to check
+  /// anything in at all.
+  final VoidCallback onMissed;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onToggleVisited,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(12),
@@ -240,6 +253,21 @@ class CheckInActivityCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(activity.title, style: AppTextStyles.headingSmall.copyWith(fontSize: 15)),
+                  if (!activity.visited)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onMissed,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 2, bottom: 2),
+                        child: Text(
+                          "Couldn't make it?",
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
