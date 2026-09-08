@@ -380,7 +380,7 @@
       {
         "sequence_order": 4,
         "poi_name": "Saemaeul Market (새마을시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 송파구 석촌호수로12길 24",
         "address_en": "24 Seokchonhosu-ro 12-gil, Songpa-gu, Seoul",
         "lat": 37.50891975984558,
@@ -511,7 +511,7 @@
       {
         "sequence_order": 1,
         "poi_name": "Namdaemun Market (남대문시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 중구 남대문시장4길 21",
         "address_en": "4 Namdaemunsijang-gil, Jung-gu, Seoul",
         "lat": 37.55910418446656,
@@ -1338,7 +1338,7 @@
       {
         "sequence_order": 2,
         "poi_name": "Mangwon Market (망원시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 마포구 포은로 8",
         "address_en": "8 Poeun-ro, Mapo-gu, Seoul",
         "lat": 37.54909469424142,
@@ -1456,44 +1456,6 @@
     ]
   },
   {
-    "course_id": "VS_MVP_011_DAY1",
-    "source": "Visit Seoul",
-    "source_url": "https://english.visitseoul.net/mvp/4nights5dayscoursefornovices/ENN034896",
-    "course_title": "4 nights 5 days course for novices",
-    "theme_category": [
-      "Modern Seoul",
-      "Shopping",
-      "Culture",
-      "Family",
-      "Food",
-      "Nature"
-    ],
-    "sequence": [
-      {
-        "sequence_order": 1,
-        "poi_name": "Dongdaemun Design Plaza (DDP) (동대문디자인플라자)",
-        "poi_type": "tourist_spot",
-        "address_ko": "서울특별시 중구 을지로 281",
-        "address_en": "281 Eulji-ro, Jung-gu, Seoul",
-        "lat": 37.56707028678808,
-        "lng": 127.0098788028792,
-        "estimated_stay_time": "90",
-        "is_area_type": false,
-        "opening_hours": {
-          "hours": "10:00-20:00 KST (Vary by space, see the website)",
-          "closed": null,
-          "source": "seoul.json",
-          "source_title": "Dongdaemun Design Plaza (DDP)",
-          "match_tier": "loose_en",
-          "closed_weekday": [],
-          "closed_weekday_source": "google_places_legacy",
-          "closed_weekday_place_id": "ChIJ8xRYr29FezUR3AtFqx2pIlw",
-          "closed_weekday_match_tier": "exact"
-        }
-      }
-    ]
-  },
-  {
     "course_id": "VS_MVP_011_DAY2",
     "source": "Visit Seoul",
     "source_url": "https://english.visitseoul.net/mvp/4nights5dayscoursefornovices/ENN034896",
@@ -1562,7 +1524,7 @@
       {
         "sequence_order": 5,
         "poi_name": "Mangwon Market (망원시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 마포구 포은로 8",
         "address_en": "8 Poeun-ro, Mapo-gu, Seoul",
         "lat": 37.54909469424142,
@@ -2328,7 +2290,7 @@
       {
         "sequence_order": 5,
         "poi_name": "Gwangjang Market (광장시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 종로구 창경궁로 88",
         "address_en": "88 Changgyeonggung-ro, Jongno-gu, Seoul",
         "lat": 37.570467421762785,
@@ -2504,7 +2466,7 @@
       {
         "sequence_order": 1,
         "poi_name": "광장시장",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 종로구 창경궁로 88",
         "address_en": "88, Changgyeonggung-ro, Jongno-gu, Seoul",
         "lat": 37.570467421762785,
@@ -4072,7 +4034,7 @@
       {
         "sequence_order": 7,
         "poi_name": "Tongin Market (통인시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 종로구 자하문로15길 18",
         "address_en": "18 Jahamun-ro 15-gil, Jongno-gu, Seoul, South Korea",
         "lat": 37.58075368143289,
@@ -4663,7 +4625,7 @@
       {
         "sequence_order": 3,
         "poi_name": "Gwangjang Market (광장시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 종로구 창경궁로 88",
         "address_en": "88, Changgyeonggung-ro, Jongno-gu, Seoul",
         "lat": 37.570467421762785,
@@ -5770,7 +5732,7 @@
       {
         "sequence_order": 2,
         "poi_name": "Namdaemun Market (남대문 시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 중구 남대문시장4길 21",
         "address_en": "21, Namdaemunsijang 4-gil, Jung-gu, Seoul",
         "lat": 37.55910418446656,
@@ -5866,7 +5828,7 @@
       {
         "sequence_order": 1,
         "poi_name": "Mangwon Market (망원 시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 마포구 포은로8길 14",
         "address_en": "14, Poeun-ro 8-gil, Mapo-gu, Seoul",
         "lat": 37.556240105046,
@@ -6694,7 +6656,7 @@
         "poi_name": "Hanyangdoseong Seoul City Wall Stamp Tour (서울 한양도성 순성길)",
         "poi_type": "tourist_spot",
         "address_ko": "서울특별시 중구 신당동 229",
-        "address_en": "6 Dongil-ro 190-gil, Nowon-gu, Seoul",
+        "address_en": "229 Sindang-dong, Jung-gu, Seoul",
         "lat": 37.54959230575524,
         "lng": 127.00528103428749,
         "estimated_stay_time": 90,
@@ -8506,7 +8468,7 @@
       {
         "sequence_order": 3,
         "poi_name": "Gobundari Market (고분다리 전통시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 강동구 구천면로34길 8 (천호동)",
         "address_en": "8 Gucheonmyeon-ro 34-gil, Gangdong-gu, Seoul",
         "lat": 37.54235014886689,
@@ -9006,7 +8968,7 @@
       {
         "sequence_order": 2,
         "poi_name": "Mangwon Market (망원시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 마포구 포은로6길 27 (망원동)",
         "address_en": "27 Poeun-ro 6-gil, Mapo-gu, Seoul",
         "lat": 37.556006831216976,
@@ -10498,7 +10460,7 @@
       {
         "sequence_order": 3,
         "poi_name": "Daerim Market (대림시장)",
-        "poi_type": "street",
+        "poi_type": "market",
         "address_ko": "서울특별시 은평구 응암동 754-1 대림시장",
         "address_en": "300-10 Eungam-dong, Eunpyeong-gu, Seoul",
         "lat": 37.58681768308281,
@@ -10991,7 +10953,7 @@
       {
         "sequence_order": 3,
         "poi_name": "Mangwon Market (망원시장)",
-        "poi_type": "shopping",
+        "poi_type": "market",
         "address_ko": "서울특별시 마포구 포은로6길 27 (망원동)",
         "address_en": "27 Poeun-ro 6-gil, Mapo-gu, Seoul",
         "lat": 37.556006831216976,

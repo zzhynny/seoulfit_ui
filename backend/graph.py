@@ -86,7 +86,13 @@ FIELD_QUESTIONS = {
     # rule rejects, so the question must not invite one.
     "travel_dates": "When are you travelling? Tap the calendar to pick your dates "
                     "(up to 7 days).",
-    "category":     "What are your main interests? (beauty, history, food, shopping, activity)",
+    # The five values are the app's whole interest vocabulary. They are also
+    # what each course carries in its `interests` field, so the answer joins to
+    # course data by exact string match rather than by embedding luck. The old
+    # seven (K-POP/Cafe/Beauty/Food/Shopping/History/Activity) could not:
+    # Cafe, Beauty and Activity matched zero courses.
+    "category":     "What are your main interests? (Culture & History, Food & Cafes, "
+                    "Shopping, K-POP & Hallyu, Nature & Relaxation)",
     "restrictions": "Any dietary or physical restrictions? (or 'none')",
     "companion":    "Who are you traveling with? (solo/couple/friends/family)",
     "pace":         "Packed schedule or relaxed pace?",
@@ -103,9 +109,14 @@ FIELD_ORDER = ["travel_dates", "category", "companion", "pace", "restrictions", 
 FIELD_EXTRACT = {
     "travel_dates": 'travel_dates: dates or duration like "June 15-17", "3 days". '
                     '"MISSING" if the reply does not answer the question.',
-    "category":     'category: interests normalized to K-POP/Cafe/Beauty/Food/Shopping/'
-                    'History/Activity. Comma-separated if multiple. "MISSING" if the '
-                    'reply does not answer the question.',
+    "category":     'category: interests normalized to EXACTLY these labels, copied '
+                    'verbatim: "Culture & History", "Food & Cafes", "Shopping", '
+                    '"K-POP & Hallyu", "Nature & Relaxation". Map anything the user '
+                    'says onto the closest label (e.g. beauty/spa/healing -> '
+                    '"Nature & Relaxation"; museums/palaces/hanok -> '
+                    '"Culture & History"; BTS/drama locations -> "K-POP & Hallyu"). '
+                    'Comma-separated if multiple. "MISSING" if the reply does not '
+                    'answer the question.',
     "companion":    'companion: solo/couple/friends/family. "MISSING" if the reply does '
                     'not answer the question.',
     "pace":         'pace: "packed" for busy or "relaxed" for slow pace. "MISSING" if the '

@@ -66,7 +66,17 @@ class ApiChatRepository implements ChatRepository {
 List<String> _quickRepliesFor(String? field) {
   switch (field) {
     case 'category':
-      return const ['Beauty', 'History', 'Food', 'Shopping', 'Activity'];
+      // The five interest labels, verbatim. They must match graph.py's
+      // FIELD_EXTRACT["category"] and each course's `interests` field exactly —
+      // the match is a string compare, not a similarity score, so a chip that
+      // reads "Culture" instead of "Culture & History" silently stops matching.
+      return const [
+        'Culture & History',
+        'Food & Cafes',
+        'Shopping',
+        'K-POP & Hallyu',
+        'Nature & Relaxation',
+      ];
     case 'companion':
       return const ['Solo', 'Couple', 'Friends', 'Family'];
     case 'pace':

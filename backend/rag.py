@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -205,6 +206,16 @@ def build_or_load_vectorstore(
     index_file = persist_dir / "index.faiss"
 
     if index_file.exists() and not rebuild:
+        # 인덱스는 page_content 뿐 아니라 코스 dict 통째를 metadata 에 담고 있어서,
+        # course_data 를 고쳐도 재빌드 전까지는 검색도 앵커도 옛 데이터를 쓴다.
+        # 자동 재빌드는 하지 않는다 — 임베딩 126건이 API 크레딧을 쓰므로 서버 기동이
+        # 조용히 실패할 수 있다. 알리기만 하고, 재빌드는 사람이 정한다.
+        if COURSE_DATA_PATH.stat().st_mtime > index_file.stat().st_mtime:
+            print(
+                f"[rag] ⚠️  {COURSE_DATA_PATH.name} 이 벡터 인덱스보다 새롭다. "
+                f"검색은 옛 데이터로 돈다 — `python build_index.py --rebuild` 필요.",
+                file=sys.stderr,
+            )
         store = FAISS.load_local(
             str(persist_dir),
             embeddings,

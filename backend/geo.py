@@ -40,6 +40,27 @@ SEOUL_AREA_CENTERS: dict[str, tuple[float, float]] = {
     "mapo":       (37.5479, 126.9130),
     "jamsil":     (37.5133, 127.1028),
     "dmc":        (37.5770, 126.8902),
+    # 앱의 지역 질문(graph.py FIELD_EXTRACT["region"])이 제시하는 12개 중 이 둘만
+    # 여기 없어서, 사용자가 고르면 extract_requested_areas 가 빈 리스트를 돌려주고
+    # Google Places 보완이 myeongdong 기본값으로 떨어졌다.
+    "bukchon":    (37.5826, 126.9836),
+    "apgujeong":  (37.5271, 127.0286),
+    # 외곽 자치구. 없을 때는 여기 속한 POI 33행이 전부 미분류로 떨어져
+    # 어떤 지역을 요청해도 매칭되지 않았다. 좌표 폴백보다 주소의 자치구
+    # 별칭이 먼저 잡히므로 배정이 결정적이다.
+    # 영등포구는 통째로 넣지 않는다 — 여의도가 영등포구라서 alias 가 여의도를
+    # 통째로 흡수한다. 문래만 별도 키로 둔다.
+    "gangdong":   (37.5479, 127.1318),   # 올림픽공원을 잠실에서 뺏지 않도록 동쪽
+    "gangseo":    (37.5657, 126.8265),   # 마곡
+    "nowon":      (37.6350, 127.0780),
+    "dobong":     (37.6560, 127.0470),
+    "jungnang":   (37.5905, 127.0930),
+    "gangbuk":    (37.6400, 127.0250),
+    "seongbuk":   (37.5950, 127.0000),
+    "eunpyeong":  (37.6020, 126.9290),
+    "guro":       (37.4850, 126.8650),
+    "gwanak":     (37.4780, 126.9520),
+    "mullae":     (37.5206, 126.8868),
 }
 
 AREA_ALIASES: dict[str, list[str]] = {
@@ -63,6 +84,19 @@ AREA_ALIASES: dict[str, list[str]] = {
     "mapo":       ["mapo", "마포"],
     "jamsil":     ["jamsil", "잠실"],
     "dmc":        ["digital media city", "dmc", "상암", "디지털미디어시티"],
+    "bukchon":    ["bukchon", "북촌"],
+    "apgujeong":  ["apgujeong", "압구정"],
+    "gangdong":   ["gangdong", "강동"],
+    "gangseo":    ["gangseo", "magok", "강서", "마곡"],
+    "nowon":      ["nowon", "노원"],
+    "dobong":     ["dobong", "도봉"],
+    "jungnang":   ["jungnang", "중랑"],
+    "gangbuk":    ["gangbuk", "강북"],
+    "seongbuk":   ["seongbuk", "성북"],
+    "eunpyeong":  ["eunpyeong", "은평"],
+    "guro":       ["guro", "구로"],
+    "gwanak":     ["gwanak", "관악"],
+    "mullae":     ["mullae", "문래"],
 }
 
 DEFAULT_CENTER: tuple[float, float] = (37.5665, 126.9780)
@@ -71,8 +105,19 @@ DEFAULT_CENTER: tuple[float, float] = (37.5665, 126.9780)
 _ADJACENT_AREAS: dict[str, set[str]] = {
     "hongdae": {"hongdae", "hapjeong", "mangwon", "yeonnam", "mapo"},
     "seongsu": {"seongsu", "wangsimni"},
-    "gangnam": {"gangnam", "sinsa", "garosu-gil"},
-    "jongno": {"jongno", "insadong", "myeongdong"},
+    # bukchon / apgujeong 을 센터 목록에 넣으면 좌표 폴백의 최근접 중심이 바뀌어,
+    # 그동안 jongno / insadong / gangnam 으로 잡히던 POI 34행이 새 키로 이동한다.
+    # 아래 인접 규칙이 그 이동을 흡수한다 — 기존 요청의 매칭 결과는 그대로다.
+    "gangnam": {"gangnam", "sinsa", "garosu-gil", "apgujeong"},
+    "jongno": {"jongno", "insadong", "myeongdong", "bukchon"},
+    "insadong": {"insadong", "bukchon"},
+    # 좁게 잡는다. bukchon 에 jongno 를 넣으면 '북촌' 요청이 종로 전체(74코스)와
+    # 사실상 같아져서 선택지로서 의미가 없어진다 — 실측 66 vs 23.
+    "bukchon": {"bukchon", "insadong"},
+    "apgujeong": {"apgujeong", "sinsa", "garosu-gil"},
+    # 영등포 타임스퀘어가 mullae 로 재분류되므로, 여의도 요청이 놓치지 않게 묶는다.
+    "yeouido": {"yeouido", "mullae"},
+    "mullae": {"mullae", "yeouido"},
     # Itaewon sits inside Yongsan-gu, so the two satisfy each other's requests.
     "yongsan": {"yongsan", "itaewon"},
     "itaewon": {"itaewon", "yongsan"},
@@ -102,6 +147,19 @@ _AREA_LABELS: dict[str, str] = {
     "mapo":       "Mapo",
     "jamsil":     "Jamsil",
     "dmc":        "Digital Media City",
+    "bukchon":    "Bukchon",
+    "apgujeong":  "Apgujeong",
+    "gangdong":   "Gangdong",
+    "gangseo":    "Gangseo",
+    "nowon":      "Nowon",
+    "dobong":     "Dobong",
+    "jungnang":   "Jungnang",
+    "gangbuk":    "Gangbuk",
+    "seongbuk":   "Seongbuk",
+    "eunpyeong":  "Eunpyeong",
+    "guro":       "Guro",
+    "gwanak":     "Gwanak",
+    "mullae":     "Mullae",
 }
 
 
