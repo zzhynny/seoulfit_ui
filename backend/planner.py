@@ -29,6 +29,8 @@ import requests
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
 
+import meal_slots
+from date_utils import weekday_for_day
 from geo import (
     AREA_ALIASES,
     DEFAULT_CENTER,
@@ -172,7 +174,7 @@ def _google_get(url: str, params: dict[str, Any]) -> dict[str, Any]:
         return data
     except Exception as e:
         print(f"[Google Places] request error: {e}")
-        return {}
+        return {"status": "REQUEST_ERROR", "error_message": str(e)}
 
 
 def fetch_nearby_places(
@@ -732,7 +734,12 @@ class ItineraryPlanner(dspy.Signature):
     STRUCTURE RULES:
     - One day entry per requested trip duration day.
     - Each day MUST have 5–8 POIs. Never fewer than 5.
-    - Each day MUST include at least one restaurant or cafe POI.
+    - Do NOT add your own restaurant POI for any day's lunch or dinner -- the
+      system supplies each day's lunch and dinner separately (see "LOCKED
+      MEAL RESERVATIONS" below if present for this trip) and will insert them
+      itself. Adding your own restaurant on top of that creates a duplicate
+      meal stop. You may still include a cafe POI for a daytime break if it
+      fits the day.
     - Arrange POIs in chronological visit order starting around 09:00–10:00.
     - Total planned activity + travel time per day should be 7–10 hours.
 
@@ -1149,7 +1156,22 @@ def _belongs_to_other_requested_area(
     return False
 
 
+def _is_locked_meal(poi: dict[str, Any]) -> bool:
+    """True only for a poi that IS a meal_slots.fill_meal_slot() result --
+    i.e. the system-supplied, verified (or at least tier-known) pick for a
+    meal slot. Says nothing about whether a POI merely looks like a
+    restaurant/cafe; see _is_meal_poi() for that."""
+    return bool(poi.get("meal_slot"))
+
+
 def _is_meal_poi(poi: dict[str, Any]) -> bool:
+    # A meal_slots.fill_meal_slot() result carries this key -- an explicit
+    # "this IS the meal slot" marker beats guessing from type/name, so it's
+    # checked first. Type inference below stays as the fallback for POIs
+    # that never went through meal_slots.py (course/Google candidates).
+    if _is_locked_meal(poi):
+        return True
+
     ptype = _normalize_text(poi.get("type"))
     name = _normalize_text(poi.get("name"))
     return (
@@ -1258,8 +1280,18 @@ def _validate_and_repair_itinerary(
     num_days: int | None = None,
     pace: str | None = None,
     purpose: str = "",
+    locked_meals: dict[int, dict[str, Any]] | None = None,
+    locked_lunch_meals: dict[int, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Remove hallucinations and force requested area coverage."""
+    """Remove hallucinations and force requested area coverage.
+
+    `locked_meals` (dinner) / `locked_lunch_meals` (lunch): {day_num:
+    meal_slots.fill_meal_slot() result}, precomputed once by plan_node
+    (before the Gemini call, so the same choice can also be told to the LLM
+    as "don't change this") -- this function only enforces them, it never
+    calls meal_slots.fill_meal_slot() itself. A day missing from one of these
+    dicts (no trip_start_date, no requested area, or tier 3/unfilled) is left
+    without a guaranteed meal slot for that meal, same as always."""
     poi_min, poi_max = _pace_bounds({"pace": pace})
     pool = _build_candidate_pool(courses, google_supplement)
     valid_names = set(pool.keys())
@@ -1373,42 +1405,68 @@ def _validate_and_repair_itinerary(
             if inserted:
                 print(f"[Validator] {_area_label(area)} 누락 보완: {inserted}개 POI 추가")
 
-    # 3. Ensure each day has a meal slot.
+    # 3. Ensure each day has its locked meal_slots.py picks (Michelin tier 1
+    # -> Google Places tier 2) present, not just "some restaurant or other".
+    # Runs once per meal (dinner, then lunch) -- same insertion logic reused
+    # for both, not a separate branch per meal.
+    #
+    # The system prompt's own "each day MUST include a restaurant/cafe POI"
+    # rule means the LLM (or step 4's generic filler) has almost always
+    # already put SOME restaurant-type POI in the day by the time this runs
+    # -- so the check here is specifically "is the locked name present",
+    # never "is any meal-type POI present". A generic _is_meal_poi() check
+    # would short-circuit on that ambient restaurant and the verified locked
+    # pick would silently never get inserted at all.
     for day in days:
         pois = day.setdefault("pois", [])
-        if any(_is_meal_poi(p) for p in pois):
-            continue
+        day_num = int(day.get("day") or 0)
+        for meal_source in (locked_meals, locked_lunch_meals):
+            meal = (meal_source or {}).get(day_num)
+            if not meal:
+                continue  # no lock for this day/meal (no trip_start_date/area, or tier 3 unfilled) -- skip silently
 
-        day_area = _primary_area_for_day(day, requested_areas)
-        candidates = _candidate_items_for_area(
-            pool,
-            day_area,
-            preferred_types={"restaurant", "cafe"},
-            exclude_names=used_names,
-        ) if day_area else []
+            meal_name_key = _normalize_text(meal.get("name"))
+            if any(_normalize_text(p.get("name")) == meal_name_key for p in pois):
+                continue  # LLM already included this exact locked restaurant
 
-        if not candidates:
-            candidates = [
-                item for item in pool.values()
-                if _normalize_text(item.get("name")) not in used_names
-                and _normalize_text(item.get("type")) in {"restaurant", "cafe"}
-                and not _belongs_to_other_requested_area(
-                    item.get("area"), day_area, requested_areas
-                )
-            ]
-
-        if candidates:
-            item = candidates[0]
-            out = _as_output_poi(item, extra_note="Added as a clear meal or cafe slot.")
+            day_area = _primary_area_for_day(day, requested_areas) or meal.get("area")
+            out = {
+                "name": meal.get("name"),
+                "type": meal.get("type", "restaurant"),
+                "address": meal.get("address") or "",
+                "lat": meal.get("lat"),
+                "lng": meal.get("lng"),
+                "stay_minutes": 60,
+                "notes": "",
+                "area": day_area,
+                "meal_slot": meal.get("meal_slot"),
+                "source_tier": meal.get("source_tier"),
+                "verified": meal.get("verified"),
+                # Google tier has no cuisine-family/opening-hours verification --
+                # surfaced as a warning field (same shape as /swap-candidates'
+                # warnings) so the frontend can flag it, rather than silently
+                # presenting it as verified as a Michelin pick would be.
+                "warnings": (
+                    ["cuisine 미확인 (Google Places, 미쉐린 미검증)"]
+                    if meal.get("source_tier") == "google" else []
+                ),
+            }
             insert_idx = min(2, len(pois))
             pois.insert(insert_idx, out)
             used_names.add(_normalize_text(out.get("name")))
-            print(f"[Validator] Day {day.get('day')} 식사 슬롯 추가: {out.get('name')}")
+            print(
+                f"[Validator] Day {day.get('day')} {meal.get('meal_slot')} 슬롯 추가: {out.get('name')} "
+                f"(tier={meal.get('source_tier')})"
+            )
 
-    # 4. Fill under-populated days up to the pace's minimum POI count.
+    # 4. Fill under-populated days up to the pace's minimum POI count. The
+    # count is non-meal POIs only -- the guaranteed meal slot from step 3 is
+    # a bonus on top of the sightseeing target, not part of it, so it can't
+    # let this step under-fill a day by one.
     for idx, day in enumerate(days):
         pois = day.setdefault("pois", [])
-        if len(pois) >= poi_min:
+        non_meal_count = sum(1 for p in pois if not _is_meal_poi(p))
+        if non_meal_count >= poi_min:
             continue
 
         target_area = None
@@ -1433,11 +1491,13 @@ def _validate_and_repair_itinerary(
                 )
             ]
 
-        while len(pois) < poi_min and candidates:
+        while non_meal_count < poi_min and candidates:
             item = candidates.pop(0)
             out = _as_output_poi(item, extra_note="Added to make the day sufficiently complete.")
             pois.append(out)
             used_names.add(_normalize_text(out.get("name")))
+            if not _is_meal_poi(out):
+                non_meal_count += 1
             print(f"[Validator] Day {day.get('day')} POI 수 보완: {out.get('name')}")
 
     # 4b. Trim over-populated days down to the pace's maximum POI count. Runs
@@ -1460,7 +1520,7 @@ def _validate_and_repair_itinerary(
         if len(pois) <= poi_max:
             continue
 
-        protected_idx: set[int] = {i for i, p in enumerate(pois) if _is_meal_poi(p)}
+        protected_idx: set[int] = {i for i, p in enumerate(pois) if _is_locked_meal(p)}
         protected_areas: set[str] = set()
         for i, p in enumerate(pois):
             area = _poi_area(p)
@@ -1730,6 +1790,77 @@ def _pace_target_line(state: TravelState) -> str:
     )
 
 
+def _resolve_locked_meals(
+    trip_start_date: str | None,
+    requested_areas: list[str],
+    expected_days: int,
+    meal_type: str = "dinner",
+    exclude_by_day: dict[int, tuple[str, ...]] | None = None,
+) -> dict[int, dict[str, Any]]:
+    """Resolve one `meal_type` pick per day via meal_slots.fill_meal_slot()
+    (Michelin tier 1 -> Google Places tier 2) BEFORE the Gemini call, so the
+    same choice can be told to the LLM as locked ("don't change this") and
+    later enforced identically by _validate_and_repair_itinerary -- one
+    lookup, not two independent ones that could disagree.
+
+    `exclude_by_day`: {day_num: (name, ...)} of restaurants already locked
+    for a different meal that day (e.g. dinner's pick, when this call is
+    resolving lunch) -- passed straight through to fill_meal_slot's existing
+    exclude_names, so the same restaurant can't be locked twice into one day.
+    If that leaves tier 1 empty, tier 2/3 kick in exactly as they would for
+    any other exclusion -- no separate dedup logic.
+
+    Cuisine-avoidance filtering is out of scope here: exclude_families is
+    never passed, so tier 1 is never family-filtered and tier 2 (Google) is
+    always accepted unverified rather than left empty.
+
+    A day with no resolvable area, no trip_start_date, or a tier-3/unfilled
+    result is simply absent from the returned dict -- same as always having
+    no guaranteed meal for that day. Called once per meal_type (dinner, then
+    lunch) -- same lookup, not a new one per meal.
+    """
+    locked: dict[int, dict[str, Any]] = {}
+    if not trip_start_date or expected_days <= 0:
+        return locked
+
+    slot_start, slot_end = meal_slots.MEAL_SLOTS[meal_type]
+    for day_num in range(1, expected_days + 1):
+        day_area = _primary_area_for_day({"day": day_num}, requested_areas)
+        if not day_area:
+            continue
+        try:
+            weekday = weekday_for_day(trip_start_date, day_num, lang="en")
+        except (ValueError, TypeError):
+            continue
+
+        result = meal_slots.fill_meal_slot(
+            area=day_area, weekday=weekday, slot_start=slot_start, slot_end=slot_end,
+            exclude_names=(exclude_by_day or {}).get(day_num, ()),
+        )
+        if result["status"] == "filled":
+            locked[day_num] = result
+        else:
+            print(f"[Validator] Day {day_num} {meal_type} 3층(unfilled): {result.get('reason')}")
+
+    return locked
+
+
+def _locked_meals_prompt_lines(locked_meals: dict[int, dict[str, Any]]) -> str:
+    if not locked_meals:
+        return ""
+    lines = ["", "=== LOCKED MEAL RESERVATIONS (do not change) ==="]
+    for day_num in sorted(locked_meals):
+        meal = locked_meals[day_num]
+        name = meal.get("name")
+        slot = meal.get("meal_slot") or "meal"
+        lines.append(
+            f"Day {day_num} {slot} is already locked to '{name}'. Include it in Day "
+            f"{day_num}'s itinerary exactly as named; do not substitute a different "
+            f"restaurant for that day's {slot} slot."
+        )
+    return "\n".join(lines) + "\n"
+
+
 # ---------------------------------------------------------------------------
 # Graph nodes
 # ---------------------------------------------------------------------------
@@ -1798,6 +1929,21 @@ def plan_node(state: TravelState) -> TravelState:
     requested_areas = _extract_requested_areas(location, purpose)
     print(f"[planner] requested_areas = {requested_areas}")
 
+    expected_days = _parse_num_days(duration, override=num_days) if (duration or num_days) else 0
+    locked_meals = _resolve_locked_meals(
+        state.get("trip_start_date"), requested_areas, expected_days, meal_type="dinner",
+    )
+    # Lunch excludes each day's already-locked dinner pick, so the same
+    # restaurant never gets locked into both meals on one day -- reuses
+    # fill_meal_slot's existing exclude_names, no new dedup logic.
+    dinner_names_by_day = {
+        day_num: (meal["name"],) for day_num, meal in locked_meals.items() if meal.get("name")
+    }
+    locked_lunch_meals = _resolve_locked_meals(
+        state.get("trip_start_date"), requested_areas, expected_days, meal_type="lunch",
+        exclude_by_day=dinner_names_by_day,
+    )
+
     google_supplement: list[dict[str, Any]] = []
     if GOOGLE_PLACES_API_KEY:
         google_supplement = build_google_supplement_by_areas(
@@ -1821,6 +1967,10 @@ def plan_node(state: TravelState) -> TravelState:
     try:
         system_prompt = ItineraryPlanner.__doc__ or ""
         pace_line = _pace_target_line(state)
+        locked_meals_lines = (
+            _locked_meals_prompt_lines(locked_meals)
+            + _locked_meals_prompt_lines(locked_lunch_meals)
+        )
         user_prompt = (
             f"{system_prompt}\n\n"
             f"Duration: {duration_text}\n"
@@ -1829,6 +1979,7 @@ def plan_node(state: TravelState) -> TravelState:
             f"Dietary: {dietary}\n"
             f"Purpose: {purpose}\n"
             + (f"{pace_line}\n" if pace_line else "")
+            + locked_meals_lines
             + f"Candidate Courses:\n{prompt_context}"
         )
         raw_json = _gemini_text(user_prompt)
@@ -1844,6 +1995,8 @@ def plan_node(state: TravelState) -> TravelState:
             num_days=num_days,
             pace=pace,
             purpose=purpose,
+            locked_meals=locked_meals,
+            locked_lunch_meals=locked_lunch_meals,
         )
 
         itinerary = _normalize_sources(itinerary, courses)

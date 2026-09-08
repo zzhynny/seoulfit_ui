@@ -873,8 +873,11 @@ def swap_candidates(req: SwapCandidatesRequest):
     v1 범위: time_window/purpose는 스키마에는 받지만 아직 후보 필터링에는
     안 쓴다(슬롯별 시간대·목적 매칭에 쓸 신호가 POI 데이터에 없음) — 나중에
     확장 여지로 받아만 둔 상태임을 명시."""
-    from critic_repair import build_candidate_pool, candidates_for_area, normalize_text
+    from critic_repair import (
+        build_candidate_pool, candidates_for_area, google_fallback_candidates, normalize_text,
+    )
     from date_utils import weekday_for_day
+    from planner import GOOGLE_PLACES_API_KEY
 
     thread_id = _require_thread_id(req.thread_id)
     state = _get_state(thread_id)
@@ -900,6 +903,29 @@ def swap_candidates(req: SwapCandidatesRequest):
         filtered = candidates_for_area(
             pool, req.day_area, exclude=exclude, preferred_types=preferred_types,
         )
+
+        # The existing pool (retrieved_courses + google_supplement) was never
+        # built to cover every area+type combination a user might swap on --
+        # a zero result above means the pool never checked, not that no real
+        # candidates exist nearby. Only hit Google when the pool truly came
+        # up empty (never on top of a non-empty result, to avoid the extra
+        # cost/latency), centered on current_poi's own coordinates.
+        if not filtered:
+            fallback_lat = current.get("lat") if current else None
+            fallback_lng = current.get("lng") if current else None
+            if fallback_lat is None or fallback_lng is None:
+                print(
+                    f"[swap fallback] current_poi {req.current_poi!r} has no known "
+                    "coordinates (not in pool) -- skipping Google fallback"
+                )
+            elif not GOOGLE_PLACES_API_KEY:
+                print("[swap fallback] GOOGLE_PLACES_API_KEY 없음 -- 폴백 생략")
+            else:
+                filtered = google_fallback_candidates(
+                    lat=fallback_lat, lng=fallback_lng, place_type=type_hint,
+                    exclude=exclude, api_key=GOOGLE_PLACES_API_KEY,
+                )
+
         rated = sorted(
             (i for i in filtered if i.get("rating") is not None),
             key=lambda i: -i["rating"],

@@ -31,7 +31,7 @@ except Exception:
     TravelState = dict
 
 from date_utils import weekday_for_day
-from planner import compute_transit_legs
+from planner import compute_transit_legs, _google_get
 
 
 # ---------------------------------------------------------------------------
@@ -537,6 +537,111 @@ def candidates_for_area(
         return (source_score, type_score)
 
     return sorted(items, key=sort_key)
+
+
+# ---------------------------------------------------------------------------
+# Google Places fallback (POST /swap-candidates only)
+# ---------------------------------------------------------------------------
+#
+# candidates_for_area() above stays a pure pool filter -- RepairAgent's
+# fill-in logic shares it (see api.py's swap handler comment), so it isn't
+# touched here. This fallback is called explicitly by /swap-candidates, and
+# only when candidates_for_area() already returned zero: the existing pool
+# (retrieved_courses + google_supplement) simply never has every area+type
+# combination a user might click "swap" on, so a zero result there doesn't
+# mean no real candidates exist nearby -- it means the pool never checked.
+
+_SWAP_FALLBACK_RADII_M = (1500, 3000)  # 1500m first, widen to 3000m once if empty
+
+
+def google_fallback_candidates(
+    *,
+    lat: float | None,
+    lng: float | None,
+    place_type: str | None,
+    exclude: set[str],
+    api_key: str,
+) -> list[dict[str, Any]]:
+    """Google Places Nearby Search centered on (lat, lng) -- the swapped POI's
+    own coordinates, not an area's fixed center point. Reuses planner.py's
+    `_google_get()` (no new HTTP client). "Similar location" here is a
+    haversine radius from (lat, lng), same formula as meal_slots.py's --
+    the area-string adjacency candidates_for_area() uses is not applied in
+    this path.
+
+    Tries `_SWAP_FALLBACK_RADII_M` in order, only moving to the next radius
+    if the previous one came back with nothing usable (ZERO_RESULTS, or OK
+    but every result got excluded/out-of-radius). A real API failure
+    (REQUEST_DENIED, a request exception, any other non-OK/ZERO_RESULTS
+    status) is logged distinctly and stops the attempt immediately -- it is
+    never treated the same as a legitimate zero-results answer.
+    """
+    if not api_key or lat is None or lng is None:
+        return []
+
+    url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+
+    for radius in _SWAP_FALLBACK_RADII_M:
+        params = {
+            "location": f"{lat},{lng}",
+            "radius": radius,
+            "type": place_type or "point_of_interest",
+            "key": api_key,
+            "language": "en",
+        }
+        data = _google_get(url, params)
+        status = data.get("status")
+
+        if status == "REQUEST_DENIED":
+            print(
+                f"[swap fallback] Google Places REQUEST_DENIED (radius={radius}m): "
+                f"{data.get('error_message')}"
+            )
+            return []
+        if status == "REQUEST_ERROR":
+            print(
+                f"[swap fallback] Google Places request failed (radius={radius}m): "
+                f"{data.get('error_message')}"
+            )
+            return []
+        if status == "ZERO_RESULTS":
+            print(f"[swap fallback] Google Places ZERO_RESULTS (radius={radius}m)")
+            continue
+        if status != "OK":
+            print(f"[swap fallback] Google Places status={status} (radius={radius}m): {data.get('error_message')}")
+            continue
+
+        items: list[dict[str, Any]] = []
+        for r in data.get("results") or []:
+            loc = (r.get("geometry") or {}).get("location") or {}
+            r_lat, r_lng = loc.get("lat"), loc.get("lng")
+            if r_lat is None or r_lng is None:
+                continue
+            # Google's own `radius` param already limits results server-side;
+            # re-check with the same haversine meal_slots.py uses so "similar
+            # location" is verifiably radius-based, not just trusted blindly.
+            if haversine_km(lat, lng, r_lat, r_lng) * 1000 > radius:
+                continue
+            if "lodging" in (r.get("types") or []):
+                continue
+            name = r.get("name") or ""
+            if not name or normalize_text(name) in exclude:
+                continue
+            items.append(candidate_from_google({
+                "poi_name": name,
+                "poi_type": place_type,
+                "address_en": r.get("vicinity") or r.get("formatted_address", ""),
+                "lat": r_lat,
+                "lng": r_lng,
+                "rating": r.get("rating"),
+            }))
+
+        if items:
+            print(f"[swap fallback] Google Places {len(items)}개 확보 (radius={radius}m)")
+            return items
+        print(f"[swap fallback] Google Places OK 이지만 반경/exclude 필터 후 0개 (radius={radius}m)")
+
+    return []
 
 
 # ---------------------------------------------------------------------------

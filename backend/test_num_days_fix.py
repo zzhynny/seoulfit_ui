@@ -163,22 +163,38 @@ def test_trim_over_max_keeps_meal_and_area_coverage():
     """The bug this trim step fixes: a 1-day trip has nowhere to redistribute
     overflow, so without an upper cap all 25 POIs from an over-produced LLM
     response used to survive untouched in that single day. Checks both pace
-    extremes, and that the meal-slot POI and the requested area survive the
-    cut."""
+    extremes, and that the LOCKED meal-slot POI and the requested area survive
+    the cut.
+
+    Trim protection is keyed on _is_locked_meal (poi.get("meal_slot")), not
+    the broader _is_meal_poi (type-based) -- an unverified restaurant the LLM
+    added on its own is exactly what trim is now supposed to be ABLE to cut,
+    so this simulates a real locked pick via locked_meals (the same path
+    plan_node uses) rather than just tagging a random simulated POI
+    restaurant-shaped and hoping _is_meal_poi would have protected it."""
     for pace, expected_max in [("packed", 8), ("relaxed", 6)]:
         courses, itinerary = _bloated_one_day_courses_and_itinerary()
+        locked_meals = {1: {
+            "name": "Locked Test Restaurant", "type": "restaurant",
+            "lat": 37.5, "lng": 127.0, "address": "hongdae",
+            "meal_slot": "dinner", "source_tier": "michelin",
+            "verified": {"opening_hours": True, "cuisine": True},
+        }}
         result = planner._validate_and_repair_itinerary(
             itinerary, courses=courses, google_supplement=[],
             requested_areas=["hongdae"], duration="October 10, 2026 (1 day)",
             num_days=None, pace=pace, purpose="",
+            locked_meals=locked_meals,
         )
         out_days = result["days"]
         assert len(out_days) == 1, len(out_days)
         pois = out_days[0]["pois"]
         assert len(pois) == expected_max, (pace, len(pois))  # trimmed exactly to the pace max
-        assert any(planner._is_meal_poi(p) for p in pois), (pace, "meal POI lost")
+        locked_poi = next((p for p in pois if planner._is_locked_meal(p)), None)
+        assert locked_poi is not None, (pace, "locked meal POI lost")
+        assert locked_poi.get("name") == "Locked Test Restaurant", (pace, "wrong POI survived as locked meal")
         assert any(p.get("area") == "hongdae" for p in pois), (pace, "requested area lost")
-        print(f"OK - trim to pace max ({pace}): 25 POIs -> {len(pois)}, meal+area survived")
+        print(f"OK - trim to pace max ({pace}): 25 POIs -> {len(pois)}, locked meal+area survived")
 
 
 def test_trim_backs_off_when_protected_set_alone_exceeds_max():
@@ -189,26 +205,35 @@ def test_trim_backs_off_when_protected_set_alone_exceeds_max():
     # recognizes these (via alias-pattern matching on name/address text), not
     # arbitrary made-up labels.
     requested_areas = ["hongdae", "seongsu", "gangnam", "itaewon", "myeongdong", "jongno"]
-    # One non-meal POI per requested area (6 protected-by-area) + one meal
-    # POI in an unrelated area (protected-by-meal) = 7 protected already,
-    # which alone exceeds relaxed's max of 6.
+    # One non-meal POI per requested area (6 protected-by-area) + one locked
+    # meal POI in an unrelated area (protected-by-meal, see locked_meals
+    # below) = 7 protected already, which alone exceeds relaxed's max of 6.
     pois = [_poi_typed(f"spot {a}", "tourist_spot", a) for a in requested_areas]
-    pois.append(_poi_typed("restaurant x", "restaurant", "mapo"))
     # Two removable filler POIs duplicating an already-protected area.
     pois.append(_poi_typed("extra 1", "tourist_spot", "hongdae"))
     pois.append(_poi_typed("extra 2", "tourist_spot", "hongdae"))
-    assert len(pois) == 9
+    assert len(pois) == 8
 
     itinerary = {"days": [{"day": 1, "pois": pois}]}
     courses = [{"sequence": [
         {"poi_name": p["name"], "lat": 37.5, "lng": 127.0, "poi_type": p["type"], "address_en": p["area"]}
         for p in pois
     ]}]
+    # "restaurant x" isn't in courses/pois above -- step 3 inserts it fresh as
+    # the locked meal (the same path plan_node uses), same style as the
+    # locked_meals fixture in test_trim_over_max_keeps_meal_and_area_coverage.
+    locked_meals = {1: {
+        "name": "restaurant x", "type": "restaurant",
+        "lat": 37.5, "lng": 127.0, "address": "mapo",
+        "meal_slot": "dinner", "source_tier": "michelin",
+        "verified": {"opening_hours": True, "cuisine": True},
+    }}
 
     result = planner._validate_and_repair_itinerary(
         itinerary, courses=courses, google_supplement=[],
         requested_areas=requested_areas, duration="October 10, 2026 (1 day)",
         num_days=None, pace="relaxed", purpose="",
+        locked_meals=locked_meals,
     )
     out_pois = result["days"][0]["pois"]
     # 7 protected > relaxed max (6), and only 2 removable < needed excess (3)

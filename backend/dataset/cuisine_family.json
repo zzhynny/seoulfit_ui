@@ -1,0 +1,166 @@
+{
+  "Asian": {
+    "family": "asian",
+    "needs_review": false
+  },
+  "Barbecue": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Bulgogi": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Chinese": {
+    "family": "chinese",
+    "needs_review": false
+  },
+  "Chueotang": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Contemporary": {
+    "family": "contemporary",
+    "needs_review": false
+  },
+  "Dim Sum": {
+    "family": "chinese",
+    "needs_review": false
+  },
+  "Doganitang": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Dubu": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Dwaeji-gukbap": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "French": {
+    "family": "western",
+    "needs_review": false
+  },
+  "French Contemporary": {
+    "family": "western",
+    "needs_review": false
+  },
+  "Gejang": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Gomtang": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Innovative": {
+    "family": "contemporary",
+    "needs_review": false
+  },
+  "Italian": {
+    "family": "western",
+    "needs_review": false
+  },
+  "Italian Contemporary": {
+    "family": "western",
+    "needs_review": false
+  },
+  "Japanese": {
+    "family": "japanese",
+    "needs_review": false
+  },
+  "Kalguksu": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Korean": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Korean Contemporary": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Kushiage": {
+    "family": "japanese",
+    "needs_review": false
+  },
+  "Mandu": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Meats and Grills": {
+    "family": "western",
+    "needs_review": false
+  },
+  "Mediterranean Cuisine": {
+    "family": "western",
+    "needs_review": false
+  },
+  "Memil-guksu": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Mexican": {
+    "family": "western",
+    "needs_review": false
+  },
+  "Modern Cuisine": {
+    "family": "contemporary",
+    "needs_review": false
+  },
+  "Naengmyeon": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Noodles": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Ramen": {
+    "family": "japanese",
+    "needs_review": false
+  },
+  "Samgyetang": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Seolleongtang": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Soba": {
+    "family": "japanese",
+    "needs_review": false
+  },
+  "Sujebi": {
+    "family": "korean",
+    "needs_review": false
+  },
+  "Sushi": {
+    "family": "japanese",
+    "needs_review": false
+  },
+  "Thai": {
+    "family": "asian",
+    "needs_review": false
+  },
+  "Udon": {
+    "family": "japanese",
+    "needs_review": false
+  },
+  "Vegan": {
+    "family": "other",
+    "needs_review": false
+  },
+  "Vegetarian": {
+    "family": "other",
+    "needs_review": false
+  },
+  "Yakitori": {
+    "family": "japanese",
+    "needs_review": false
+  }
+}
