@@ -131,6 +131,21 @@ def test_nearby_shopping_sorts_by_distance_and_caps_want():
                 "distance_m"} <= set(p)
 
 
+def test_nearby_shopping_clips_to_radius():
+    # 반경 밖은 아예 오지 않는다.
+    res = live_help.nearby_shopping(
+        live_help.NearbyShoppingRequest(lat=37.5636, lng=126.9827, want=100))
+    assert res["pois"], "명동 1km 안이 비면 데이터가 잘못된 것"
+    assert max(p["distance_m"] for p in res["pois"]) <= live_help._RADIUS_M
+
+
+def test_nearby_shopping_returns_empty_when_nothing_is_within_radius():
+    # 서해 한복판. 앱은 이 빈 리스트를 빈 상태 화면으로 그린다.
+    res = live_help.nearby_shopping(
+        live_help.NearbyShoppingRequest(lat=37.0, lng=125.0, want=20))
+    assert res["pois"] == [], res["pois"]
+
+
 def test_nearby_shopping_category_filter_is_exclusive():
     res = live_help.nearby_shopping(
         live_help.NearbyShoppingRequest(lat=37.5636, lng=126.9827,
@@ -162,6 +177,8 @@ if __name__ == "__main__":
     test_shipped_dataset_is_clean()
     test_shipped_dataset_category_counts()
     test_nearby_shopping_sorts_by_distance_and_caps_want()
+    test_nearby_shopping_clips_to_radius()
+    test_nearby_shopping_returns_empty_when_nothing_is_within_radius()
     test_nearby_shopping_category_filter_is_exclusive()
     test_nearby_shopping_does_not_mutate_the_loaded_dataset()
     print("shopping_poi self-check ok")

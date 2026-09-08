@@ -45,12 +45,29 @@ class TripProvider extends ChangeNotifier {
   bool _loading = false;
   bool get loading => _loading;
 
+  /// Loads the plan the Trip tab shows, once.
+  ///
+  /// Returns early when one is already in memory. The server's copy carries
+  /// no check-ins, so refetching on every remount of the Trip tab silently
+  /// erased every stamp the traveller had just collected.
+  ///
+  /// The fetch is guarded because /state throws on a timeout or any non-200:
+  /// the uncaught throw left [_loading] true forever, so the Trip tab stayed
+  /// a spinner — no Final Route, and no "Check in for today's places" button,
+  /// which is the only way into the stamp / check-in / recap flow.
   Future<void> loadCurrentTrip() async {
+    if (_itinerary != null) return;
     _loading = true;
     notifyListeners();
-    _itinerary = await _repository.fetchCurrentItinerary();
-    _loading = false;
-    notifyListeners();
+    try {
+      _itinerary = await _repository.fetchCurrentItinerary();
+    } catch (e) {
+      // Landing on Trip_Empty-State at least offers a way to start planning.
+      debugPrint('[trip] loadCurrentTrip failed, showing empty state: $e');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> generateItinerary() async {

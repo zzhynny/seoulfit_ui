@@ -639,14 +639,30 @@ import re as _re
 import time as _time
 import html as _html
 
+# The nine genres in world.nol.com/en/ticket's own nav, in its own order,
+# keyed on the label the app puts on the chip. Slugs are read off the nav's
+# hrefs (/en/ticket/genre/<slug>/products) -- note they are upper-case except
+# play-stay, and that NOL's label and its slug disagree more often than not
+# ("Play" is DRAMA, "Exhibitions" is EXHIBIT, "Family" is KIDS).
+#
+# The list used to be six entries with two labels NOL does not use, so Sports,
+# Dance and Play&Stay were unreachable from the app.
 _NOL_GENRE = {
-    "musical": "MUSICAL",
+    "play&stay": "play-stay",
     "concert": "CONCERT",
+    "musical": "MUSICAL",
+    "play": "DRAMA",
+    "exhibitions": "EXHIBIT",
     "sports": "SPORTS",
-    "exhibition": "EXHIBIT",
+    "dance": "DANCE",
     "classic": "CLASSIC",
     "family": "KIDS",
+    # Labels older builds send. Kept so an app that has not been updated
+    # still resolves rather than silently landing on Musical.
     "theater": "DRAMA",
+    "exhibition": "EXHIBIT",
+    "classical": "CLASSIC",
+    "kids": "KIDS",
 }
 _NOL_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "

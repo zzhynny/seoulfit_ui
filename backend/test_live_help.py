@@ -176,10 +176,9 @@ def test_egen_allows_legitimate_empty_result():
 
 
 def test_nearby_poi_sorts_by_distance_and_caps_want():
-    # 강남 좌표. 431건 전량에서 거리순 상위 N 을 뽑는지 — 반경으로 자르지 않으므로
-    # POI 가 드문 지역에서도 want 만큼은 항상 채워져야 한다.
+    # 종로 좌표. POI 가 빽빽한 곳이라 1km 반경 안에서도 want 가 채워져야 한다.
     out = live_help.nearby_poi(
-        live_help.NearbyPoiRequest(lat=37.4979, lng=127.0276, want=5)
+        live_help.NearbyPoiRequest(lat=37.5720, lng=126.9794, want=5)
     )["pois"]
     assert len(out) == 5, len(out)
     dists = [p["distance_m"] for p in out]
@@ -188,11 +187,29 @@ def test_nearby_poi_sorts_by_distance_and_caps_want():
     assert "overview" in out[0] and "image" in out[0]
 
 
-def test_nearby_poi_category_filter_is_exclusive():
+def test_nearby_poi_clips_to_radius():
+    # 반경 밖은 아예 오지 않는다. want 를 크게 줘도 1km 를 넘기지 않는다.
     out = live_help.nearby_poi(
-        live_help.NearbyPoiRequest(lat=37.4979, lng=127.0276, category="NA", want=20)
+        live_help.NearbyPoiRequest(lat=37.5720, lng=126.9794, want=100)
     )["pois"]
-    assert out, "Nature 는 27건 있으므로 비면 안 된다"
+    assert out, "종로 1km 안이 비면 데이터가 잘못된 것"
+    assert max(p["distance_m"] for p in out) <= live_help._RADIUS_M
+
+
+def test_nearby_poi_returns_empty_when_nothing_is_within_radius():
+    # 서해 한복판. 앱은 이 빈 리스트를 빈 상태 화면으로 그린다.
+    out = live_help.nearby_poi(
+        live_help.NearbyPoiRequest(lat=37.0, lng=125.0, want=20)
+    )["pois"]
+    assert out == [], out
+
+
+def test_nearby_poi_category_filter_is_exclusive():
+    # 창덕궁 좌표 — 반경 안에 Nature 가 있는 곳이어야 필터가 의미가 있다.
+    out = live_help.nearby_poi(
+        live_help.NearbyPoiRequest(lat=37.5793, lng=126.9894, category="NA", want=20)
+    )["pois"]
+    assert out, "창덕궁 1km 안에 Nature 가 하나도 없으면 데이터가 잘못된 것"
     assert {p["category"] for p in out} == {"NA"}
 
 
@@ -252,6 +269,8 @@ if __name__ == "__main__":
     test_egen_raises_on_error_envelope_without_resultcode()
     test_egen_allows_legitimate_empty_result()
     test_nearby_poi_sorts_by_distance_and_caps_want()
+    test_nearby_poi_clips_to_radius()
+    test_nearby_poi_returns_empty_when_nothing_is_within_radius()
     test_nearby_poi_category_filter_is_exclusive()
     test_tour_poi_dataset_excludes_clinics_and_food()
     test_filter_places_carries_the_photo_reference_not_a_url()

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seoulfit_ui/models/trip.dart';
 import 'package:seoulfit_ui/widgets/route_map.dart';
@@ -120,6 +122,85 @@ void main() {
     // widget, and the app already renders them as the placeholder — drain
     // them so they don't fail the assertions above.
     while (tester.takeException() != null) {}
+  });
+
+  testWidgets('the zoom buttons actually move the camera', (tester) async {
+    // The +/- buttons exist because the map is only 128-200px tall inside a
+    // scrolling list. They were inert: RouteMap held a MapController that was
+    // never handed to FlutterMap, so flutter_map built its own and every
+    // _zoomBy() read of `_controller.camera` threw
+    // "You need to have the FlutterMap widget rendered at least once".
+    //
+    // Read the camera the way a layer does, through the inherited
+    // MapCamera -- that is the camera the map actually paints, so it can't
+    // agree with a controller the map isn't listening to.
+    await tester.pumpWidget(MaterialApp(
+      home: RouteMap(
+        itinerary: itineraryOf([
+          [
+            // Far enough apart that initialCameraFit lands well below
+            // maxZoom -- two stops on one street fit at 18 and "zoom in"
+            // is then correctly a no-op, which would pass for the bug.
+            stop('Hongdae', lat: 37.5523988, lng: 126.9226),
+            stop('Gangnam', lat: 37.4979, lng: 127.0276),
+          ],
+        ]),
+      ),
+    ));
+    // Tile requests 400 against the test binding. Those are the harness, not
+    // the widget, so they get drained after every pump -- the assertion that
+    // matters is whether the painted camera moved, which is exactly what an
+    // unbound controller cannot do.
+    while (tester.takeException() != null) {}
+
+    double zoom() => MapCamera.of(tester.element(find.byType(MarkerLayer))).zoom;
+
+    // initialCameraFit is applied during the map's first layout, so the very
+    // first frame still reports the pre-fit zoom. Let it settle before
+    // sampling, or the fit's own jump reads as the button working.
+    await tester.pump();
+    while (tester.takeException() != null) {}
+    final before = zoom();
+
+    await tester.tap(find.byTooltip('Zoom in'));
+    await tester.pump();
+    while (tester.takeException() != null) {}
+    expect(zoom(), greaterThan(before));
+
+    await tester.tap(find.byTooltip('Zoom out'));
+    await tester.pump();
+    while (tester.takeException() != null) {}
+    expect(zoom(), closeTo(before, 0.001));
+  });
+
+  testWidgets('switching days recentres the map on that day', (tester) async {
+    // The day tabs already filtered which markers were drawn, but the camera
+    // stayed on the fit computed for whatever day was showing first, so
+    // picking day 2 left its stops off-screen -- an empty-looking map.
+    final trip = itineraryOf([
+      [stop('Hongdae', lat: 37.5524, lng: 126.9226)],
+      [stop('Gangnam', lat: 37.4979, lng: 127.0276)],
+    ]);
+
+    Future<void> show(int day) async {
+      await tester.pumpWidget(MaterialApp(
+        home: RouteMap(itinerary: trip, onlyDay: day),
+      ));
+      await tester.pump();
+      while (tester.takeException() != null) {}
+    }
+
+    LatLng centre() =>
+        MapCamera.of(tester.element(find.byType(MarkerLayer))).center;
+
+    await show(1);
+    final onDayOne = centre();
+    expect(onDayOne.latitude, closeTo(37.5524, 0.01));
+
+    await show(2);
+    final onDayTwo = centre();
+    expect(onDayTwo.latitude, closeTo(37.4979, 0.01));
+    expect(onDayTwo.longitude, closeTo(127.0276, 0.01));
   });
 
   group('onlyDay', () {

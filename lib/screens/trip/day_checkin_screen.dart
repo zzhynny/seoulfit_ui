@@ -14,12 +14,18 @@ class DayCheckInScreen extends StatelessWidget {
     required this.onComplete,
     required this.onMissedPlace,
     required this.onBack,
+    required this.onSelectDay,
   });
 
   final int dayNumber;
   final VoidCallback onComplete;
   final void Function(String activityId) onMissedPlace;
   final VoidCallback onBack;
+
+  /// Tapping a day tab. The screen reads its day from the route, so switching
+  /// days is the router's call -- it hands back a screen for the new day
+  /// rather than this one mutating [dayNumber] it does not own.
+  final ValueChanged<int> onSelectDay;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +47,9 @@ class DayCheckInScreen extends StatelessWidget {
                 color: AppColors.textPrimary,
                 tooltip: 'Back',
               ),
+              // The stamped-days chip used to sit in this row, unconstrained,
+              // which left the 24pt title barely 90px to live in. Title first
+              // across the full width, chip on the line below with the date.
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,19 +64,39 @@ class DayCheckInScreen extends StatelessWidget {
                           child: Image.asset(companion.portraitAsset, fit: BoxFit.contain),
                         ),
                         const SizedBox(width: 8),
-                        Text('Day $dayNumber Check-in', style: AppTextStyles.headingMedium.copyWith(fontSize: 24)),
+                        Expanded(
+                          child: Text(
+                            'Day $dayNumber Check-in',
+                            style: AppTextStyles.headingMedium.copyWith(fontSize: 24),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
-                    Text('${day.date} • ${day.areaName}', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${day.date} • ${day.areaName}',
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(color: AppColors.chipBackground, borderRadius: BorderRadius.circular(20)),
+                          child: Text(
+                            '$stampedDays/${itinerary.days.length} Days Stamped',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: AppColors.chipBackground, borderRadius: BorderRadius.circular(20)),
-                child: Text(
-                  '$stampedDays/${itinerary.days.length} Days Stamped',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -76,7 +105,7 @@ class DayCheckInScreen extends StatelessWidget {
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: DayTabs(days: itinerary.days, selectedDay: dayNumber, onSelect: (_) {}),
+          child: DayTabs(days: itinerary.days, selectedDay: dayNumber, onSelect: onSelectDay),
         ),
         Expanded(
           child: ListView(

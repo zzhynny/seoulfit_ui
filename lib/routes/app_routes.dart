@@ -264,6 +264,11 @@ GoRouter buildAppRouter() {
                       onComplete: () => context.push('${AppRoutes.trip}/day-complete/$day'),
                       onMissedPlace: (activityId) =>
                           context.push('${AppRoutes.trip}/missed-reason/$day/$activityId'),
+                      // Replace rather than push: the day tabs are one screen
+                      // the traveller moves along, not a stack to unwind, so
+                      // Back still leaves check-in in one tap.
+                      onSelectDay: (d) => context.pushReplacement(
+                          '${AppRoutes.trip}/day-checkin/$d'),
                     );
                   },
                 ),

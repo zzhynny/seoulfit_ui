@@ -157,6 +157,7 @@ TransitHop toUiHop(api.TransitLeg leg) => TransitHop(
       carMinutes: leg.carMinutes,
       kakaoWalkUrl: leg.kakaoWalkUrl,
       kakaoCarUrl: leg.kakaoCarUrl,
+      kakaoTransitUrl: leg.kakaoTransitUrl,
       options: [
         for (final option in leg.transitOptions)
           TransitChoice(

@@ -219,6 +219,7 @@ class TransitHop {
     this.carMinutes,
     this.kakaoWalkUrl,
     this.kakaoCarUrl,
+    this.kakaoTransitUrl,
   });
 
   /// Public-transport options, best first.
@@ -234,6 +235,7 @@ class TransitHop {
   final int? carMinutes;
   final String? kakaoWalkUrl;
   final String? kakaoCarUrl;
+  final String? kakaoTransitUrl;
 
   bool get hasAnything =>
       options.isNotEmpty ||

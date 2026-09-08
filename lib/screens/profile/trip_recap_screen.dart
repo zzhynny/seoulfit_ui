@@ -333,15 +333,19 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
             ),
           ),
           const SizedBox(height: 16),
+          // Wrap, not Row: the three swatches come to 327.9pt against the
+          // 327pt a 375pt phone leaves after the page padding, so a Row
+          // overflowed on every such screen. This drops to two lines
+          // instead.
           SizedBox(
             width: double.infinity,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 6,
               children: [
                 _legendItem(_solidDot(AppColors.primary), 'Completed'),
-                const SizedBox(width: 12),
                 _legendItem(_solidDot(AppColors.primary.withValues(alpha: 0.35)), 'Partial'),
-                const SizedBox(width: 12),
                 _legendItem(_dashedDot(), 'Planned'),
               ],
             ),
@@ -473,10 +477,19 @@ class _LowDataRecapBody extends StatelessWidget {
               children: [
                 Text('YOUR STAMP BOOK', style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 14),
+                // Each cell takes an equal share and scales down inside it.
+                // At 375pt the five 60pt stamps plus their "Stamped" labels
+                // are wider than the card, which overflowed the row; a trip
+                // longer than five days overflowed it further.
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    for (final day in stampDays) _stampCell(day),
+                    for (final day in stampDays)
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: _stampCell(day),
+                        ),
+                      ),
                   ],
                 ),
               ],

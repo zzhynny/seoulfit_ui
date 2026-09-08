@@ -134,6 +134,7 @@ def compute_transit_legs(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "car_minutes": None,
                 "kakao_walk_url": None,
                 "kakao_car_url": None,
+                "kakao_transit_url": None,
                 "transit_options": [],
             })
             continue
@@ -155,6 +156,10 @@ def compute_transit_legs(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "car_minutes": max(1, round(dist / CAR_KMH * 60)),
             "kakao_walk_url": _kakao_route_url(lat1, lng1, lat2, lng2, "foot"),
             "kakao_car_url": _kakao_route_url(lat1, lng1, lat2, lng2, "car"),
+            # ODsay gives the lines and the fare but nothing to tap through
+            # to, which left the subway/bus chips looking like buttons that
+            # did nothing. Kakao's own transit route covers the same pair.
+            "kakao_transit_url": _kakao_route_url(lat1, lng1, lat2, lng2, "publictransit"),
             "transit_options": transit_options,
         })
     return legs

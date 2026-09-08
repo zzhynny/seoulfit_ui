@@ -39,6 +39,10 @@ class CategoryTag extends StatelessWidget {
       ),
       child: Text(
         category.label.toUpperCase(),
+        // Callers put this next to variable-width text in a tight row, so it
+        // has to survive being handed less width than the label wants.
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTextStyles.caption.copyWith(
           color: colors.foreground,
           fontWeight: FontWeight.w700,

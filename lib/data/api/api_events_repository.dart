@@ -24,6 +24,7 @@ SeoulEvent _toEvent(Map<String, dynamic> json, String category, int index) {
   String field(String key) => (json[key] ?? '').toString().trim();
 
   final url = field('image_url');
+  final landing = field('landing_url');
   return SeoulEvent(
     title: field('name'),
     dateRange: field('date'),
@@ -32,6 +33,7 @@ SeoulEvent _toEvent(Map<String, dynamic> json, String category, int index) {
     // for, so the chip's own label is the accurate one.
     category: category,
     posterUrl: url.isEmpty ? null : url,
+    landingUrl: landing.isEmpty ? null : landing,
     // Only used when the poster is missing or fails to load. Cycling by
     // position keeps a gradient-heavy grid from reading as one flat block.
     posterColors: _fallbackGradients[index % _fallbackGradients.length],

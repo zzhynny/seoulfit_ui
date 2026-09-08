@@ -15,7 +15,7 @@ class RouteMap extends StatefulWidget {
   const RouteMap({
     super.key,
     required this.itinerary,
-    this.height = 200,
+    this.height = 300,
     this.onlyDay,
   });
 
@@ -47,6 +47,38 @@ class _RouteMapState extends State<RouteMap> {
       (camera.zoom + delta).clamp(3.0, 18.0),
     );
   }
+
+  /// [MapOptions.initialCameraFit] is consulted once, at the map's first
+  /// layout, so a day tab that changes which stops are drawn leaves the
+  /// camera framing the day before it — picking day 2 showed an empty patch
+  /// of Seoul with its markers off-screen. Re-fit whenever the selection
+  /// changes under a map that is already on screen.
+  @override
+  void didUpdateWidget(RouteMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.onlyDay == widget.onlyDay &&
+        identical(oldWidget.itinerary, widget.itinerary)) {
+      return;
+    }
+
+    final points = _pointsFor(widget);
+    // Nothing to frame, or the previous build showed the illustration instead
+    // of a map: in both cases there is no live FlutterMap bound to
+    // _controller, and this frame's build sets the fit up correctly anyway.
+    if (points.isEmpty || _pointsFor(oldWidget).isEmpty) return;
+
+    final fit = _fitFor(points);
+    if (fit == null) {
+      _controller.move(points.first, 14);
+    } else {
+      _controller.fitCamera(fit);
+    }
+  }
+
+  static List<LatLng> _pointsFor(RouteMap w) => [
+        for (final day in mappableDays(w.itinerary, onlyDay: w.onlyDay))
+          for (final stop in day) stop.point,
+      ];
 
   @override
   void dispose() {
@@ -85,6 +117,9 @@ class _RouteMapState extends State<RouteMap> {
               ),
             ),
             FlutterMap(
+          // Without this the widget builds its own controller and
+          // _controller is orphaned, so _zoomBy throws on every tap.
+          mapController: _controller,
           options: _options(allPoints),
           children: [
             TileLayer(
@@ -147,10 +182,27 @@ class _RouteMapState extends State<RouteMap> {
     );
   }
 
+  /// The camera that frames [points], or null when there is no extent to fit
+  /// — CameraFit.bounds on a zero-area box zooms to maxZoom on one building.
+  static CameraFit? _fitFor(List<LatLng> points) {
+    if (points.length < 2) return null;
+
+    final lats = points.map((p) => p.latitude);
+    final lngs = points.map((p) => p.longitude);
+    return CameraFit.bounds(
+      bounds: LatLngBounds(
+        LatLng(lats.reduce((a, b) => a < b ? a : b),
+            lngs.reduce((a, b) => a < b ? a : b)),
+        LatLng(lats.reduce((a, b) => a > b ? a : b),
+            lngs.reduce((a, b) => a > b ? a : b)),
+      ),
+      padding: const EdgeInsets.all(32),
+    );
+  }
+
   MapOptions _options(List<LatLng> points) {
-    // A single stop has no extent to fit, and CameraFit.bounds on a
-    // zero-area box zooms to maxZoom on one building.
-    if (points.length == 1) {
+    final fit = _fitFor(points);
+    if (fit == null) {
       return MapOptions(
         initialCenter: points.first,
         initialZoom: 14,
@@ -160,21 +212,11 @@ class _RouteMapState extends State<RouteMap> {
       );
     }
 
-    final lats = points.map((p) => p.latitude);
-    final lngs = points.map((p) => p.longitude);
     return MapOptions(
       minZoom: 3,
       maxZoom: 18,
       interactionOptions: _interaction,
-      initialCameraFit: CameraFit.bounds(
-        bounds: LatLngBounds(
-          LatLng(lats.reduce((a, b) => a < b ? a : b),
-              lngs.reduce((a, b) => a < b ? a : b)),
-          LatLng(lats.reduce((a, b) => a > b ? a : b),
-              lngs.reduce((a, b) => a > b ? a : b)),
-        ),
-        padding: const EdgeInsets.all(32),
-      ),
+      initialCameraFit: fit,
     );
   }
 

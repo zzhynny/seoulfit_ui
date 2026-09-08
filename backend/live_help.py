@@ -303,6 +303,10 @@ def emergency_rooms(req: ErRequest):
 # 만든 산출물을 읽는 편이 빠르고 일 1,000회 쿼터도 쓰지 않는다.
 # ---------------------------------------------------------------------------
 
+# /nearby-poi · /nearby-shopping 공통 반경. 도보권 밖을 '주변' 이라고 부르지
+# 않는다. 늘리려면 여기 한 곳만 고치면 된다.
+_RADIUS_M = 1000
+
 _POI_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset", "tour_poi.json")
 
 with open(_POI_PATH, encoding="utf-8") as _f:
@@ -341,16 +345,20 @@ class NearbyShoppingRequest(BaseModel):
 def nearby_shopping(req: NearbyShoppingRequest):
     """현재 위치에서 가까운 쇼핑 POI 를 거리순으로 돌려준다.
 
-    /nearby-poi 와 같은 이유로 반경으로 자르지 않는다. 310건이라 전량이 이미
-    메모리에 있고, 20건이면 23KB 남짓이다.
+    /nearby-poi 와 같이 _RADIUS_M 안쪽만 준다. 걸어갈 수 있는 곳이 아니면
+    'On trip 중 지금 주변' 이라는 화면의 전제가 무너진다.
     """
     rows = _SHOPPING_POIS
     if req.category:
         rows = [p for p in rows if p["category"] == req.category]
     ranked = sorted(
         (
-            dict(p, distance_m=round(haversine_m(req.lat, req.lng, p["lat"], p["lng"])))
-            for p in rows
+            d
+            for d in (
+                dict(p, distance_m=round(haversine_m(req.lat, req.lng, p["lat"], p["lng"])))
+                for p in rows
+            )
+            if d["distance_m"] <= _RADIUS_M
         ),
         key=lambda p: p["distance_m"],
     )
@@ -372,8 +380,9 @@ class NearbyPoiRequest(BaseModel):
 def nearby_poi(req: NearbyPoiRequest):
     """현재 위치에서 가까운 관광 POI 를 거리순으로 돌려준다.
 
-    반경으로 자르지 않는다 — POI 밀도가 지역마다 10배 넘게 차이나서(종로 1km
-    71건 vs 여의도 6건) 반경을 고정하면 어떤 지역에서는 빈 화면이 된다.
+    _RADIUS_M 안쪽만 준다. POI 밀도가 지역마다 10배 넘게 차이나서(종로 1km
+    71건 vs 여의도 6건) 한산한 지역에서는 빈 리스트가 나온다 — 걸어서 못 가는
+    6km 짜리를 '주변' 이라고 내미는 쪽이 더 나쁘다. 앱은 빈 상태를 그린다.
     상세 정보까지 한 응답에 담는다. 431건이 이미 메모리에 있어 2차 호출을
     만들 이유가 없고, 20건이면 25KB 남짓이다.
     """
@@ -382,8 +391,12 @@ def nearby_poi(req: NearbyPoiRequest):
         rows = [p for p in rows if p["category"] == req.category]
     ranked = sorted(
         (
-            dict(p, distance_m=round(haversine_m(req.lat, req.lng, p["lat"], p["lng"])))
-            for p in rows
+            d
+            for d in (
+                dict(p, distance_m=round(haversine_m(req.lat, req.lng, p["lat"], p["lng"])))
+                for p in rows
+            )
+            if d["distance_m"] <= _RADIUS_M
         ),
         key=lambda p: p["distance_m"],
     )

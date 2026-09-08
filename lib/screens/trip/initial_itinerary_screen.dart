@@ -54,45 +54,56 @@ class _InitialItineraryScreenState extends State<InitialItineraryScreen> {
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          // Was Image.asset('map-seoul.png') — a Figma illustration of a map,
-          // not the trip. Same real map as Final Route, following the day
-          // tabs below it.
-          child: RouteMap(
-            itinerary: widget.itinerary,
-            height: 128,
-            onlyDay: _selectedDay,
-          ),
-        ),
-        if (widget.itinerary.summary.trim().isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: TripSummaryText(summary: widget.itinerary.summary),
-          ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: DayTabs(days: widget.itinerary.days, selectedDay: _selectedDay, onSelect: (d) => setState(() => _selectedDay = d)),
-        ),
-        if (day.estimatedCost.trim().isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: DayCostChip(estimatedCost: day.estimatedCost),
-          ),
+        // Map, summary and day tabs scroll with the stops rather than being
+        // pinned above them: the map is 192px tall now, and holding it plus
+        // the summary on screen left the stop list a slot too short to read
+        // on a phone. Final Route already scrolls its map this way.
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(bottom: 16),
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                // Was Image.asset('map-seoul.png') — a Figma illustration of a
+                // map, not the trip. Same real map as Final Route, following
+                // the day tabs below it.
+                child: RouteMap(
+                  itinerary: widget.itinerary,
+                  height: 192,
+                  onlyDay: _selectedDay,
+                ),
+              ),
+              if (widget.itinerary.summary.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: TripSummaryText(summary: widget.itinerary.summary),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: DayTabs(days: widget.itinerary.days, selectedDay: _selectedDay, onSelect: (d) => setState(() => _selectedDay = d)),
+              ),
+              if (day.estimatedCost.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: DayCostChip(estimatedCost: day.estimatedCost),
+                ),
+              const SizedBox(height: 16),
               for (final activity in day.activities) ...[
-                ActivityCard(
-                  activity: activity,
-                  onTap: () => showPlaceDetailSheet(context, activity),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ActivityCard(
+                    activity: activity,
+                    onTap: () => showPlaceDetailSheet(context, activity),
+                  ),
                 ),
                 const SizedBox(height: 12),
               ],
               if (widget.itinerary.sources.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                SourcesCard(sources: widget.itinerary.sources),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SourcesCard(sources: widget.itinerary.sources),
+                ),
                 const SizedBox(height: 12),
               ],
             ],

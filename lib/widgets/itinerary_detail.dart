@@ -133,7 +133,7 @@ class SourcesCard extends StatelessWidget {
               const Icon(Icons.verified_user_outlined,
                   size: 14, color: AppColors.primary),
               const SizedBox(width: AppSpacing.sm),
-              Text('Built from', style: AppTextStyles.labelUppercase),
+              Text('Sources', style: AppTextStyles.labelUppercase),
             ],
           ),
           const SizedBox(height: AppSpacing.smMd),

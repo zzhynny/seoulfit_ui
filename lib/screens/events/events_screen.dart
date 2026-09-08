@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../data/repositories/events_repository.dart';
 import '../../models/event.dart';
 import '../../theme/theme.dart';
@@ -14,7 +16,7 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> {
   List<SeoulEvent> _events = [];
-  String _category = 'Musical';
+  String _category = kDefaultEventCategory;
 
   @override
   void initState() {
@@ -53,7 +55,10 @@ class _EventsScreenState extends State<EventsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Events in Seoul', style: AppTextStyles.headingMedium.copyWith(fontSize: 26)),
+                    Text(
+                      'Events in Seoul',
+                      style: AppTextStyles.headingMedium.copyWith(fontSize: 26),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'Discover performances, exhibitions and festivals during your trip',
@@ -158,44 +163,80 @@ class _EventCard extends StatelessWidget {
 
   final SeoulEvent event;
 
+  /// Opens the event's page on the ticket site. Mock data carries no URL, so
+  /// the card is inert there rather than opening nowhere.
+  Future<void> _open(BuildContext context) async {
+    final uri = Uri.parse(event.landingUrl!);
+    var ok = false;
+    try {
+      if (await canLaunchUrl(uri)) ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Couldn't open ${event.title}.")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.borderAlt),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: event.posterAsset != null
-                ? Image.asset(event.posterAsset!, width: double.infinity, fit: BoxFit.cover)
-                : event.posterUrl != null
-                ? Image.network(
-                    event.posterUrl!,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    // A dead poster URL must not blank the card — the title
-                    // and venue underneath are the useful part.
-                    errorBuilder: (_, _, _) => _PosterFallback(event: event),
-                  )
-                : _PosterFallback(event: event),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(event.dateRange, style: AppTextStyles.caption.copyWith(color: const Color(0xFFA67C68), fontWeight: FontWeight.w600)),
-                Text(event.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.headingSmall.copyWith(fontSize: 15)),
-                Text('📍 ${event.venue}', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.caption),
-              ],
+    return GestureDetector(
+      onTap: event.landingUrl == null ? null : () => _open(context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.borderAlt),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: event.posterAsset != null
+                  ? Image.asset(event.posterAsset!, width: double.infinity, fit: BoxFit.cover)
+                  : event.posterUrl != null
+                  ? Image.network(
+                      event.posterUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      // A dead poster URL must not blank the card — the title
+                      // and venue underneath are the useful part.
+                      errorBuilder: (_, _, _) => _PosterFallback(event: event),
+                    )
+                  : _PosterFallback(event: event),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.dateRange,
+                    style: AppTextStyles.caption.copyWith(
+                      color: const Color(0xFFA67C68),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headingSmall.copyWith(fontSize: 15),
+                  ),
+                  Text(
+                    '📍 ${event.venue}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

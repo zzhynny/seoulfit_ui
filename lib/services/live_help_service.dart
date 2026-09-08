@@ -120,8 +120,8 @@ class LiveHelpService {
 
   /// 주변 관광 POI 를 거리순으로. [category] 가 null 이면 전체(칩의 'All').
   ///
-  /// 반경 인자가 없다 — 서버가 반경으로 자르지 않고 상위 [want] 건을 준다.
-  /// POI 밀도가 지역마다 10배 넘게 차이나서 반경을 고정하면 빈 화면이 나온다.
+  /// 반경 인자가 없다 — 서버가 1km 로 자른 뒤 상위 [want] 건을 준다. POI 밀도가
+  /// 지역마다 10배 넘게 차이나서 한산한 곳에서는 빈 리스트가 온다. 정상이다.
   static Future<List<TourPoi>> fetchTourPois(
     LatLng at, {
     String? category,
@@ -142,8 +142,8 @@ class LiveHelpService {
 
   /// 주변 쇼핑 POI 를 거리순으로. [category] 가 null 이면 전체(칩의 'All').
   ///
-  /// fetchTourPois 와 같은 계약이다 — 서버가 반경으로 자르지 않고 상위 [want]
-  /// 건을 준다. 면세점(DF)은 전체 5건뿐이라 몇 km 짜리가 나올 수 있다.
+  /// fetchTourPois 와 같은 계약이다 — 서버가 1km 로 자른 뒤 상위 [want] 건을
+  /// 준다. 면세점(DF)은 전체 5건뿐이라 대개 빈 리스트가 온다.
   static Future<List<ShoppingPoi>> fetchShoppingPois(
     LatLng at, {
     String? category,

@@ -181,6 +181,7 @@ class TransitLeg {
   final int? carMinutes;
   final String? kakaoWalkUrl;
   final String? kakaoCarUrl;
+  final String? kakaoTransitUrl;
   final List<TransitOption> transitOptions;
 
   const TransitLeg({
@@ -191,6 +192,7 @@ class TransitLeg {
     this.carMinutes,
     this.kakaoWalkUrl,
     this.kakaoCarUrl,
+    this.kakaoTransitUrl,
     this.transitOptions = const [],
   });
 
@@ -202,6 +204,7 @@ class TransitLeg {
         carMinutes: (json['car_minutes'] as num?)?.toInt(),
         kakaoWalkUrl: json['kakao_walk_url'] as String?,
         kakaoCarUrl: json['kakao_car_url'] as String?,
+        kakaoTransitUrl: json['kakao_transit_url'] as String?,
         transitOptions: _asJsonList(json['transit_options'])
             .map(TransitOption.fromJson)
             .toList(),

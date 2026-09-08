@@ -241,18 +241,28 @@ class CheckInActivityCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        activity.time,
-                        style: AppTextStyles.caption.copyWith(
-                          color: activity.visited ? AppColors.primary : const Color(0xFF8A8A93),
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          activity.time,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption.copyWith(
+                            color: activity.visited ? AppColors.primary : const Color(0xFF8A8A93),
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      CategoryTag(category: activity.category),
+                      const SizedBox(width: 6),
+                      Flexible(child: CategoryTag(category: activity.category)),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(activity.title, style: AppTextStyles.headingSmall.copyWith(fontSize: 15)),
+                  Text(
+                    activity.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headingSmall.copyWith(fontSize: 15),
+                  ),
                   if (!activity.visited)
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,
