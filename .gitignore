@@ -52,4 +52,8 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/.env
 backend/checkins.db
+
+# Live Google Places key. The file says so itself, but it was tracked anyway
+# and the key rode 21 unpushed commits before this line existed.
+lib/config/api_keys.dart
 backend/.pytest_cache/
