@@ -126,9 +126,9 @@ k 미달   →  ② 해제 재시도                relaxed="interest"
 ```
 지역            풀  Culture   Food  Shopping  K-POP  Nature
 Jongno       74      66      37      33      24      44
+Itaewon      32      29       8      14       9      25
 Gangnam      29      20       9      21       8      19
 Myeongdong   29      25      12      20       7      21
-Itaewon      32      29       8      14       9      25
 Hongdae      24      15       8       8       8      16
 Bukchon      21      20       8      10       7       8
 Insadong     21      20       8      10       7       8
@@ -138,13 +138,17 @@ Seongsu      12       6       8       7       2      10
 Dongdaemun   12       8      10       8       4       8
 Sinchon       5       3       2       1       3       3
 
-60개 조합 중 0~1개인 칸: 1 (Sinchon × Shopping)
+k=3 을 못 채우는 칸: 3/60 — Seongsu × K-POP & Hallyu (2),
+Sinchon × Food & Cafes (2), Sinchon × Shopping (1)
 ```
 
 `k = 3` 고정. 예전 `segment_k(구간일수 + 1)`는 한 구간이 여러 날을 덮을 때의 값이었는데,
 이제 `day_spec` 하나가 하루라 항상 2가 되어 의미가 없다. 하루에 앵커 3개면 LLM 이
-고를 여지가 있고, 필터가 3개를 못 채우는 칸은 60개 중 하나(Sinchon × Shopping)뿐이다.
+고를 여지가 있고, 필터가 3개를 못 채우는 칸은 60개 중 셋뿐이라 완화 사다리로 덮인다.
 `segment_k`는 삭제한다.
+
+(위 수치는 구현 후 실측으로 갱신했다. 설계 시점에는 한 칸으로 적었는데, 그때는
+관심사 태그를 자동 규칙으로 매겼고 이후 125개를 손으로 다시 붙였다.)
 
 ### 중복 방지
 
