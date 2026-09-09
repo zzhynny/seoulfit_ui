@@ -826,15 +826,17 @@ def trip_checkin(req: CheckinRequest):
 @app.post("/revalidate")
 def revalidate(req: RevalidateRequest):
     """User Selection 화면에서 사용자가 편집한 슬롯 상태(제외/교체/재정렬/day
-    이동)를 반영한 뒤, CriticAgent -> RepairAgent -> CriticAgent 순서로 다시
-    돌려서 이슈/점수를 before-after로 준다. graph.py의 critic_repair 노드는
-    /chat 한 턴 안에서만 도는데, 여기가 User Selection 이후 재검증하는 유일한
-    경로다 — day_start_shift로 day 번호가 바뀌면 실제 요일도 바뀌므로,
-    요일 기반 규칙(CLOSED_ON_ASSIGNED_DAY 등)이 여기서 새로 체크된다.
+    이동)를 반영한 뒤, evaluate -> repair 수렴 루프(run_critic_repair_loop,
+    graph.py의 critic_repair_node와 동일 함수 -- 두 경로가 다르게 동작하는
+    걸 막기 위해 공유한다)를 최대 3회 돌려서 이슈/점수를 before-after로
+    준다. graph.py의 critic_repair 노드는 /chat 한 턴 안에서만 도는데,
+    여기가 User Selection 이후 재검증하는 유일한 경로다 — day_start_shift로
+    day 번호가 바뀌면 실제 요일도 바뀌므로, 요일 기반 규칙
+    (CLOSED_ON_ASSIGNED_DAY 등)이 여기서 새로 체크된다.
 
     끝나면 새 itinerary를 체크포인트에 저장한다(update_state) — 이어지는
     편집(재교체, 재정렬)이 이 결과 위에서 계속되도록."""
-    from critic_repair import CriticAgent, RepairAgent, apply_slot_edits, build_candidate_pool
+    from critic_repair import apply_slot_edits, build_candidate_pool, run_critic_repair_loop
     from planner import compute_transit_legs
 
     thread_id = _require_thread_id(req.thread_id)
@@ -849,17 +851,14 @@ def revalidate(req: RevalidateRequest):
         )
         edited_state = {**state, "itinerary": edited_itinerary}
 
-        critic = CriticAgent()
-        before_report = critic.evaluate(edited_state)
+        result = run_critic_repair_loop(edited_state, user_selected_names=user_selected_names)
+        repaired_itinerary = result["itinerary"]
+        before_report = result["before_report"]
+        after_report = result["report"]
+        repair_log = result["repair_log"]
 
-        repaired_itinerary, repair_log = RepairAgent().repair(
-            edited_state, before_report, user_selected_names=user_selected_names,
-        )
         for day in repaired_itinerary.get("days") or []:
             day["transit_legs"] = compute_transit_legs(day.get("pois") or [])
-
-        after_state = {**edited_state, "itinerary": repaired_itinerary}
-        after_report = critic.evaluate(after_state)
 
         _graph.update_state(_config(thread_id), {"itinerary": repaired_itinerary})
     except HTTPException:
@@ -872,6 +871,8 @@ def revalidate(req: RevalidateRequest):
     return {
         "before": before_report,
         "after": after_report,
+        "converged": result["converged"],
+        "rounds": result["rounds"],
         "repaired_itinerary": repaired_itinerary,
         "repair_log": repair_log,
     }

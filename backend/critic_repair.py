@@ -18,6 +18,7 @@ The node is intentionally robust:
 
 from __future__ import annotations
 
+import copy
 import math
 import re
 from dataclasses import dataclass
@@ -1605,10 +1606,130 @@ def reorder_supplements(
     return route
 
 
-def make_critic_repair_node(base_dir: Any | None = None):
+MAX_CRITIC_REPAIR_ROUNDS = 3
+
+
+def _issue_counts_by_code(issues: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for issue in issues:
+        code = issue.get("code", "UNKNOWN")
+        counts[code] = counts.get(code, 0) + 1
+    return counts
+
+
+def run_critic_repair_loop(
+    state: dict[str, Any],
+    *,
+    user_selected_names: set[str] | None = None,
+    max_rounds: int = MAX_CRITIC_REPAIR_ROUNDS,
+) -> dict[str, Any]:
+    """Repeatedly runs CriticAgent.evaluate -> RepairAgent.repair, converging
+    on fewer issues each round, instead of the old single evaluate -> repair
+    -> evaluate -> done pass (which returned unfixed violations from the
+    second evaluate without ever acting on them). Shared by graph.py's
+    critic_repair_node and api.py's /revalidate handler so both paths
+    behave identically -- fixing convergence in only one would just
+    relocate the same bug to whichever path was left alone.
+
+    Convergence signal: len(report["issues"]) -- see CriticAgent.evaluate.
+    A flat per-violation-instance count, NOT severity-weighted, and not
+    perfectly uniform per rule: DUPLICATE_POIS and HIGH_FOREIGNER_FRICTION
+    each collapse to at most one issue for the whole itinerary no matter how
+    many instances exist, while e.g. CLOSED_ON_ASSIGNED_DAY is one issue per
+    closed POI found. `rounds` in the return value logs the per-rule
+    breakdown (`issue_counts_by_code`) every round, not just the total, so
+    an unexpected non-convergence can be diagnosed after the fact.
+
+    Each round hands repair() a fresh deepcopy of the current best
+    itinerary. repair() mutates its input's day/pois lists in place, so
+    without that copy a non-improving round would corrupt the best-so-far
+    state via aliasing, even though we meant to discard that round's
+    result. If a round's issue count does not strictly decrease vs the
+    best seen so far, that round's mutated copy is thrown away outright and
+    the loop stops there -- the returned itinerary is always the best
+    (fewest-issues) one actually produced, never something worse than an
+    earlier round already achieved. Stops immediately on 0 issues;
+    otherwise stops after `max_rounds` rounds with `converged=False` in the
+    return value and the remaining issues still on `report["issues"]`.
+    """
     critic = CriticAgent()
     repairer = RepairAgent()
 
+    itinerary = state.get("itinerary")
+    if not itinerary:
+        return {
+            "itinerary": itinerary,
+            "before_report": None,
+            "report": None,
+            "repair_log": [],
+            "converged": False,
+            "rounds": [],
+        }
+
+    before_report = critic.evaluate(state)
+    best_itinerary = itinerary
+    best_report = before_report
+    best_count = len(before_report["issues"])
+
+    rounds: list[dict[str, Any]] = [{
+        "round": 0,
+        "issue_count": best_count,
+        "issue_counts_by_code": _issue_counts_by_code(before_report["issues"]),
+        "outcome": "initial",
+    }]
+
+    all_repair_log: list[str] = []
+
+    for round_num in range(1, max_rounds + 1):
+        if best_count == 0:
+            break
+
+        round_input = copy.deepcopy(best_itinerary)
+        repaired_itinerary, repair_log = repairer.repair(
+            {**state, "itinerary": round_input},
+            best_report,
+            user_selected_names=user_selected_names,
+        )
+        after_report = critic.evaluate({**state, "itinerary": repaired_itinerary})
+        after_count = len(after_report["issues"])
+
+        if after_count < best_count:
+            best_itinerary = repaired_itinerary
+            best_report = after_report
+            best_count = after_count
+            all_repair_log.extend(repair_log)
+            rounds.append({
+                "round": round_num,
+                "issue_count": after_count,
+                "issue_counts_by_code": _issue_counts_by_code(after_report["issues"]),
+                "repair_log": repair_log,
+                "outcome": "converged" if after_count == 0 else "improved",
+            })
+        else:
+            # No improvement (equal or worse): round_input/repaired_itinerary
+            # are discarded here -- best_itinerary was never mutated (the
+            # deepcopy above protected it), so it's still exactly what the
+            # previous round (or the initial evaluate) produced.
+            rounds.append({
+                "round": round_num,
+                "issue_count": after_count,
+                "issue_counts_by_code": _issue_counts_by_code(after_report["issues"]),
+                "repair_log": repair_log,
+                "outcome": "rolled_back",
+            })
+            break
+
+    return {
+        "itinerary": best_itinerary,
+        "before_report": before_report,
+        "report": best_report,
+        "repair_log": all_repair_log,
+        "converged": best_count == 0,
+        "rounds": rounds,
+    }
+
+
+def make_critic_repair_node(base_dir: Any | None = None):
     def critic_repair_node(state: TravelState) -> TravelState:
         itinerary = state.get("itinerary")
 
@@ -1623,20 +1744,17 @@ def make_critic_repair_node(base_dir: Any | None = None):
 
         # Snapshot of the planner-validated itinerary (already ran through
         # planner._validate_and_repair_itinerary before this node runs), taken
-        # BEFORE Critic/Repair touch it. RepairAgent mutates a day's `pois` list
-        # in place rather than copying it, so without this snapshot an exception
-        # partway through repair() would leave `itinerary` itself half-mutated --
-        # this is the clean fallback the except branch below returns instead.
-        import copy
+        # BEFORE Critic/Repair touch it -- the clean fallback if anything
+        # below raises. run_critic_repair_loop protects its own best-so-far
+        # state internally (each round works on a deepcopy), but this guards
+        # the whole call: an exception from reorder_supplements/
+        # compute_transit_legs after the loop returns should not surface a
+        # half-finished itinerary either.
         fallback_itinerary = copy.deepcopy(itinerary)
 
         try:
-            before_report = critic.evaluate(state)
-
-            repaired_itinerary, repair_logs = repairer.repair(
-                state={**state, "itinerary": itinerary},
-                report=before_report,
-            )
+            result = run_critic_repair_loop(state)
+            repaired_itinerary = result["itinerary"]
 
             # Google-sourced POIs lose their source_kind by the time they land in
             # a day (both as_output_poi helpers strip it), so recover it from the
@@ -1647,30 +1765,33 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 day["pois"] = reorder_supplements(day.get("pois") or [], movable_names)
                 day["transit_legs"] = compute_transit_legs(day.get("pois") or [])
 
-            after_state = {**state, "itinerary": repaired_itinerary}
-            after_report = critic.evaluate(after_state)
-
             repaired_itinerary["critic_report"] = {
-                "before": before_report,
-                "after": after_report,
-                "repair_applied": bool(repair_logs),
-                "repair_log": repair_logs,
+                "before": result["before_report"],
+                "after": result["report"],
+                "repair_applied": bool(result["repair_log"]),
+                "repair_log": result["repair_log"],
+                "converged": result["converged"],
+                "rounds": result["rounds"],
+                "remaining_issues": [] if result["converged"] else result["report"]["issues"],
             }
 
-            requested = after_report.get("requested_areas") or []
-            coverage = after_report.get("area_coverage") or {}
+            requested = result["report"].get("requested_areas") or []
+            coverage = result["report"].get("area_coverage") or {}
             coverage_text = ", ".join(
                 f"{area_label(area)}={coverage.get(area, 0)}"
                 for area in requested
             ) if requested else "No specific requested areas"
 
-            score = after_report.get("overall_score")
+            score = result["report"].get("overall_score")
+            repair_rounds = sum(1 for r in result["rounds"] if r["outcome"] in ("improved", "converged"))
 
             msg = (
-                f"✅ Critic-Repair completed.\n"
+                f"✅ Critic-Repair completed "
+                f"({repair_rounds} repair round(s), "
+                f"{'converged' if result['converged'] else 'not fully converged'}).\n"
                 f"- Overall score: {score}\n"
                 f"- Requested area coverage: {coverage_text}\n"
-                f"- Repairs applied: {len(repair_logs)}"
+                f"- Repairs applied: {len(result['repair_log'])}"
             )
 
             return {
@@ -1695,6 +1816,8 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 "after": None,
                 "repair_applied": False,
                 "repair_log": [],
+                "converged": False,
+                "rounds": [],
             }
             return {
                 **state,
