@@ -681,7 +681,6 @@ def _format_requested_area_rules(
         return ""
 
     labels = [_area_label(a) for a in requested_areas]
-    num_days = _parse_num_days(duration, override=num_days)
 
     lines = [
         "",
@@ -692,23 +691,12 @@ def _format_requested_area_rules(
         "If candidate course data is weak for an area, use REAL-TIME GOOGLE PLACES DATA for that area.",
     ]
 
-    if len(requested_areas) >= 2:
-        # Distribute areas evenly across the actual number of days.
-        days_per_area = max(1, num_days // len(requested_areas))
-        area_assignments = []
-        for i, label in enumerate(labels):
-            start_day = i * days_per_area + 1
-            end_day = start_day + days_per_area - 1
-            if i == len(labels) - 1:
-                end_day = num_days  # last area gets any remainder days
-            if start_day == end_day:
-                area_assignments.append(f"Day {start_day} = {label}")
-            else:
-                area_assignments.append(f"Days {start_day}–{end_day} = {label}")
-        lines.append(
-            f"This is a {num_days}-day trip with {len(requested_areas)} requested areas. "
-            f"Distribute them across the days as follows: {', '.join(area_assignments)}."
-        )
+    # No day->area distribution paragraph here any more: every day's area is
+    # already stated in its own "=== DAY N CANDIDATES: <area> ===" header
+    # (see _format_segment_block), and day_specs lets the traveller repeat a
+    # region across days (e.g. Day 1 & 2 = Hongdae, Day 3 = Gangnam) -- a
+    # paragraph re-deriving "Day 1 = X, Days 2-3 = Y" from the deduplicated
+    # requested_areas list would only contradict those headers.
 
     lines.append(
         "If you cannot find enough sightseeing POIs for an area, use cafes, restaurants, shops, or cultural spaces from Google Places."
@@ -1276,6 +1264,7 @@ def _validate_and_repair_itinerary(
     courses: list[dict[str, Any]],
     google_supplement: list[dict[str, Any]],
     requested_areas: list[str],
+    day_segments: list[dict[str, Any]] | None = None,
     duration: str = "",
     num_days: int | None = None,
     pace: str | None = None,
@@ -1429,7 +1418,7 @@ def _validate_and_repair_itinerary(
             if any(_normalize_text(p.get("name")) == meal_name_key for p in pois):
                 continue  # LLM already included this exact locked restaurant
 
-            day_area = _primary_area_for_day(day, requested_areas) or meal.get("area")
+            day_area = _primary_area_for_day(day, day_segments) or meal.get("area")
             out = {
                 "name": meal.get("name"),
                 "type": meal.get("type", "restaurant"),
@@ -1463,16 +1452,13 @@ def _validate_and_repair_itinerary(
     # count is non-meal POIs only -- the guaranteed meal slot from step 3 is
     # a bonus on top of the sightseeing target, not part of it, so it can't
     # let this step under-fill a day by one.
-    for idx, day in enumerate(days):
+    for day in days:
         pois = day.setdefault("pois", [])
         non_meal_count = sum(1 for p in pois if not _is_meal_poi(p))
         if non_meal_count >= poi_min:
             continue
 
-        target_area = None
-        if requested_areas:
-            target_area = requested_areas[min(idx, len(requested_areas) - 1)]
-        target_area = target_area or _primary_area_for_day(day, requested_areas)
+        target_area = _primary_area_for_day(day, day_segments)
 
         candidates = []
         if target_area:
@@ -1572,10 +1558,7 @@ def _validate_and_repair_itinerary(
         day_num = int(day.get("day") or idx + 1)
         # Only replace bare "Day N" placeholders — never overwrite LLM-generated titles.
         if current_theme in ("", f"Day {day_num}"):
-            area = None
-            if requested_areas:
-                area = requested_areas[min(idx, len(requested_areas) - 1)]
-            area = area or _primary_area_for_day(day, requested_areas)
+            area = _primary_area_for_day(day, day_segments)
             day["theme"] = _generate_day_theme(day, area, purpose=purpose)
 
     # 6. Attach transit legs (Haversine distance + walk/car ETA + Kakao deep links).
@@ -1599,11 +1582,24 @@ def _area_coverage(days: list[dict[str, Any]], requested_areas: list[str]) -> di
     return coverage
 
 
-def _primary_area_for_day(day: dict[str, Any], requested_areas: list[str]) -> str | None:
-    if requested_areas:
-        day_num = int(day.get("day") or 1)
-        idx = min(max(day_num - 1, 0), len(requested_areas) - 1)
-        return requested_areas[idx]
+def _primary_area_for_day(
+    day: dict[str, Any], day_segments: list[dict[str, Any]] | None,
+) -> str | None:
+    """The area the traveller actually picked for this day.
+
+    `day_segments` (one entry per day: `{"day_numbers": [n], "area": ...}`,
+    built by retrieve_node from the per-day `day_specs`) is the authoritative
+    day->area map. It must be looked up by day number, never by position in
+    a deduplicated area list -- a repeated region (Day 1 & 2 = Hongdae, Day
+    3 = Gangnam) collapses `requested_areas` to `["hongdae", "gangnam"]`,
+    and indexing that by day would hand day 2 Gangnam's meals/theme/fill.
+    """
+    day_num = int(day.get("day") or 0)
+    for seg in day_segments or []:
+        if day_num in (seg.get("day_numbers") or []):
+            area = seg.get("area")
+            if area:
+                return area
 
     counts: dict[str, int] = {}
     for poi in day.get("pois", []) or []:
@@ -1792,7 +1788,7 @@ def _pace_target_line(state: TravelState) -> str:
 
 def _resolve_locked_meals(
     trip_start_date: str | None,
-    requested_areas: list[str],
+    day_segments: list[dict[str, Any]] | None,
     expected_days: int,
     meal_type: str = "dinner",
     exclude_by_day: dict[int, tuple[str, ...]] | None = None,
@@ -1825,7 +1821,7 @@ def _resolve_locked_meals(
 
     slot_start, slot_end = meal_slots.MEAL_SLOTS[meal_type]
     for day_num in range(1, expected_days + 1):
-        day_area = _primary_area_for_day({"day": day_num}, requested_areas)
+        day_area = _primary_area_for_day({"day": day_num}, day_segments)
         if not day_area:
             continue
         try:
@@ -1995,7 +1991,7 @@ def plan_node(state: TravelState) -> TravelState:
 
     expected_days = _parse_num_days(duration, override=num_days) if (duration or num_days) else 0
     locked_meals = _resolve_locked_meals(
-        state.get("trip_start_date"), requested_areas, expected_days, meal_type="dinner",
+        state.get("trip_start_date"), day_segments, expected_days, meal_type="dinner",
     )
     # Lunch excludes each day's already-locked dinner pick, so the same
     # restaurant never gets locked into both meals on one day -- reuses
@@ -2004,7 +2000,7 @@ def plan_node(state: TravelState) -> TravelState:
         day_num: (meal["name"],) for day_num, meal in locked_meals.items() if meal.get("name")
     }
     locked_lunch_meals = _resolve_locked_meals(
-        state.get("trip_start_date"), requested_areas, expected_days, meal_type="lunch",
+        state.get("trip_start_date"), day_segments, expected_days, meal_type="lunch",
         exclude_by_day=dinner_names_by_day,
     )
 
@@ -2055,6 +2051,7 @@ def plan_node(state: TravelState) -> TravelState:
             courses=courses,
             google_supplement=google_supplement,
             requested_areas=requested_areas,
+            day_segments=day_segments,
             duration=duration,
             num_days=num_days,
             pace=pace,

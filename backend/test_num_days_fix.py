@@ -50,6 +50,43 @@ def test_resolve_num_days():
     print("OK - _resolve_num_days")
 
 
+def test_primary_area_for_day_reads_day_segments_not_deduped_position():
+    """Regression for the retrieval-redesign review's finding #1: a 3-day
+    trip with Day 1 = Hongdae, Day 2 = Hongdae, Day 3 = Gangnam collapses
+    `requested_areas` to ["hongdae", "gangnam"] (Task 6's
+    `list(dict.fromkeys(...))` dedup in plan_node). Indexing that deduped
+    list by day position used to hand day 2 Gangnam's area instead of its
+    own Hongdae pick -- day_segments (one entry per day, keyed by day
+    number) is the fix: it must resolve every day to its own day_spec."""
+    day_segments = [
+        {"day_numbers": [1], "area": "hongdae"},
+        {"day_numbers": [2], "area": "hongdae"},
+        {"day_numbers": [3], "area": "gangnam"},
+    ]
+    assert planner._primary_area_for_day({"day": 1}, day_segments) == "hongdae"
+    assert planner._primary_area_for_day({"day": 2}, day_segments) == "hongdae"
+    assert planner._primary_area_for_day({"day": 3}, day_segments) == "gangnam"
+
+    # No day_segments (e.g. legacy caller) -> falls back to counting the
+    # day's own POI areas, same as before this fix.
+    day = {"day": 1, "pois": [{"area": "itaewon"}, {"area": "itaewon"}, {"area": "mapo"}]}
+    assert planner._primary_area_for_day(day, None) == "itaewon"
+    print("OK - _primary_area_for_day reads day_segments by day number")
+
+
+def test_format_requested_area_rules_drops_the_contradicting_distribution_paragraph():
+    """The removed 'Distribute them across the days as follows' paragraph
+    re-derived a day->area split from the deduplicated requested_areas list
+    -- for a repeated region that split contradicts the per-day
+    '=== DAY N CANDIDATES: <area> ===' headers the prompt already has."""
+    text = planner._format_requested_area_rules(["hongdae", "gangnam"], "", num_days=3)
+    assert "Distribute them across the days" not in text
+    assert "Day 1 = " not in text and "Days 2" not in text
+    # The rest of the section is untouched.
+    assert "The user explicitly requested these areas: Hongdae, Gangnam." in text
+    print("OK - _format_requested_area_rules no longer distributes areas by position")
+
+
 def test_pace_bounds():
     assert planner._pace_bounds({"pace": "relaxed"}) == (5, 6)
     assert planner._pace_bounds({"pace": "packed"}) == (7, 8)
@@ -389,6 +426,8 @@ def test_plan_node_with_origin_date_picker_format():
 if __name__ == "__main__":
     test_parse_num_days_override()
     test_resolve_num_days()
+    test_primary_area_for_day_reads_day_segments_not_deduped_position()
+    test_format_requested_area_rules_drops_the_contradicting_distribution_paragraph()
     test_pace_bounds()
     test_pace_target_line()
     test_fold_least_filled_not_round_robin()

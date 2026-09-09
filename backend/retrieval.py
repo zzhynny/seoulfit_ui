@@ -27,11 +27,17 @@ VECTORS = _HERE / "dataset" / "course_vectors.npz"
 
 DEFAULT_K = 3
 
-# Day Planner 화면이 여는 기본 지역 순서. 코스 풀이 넓은 곳부터 두어 어느 날도
-# 앵커가 비지 않게 하고, 도심에서 시작해 밖으로 나가는 순서로 배열했다.
+# Day Planner 화면이 여는 기본 지역 순서 -- 코스 풀이 넓은 곳부터 두어 어느
+# 날도 앵커가 비지 않게 하고, 도심에서 시작해 밖으로 나가는 순서로 배열했다.
+# 이 12개가 앱이 실제로 제시하는 전체 지역 어휘이기도 하다 (graph.py의
+# DAY_PLAN_REGIONS와 lib/models/travel_state.dart의 kRegionLabels가 이 목록과
+# 같은 키·순서를 쓴다) -- POST /day-plan은 이 목록으로 region을 검증하므로,
+# 여기 없는 geo.SEOUL_AREA_CENTERS의 나머지 21개 키(코스 풀이 옅은 외곽
+# 자치구 등)는 절대 통과하지 못한다.
 DAY_PLAN_REGION_ORDER = [
     "jongno", "myeongdong", "hongdae", "gangnam",
     "seongsu", "itaewon", "bukchon",
+    "insadong", "mapo", "dongdaemun", "sinchon", "apgujeong",
 ]
 
 
