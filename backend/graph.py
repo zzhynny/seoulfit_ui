@@ -62,8 +62,16 @@ def _classify_intent(user_message: str) -> SimpleNamespace:
         "Otherwise return exactly one of: travel_dates, category, restrictions, companion, pace, region "
         "(the field they want to change)."
     )
+    # "CONFIRM" here on a missing/failed classification (data == {} when
+    # _gemini_json's own call+retry both fail) used to silently proceed to
+    # build the itinerary even if the user typed something like "change my
+    # dates" -- the single most consequential value defaulting to the one
+    # action with side effects. "UNKNOWN" is not "CONFIRM" and not a field
+    # name, so handle_confirm_node's existing fallback branch (neither
+    # CONFIRM nor a recognized field) takes it: the user is asked again
+    # instead of being treated as having confirmed.
     data = _gemini_json(prompt)
-    return SimpleNamespace(intent=str(data.get("intent", "CONFIRM")))
+    return SimpleNamespace(intent=str(data.get("intent", "UNKNOWN")))
 
 
 # ---------------------------------------------------------------------------
