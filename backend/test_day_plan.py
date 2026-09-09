@@ -74,11 +74,37 @@ def test_posting_a_plan_stores_it_and_advances_to_confirm():
     ([{"day": 1, "region": "jongno", "interest": "Shopping"},
       {"day": 1, "region": "jongno", "interest": "Shopping"},
       {"day": 3, "region": "jongno", "interest": "Shopping"}], "day 중복"),
+    # geo.SEOUL_AREA_CENTERS has 33 keys but the app only ever offers 12
+    # (lib/models/travel_state.dart's kRegionLabels) -- these three are real
+    # geo keys with a near-empty course pool (measured: dobong 1, gwanak 1,
+    # dmc 3) that /day-plan must still reject, not just made-up ones.
+    ([{"day": 1, "region": "dobong", "interest": "Shopping"},
+      {"day": 2, "region": "jongno", "interest": "Shopping"},
+      {"day": 3, "region": "jongno", "interest": "Shopping"}], "앱이 안 주는 지역 (dobong)"),
+    ([{"day": 1, "region": "gwanak", "interest": "Shopping"},
+      {"day": 2, "region": "jongno", "interest": "Shopping"},
+      {"day": 3, "region": "jongno", "interest": "Shopping"}], "앱이 안 주는 지역 (gwanak)"),
+    ([{"day": 1, "region": "dmc", "interest": "Shopping"},
+      {"day": 2, "region": "jongno", "interest": "Shopping"},
+      {"day": 3, "region": "jongno", "interest": "Shopping"}], "앱이 안 주는 지역 (dmc)"),
 ])
 def test_bad_plans_are_rejected(days, why):
     _seed()
     r = client.post("/day-plan", json={"thread_id": THREAD, "days": days})
     assert r.status_code == 400, why
+
+
+def test_day_plan_regions_are_all_valid_geo_keys():
+    """graph.DAY_PLAN_REGIONS (what POST /day-plan validates region against)
+    must never drift ahead of geo.SEOUL_AREA_CENTERS -- every region the app
+    can offer has to resolve to real coordinates, or Google Places
+    supplementing and meal-slot lookups silently fall back to a default
+    area instead of the one the traveller picked."""
+    from geo import SEOUL_AREA_CENTERS
+    assert set(graph.DAY_PLAN_REGIONS) <= set(SEOUL_AREA_CENTERS)
+    # And it's the app's 12, not the full 33 -- see the rejected-region
+    # cases above.
+    assert len(graph.DAY_PLAN_REGIONS) == 12
 
 
 def test_day_plan_rejects_a_thread_that_has_not_reached_day_plan():

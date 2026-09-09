@@ -107,6 +107,11 @@ _METERED_PATHS = {
     "/chat", "/poi-summary", "/poi-detail", "/poi-image",
     "/analyze-landmark", "/nearby", "/nearby-poi", "/nearby-shopping",
     "/emergency-rooms", "/place-photo",
+    # /reset really deletes a session's state now (it used to be a no-op),
+    # and /day-plan writes day_specs -- both write to state protected only
+    # by an unguessable thread id (there's no login), so an unmetered loop
+    # can churn either one indefinitely.
+    "/reset", "/day-plan",
 }
 # 120/min, not 30: user_selection_screen renders one card per candidate stop
 # and each fires fetchPoiDetail on build, and final_itinerary_map_screen
@@ -433,8 +438,7 @@ def day_plan(req: DayPlanRequest):
     어휘가 어긋나면 400 으로 시끄럽게 실패한다. retrieval 의 필터는 문자열
     비교라서, 통과시키면 조용히 0개를 반환하고 그날 앵커가 사라진다.
     """
-    from geo import SEOUL_AREA_CENTERS
-    from graph import INTEREST_LABELS
+    from graph import DAY_PLAN_REGIONS, INTEREST_LABELS
     from rag import _parse_num_days
 
     thread_id = _require_thread_id(req.thread_id)
@@ -456,7 +460,7 @@ def day_plan(req: DayPlanRequest):
     if sorted(d["day"] for d in days) != list(range(1, expected + 1)):
         raise HTTPException(status_code=400, detail="day numbers must be 1..N with no gaps or repeats")
     for d in days:
-        if d["region"] not in SEOUL_AREA_CENTERS:
+        if d["region"] not in DAY_PLAN_REGIONS:
             raise HTTPException(status_code=400, detail=f"unknown region: {d['region']}")
         if d["interest"] not in INTEREST_LABELS:
             raise HTTPException(status_code=400, detail=f"unknown interest: {d['interest']}")

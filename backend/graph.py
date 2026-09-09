@@ -142,6 +142,13 @@ INTEREST_LABELS = [
     "K-POP & Hallyu", "Nature & Relaxation",
 ]
 
+# Day Planner 화면이 제시하는 12개 지역(lib/models/travel_state.dart의
+# kRegionLabels와 동일한 키·순서). geo.SEOUL_AREA_CENTERS는 33개 키를 갖고
+# 있어 앱이 절대 주지 않는 21개(nowon, dobong, gwanak, dmc, ...)까지 통과
+# 시킨다 — 코스 풀이 1~3개뿐인 지역이 그대로 새면 그날 앵커가 거의 없다.
+# DAY_PLAN_REGION_ORDER와 같은 객체를 그대로 쓰므로 둘이 어긋날 수 없다.
+DAY_PLAN_REGIONS = DAY_PLAN_REGION_ORDER
+
 
 def _extract_field(field: str, text: str) -> str:
     """Pull ONE slot out of the reply to that slot's own question.
@@ -244,6 +251,20 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     if not value or value.upper() == "MISSING":
         return {}
 
+    if field == "category" and value not in INTEREST_LABELS:
+        # The question is plural ("What are your main interests?"), so the
+        # LLM extraction sometimes returns more than one label
+        # ("Shopping, Food & Cafes") even though every downstream consumer
+        # (the day_specs interest dropdown, retrieval.select_anchors' filter)
+        # expects exactly one of INTEREST_LABELS. An off-vocabulary value
+        # would otherwise reach the Flutter dropdown (assertion failure) or
+        # silently relax select_anchors to interest-free for every day.
+        # Taking a valid first element beats discarding the whole answer;
+        # anything else off-vocabulary falls back to the same default
+        # default_day_specs already uses for a blank interest.
+        first = value.split(",")[0].strip()
+        value = first if first in INTEREST_LABELS else DEFAULT_INTEREST
+
     return {field: value}
 
 
@@ -342,7 +363,12 @@ def collect_node(state: TravelState) -> TravelState:
     # job, reached only from current_step == "confirm".
     field = state.get("pending") or _next_field(state)
     if field is None:
-        return {**state, "pending": None, "current_step": "confirm"}
+        # Route through _ask instead of jumping to confirm directly: this
+        # was the one path that could reach confirm without day_specs ever
+        # existing (unreachable today only by luck of the current routing),
+        # while every downstream consumer of day_specs assumes it's always
+        # there once current_step reaches confirm.
+        return _ask(state, {}, None)
 
     if field == "travel_dates":
         # Picker-only: no extraction, no LLM. Both rejections leave `pending`
