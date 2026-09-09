@@ -31,6 +31,7 @@ from langchain_core.messages import AIMessage
 
 import meal_slots
 from date_utils import weekday_for_day
+from pace import pace_bounds as _shared_pace_bounds
 from geo import (
     AREA_ALIASES,
     DEFAULT_CENTER,
@@ -1787,17 +1788,15 @@ def _resolve_num_days(state: TravelState) -> int | None:
 
 
 def _pace_bounds(state: TravelState) -> tuple[int, int]:
-    """Single source of truth for the per-day POI count target driven by
-    trip pace (relaxed/packed): both the LLM prompt guidance
+    """Per-day POI count target driven by trip pace (relaxed/packed).
+
+    Thin wrapper over pace.pace_bounds() -- the actual (min, max) values now
+    live there so critic_repair.py's TOO_FEW_POIS check and under-fill step
+    read the exact same numbers instead of a separately-hardcoded 5. Kept
+    here (same name/signature) since both the LLM prompt guidance
     (`_pace_target_line`) and `_validate_and_repair_itinerary`'s fill/trim
-    steps read the (min, max) from here, so the prompt and the validator can
-    never end up quoting different numbers."""
-    pace = (state.get("pace") or "").strip().lower()
-    if pace == "relaxed":
-        return (5, 6)
-    if pace == "packed":
-        return (7, 8)
-    return (6, 7)  # no pace on record -- a middling default, not a guess at either extreme
+    steps already call it this way."""
+    return _shared_pace_bounds(state.get("pace"))
 
 
 _PACE_LABELS: dict[str, str] = {"packed": "packed schedule", "relaxed": "relaxed pace"}

@@ -31,6 +31,7 @@ except Exception:
     TravelState = dict
 
 from date_utils import weekday_for_day
+from pace import pace_bounds
 from planner import compute_transit_legs, _google_get
 # Single source of truth for area aliases/centers/adjacency (see geo.py's own
 # docstring) -- critic_repair.py used to keep its own drifted copy (19 of
@@ -623,11 +624,12 @@ class CriticAgent:
         # directly and have to be re-looked-up from the candidate pool.
         pool = build_candidate_pool(state)
         trip_start_date = state.get("trip_start_date")
+        pace = state.get("pace")
 
         issues: list[CriticIssue] = []
 
         area_report = self._evaluate_area_coverage(itinerary, requested_areas, issues)
-        day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues)
+        day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, pace, issues)
         duplicate_report = self._evaluate_duplicates(itinerary, issues)
         foreigner_report = self._evaluate_foreigner_readiness(itinerary, issues)
 
@@ -716,6 +718,7 @@ class CriticAgent:
         requested_areas: list[str],
         pool: dict[str, dict[str, Any]],
         trip_start_date: str | None,
+        pace: str | None,
         issues: list[CriticIssue],
     ) -> dict[str, Any]:
         days = itinerary.get("days") or []
@@ -727,6 +730,11 @@ class CriticAgent:
             ))
             return {"score": 0.0}
 
+        # Only the floor is used here -- the ceiling half of pace_bounds is
+        # deliberately never read in this module (no per-day POI maximum is
+        # enforced by Critic/Repair).
+        poi_min, _poi_max = pace_bounds(pace)
+
         penalties = 0.0
         checks = 0
 
@@ -735,12 +743,12 @@ class CriticAgent:
             pois = day.get("pois") or []
 
             checks += 1
-            if len(pois) < 5:
+            if len(pois) < poi_min:
                 penalties += 0.35
                 issues.append(CriticIssue(
                     code="TOO_FEW_POIS",
                     severity="medium",
-                    message=f"Day {day_num} has only {len(pois)} POIs; at least 5 are recommended.",
+                    message=f"Day {day_num} has only {len(pois)} POIs; at least {poi_min} are recommended.",
                     day=day_num,
                 ))
 
@@ -973,6 +981,7 @@ class RepairAgent:
             requested_areas=requested_areas,
             logs=logs,
             trip_start_date=state.get("trip_start_date"),
+            pace=state.get("pace"),
         )
 
         # No second dedup pass here: _repair_closed_on_assigned_day's "(b)
@@ -1261,12 +1270,17 @@ class RepairAgent:
         requested_areas: list[str],
         logs: list[str],
         trip_start_date: str | None = None,
+        pace: str | None = None,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
+        # Floor only -- see _evaluate_days for why the ceiling half is never
+        # read here either. This method fills a day UP TO poi_min; it does
+        # not trim anything down, so poi_max has nothing to do.
+        poi_min, _poi_max = pace_bounds(pace)
 
         for idx, day in enumerate(itinerary.get("days") or []):
             pois = day.setdefault("pois", [])
-            if len(pois) >= 5:
+            if len(pois) >= poi_min:
                 continue
 
             weekday = self._weekday_for(trip_start_date, safe_int(day.get("day"), 0))
@@ -1292,7 +1306,7 @@ class RepairAgent:
                 ]
 
             added = 0
-            while len(pois) < 5 and candidates:
+            while len(pois) < poi_min and candidates:
                 item = candidates.pop(0)
                 poi = as_output_poi(
                     item,
