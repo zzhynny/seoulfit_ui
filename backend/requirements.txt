@@ -24,8 +24,10 @@ langchain-google-genai>=2,<3
 langgraph>=0.2.60,<0.3
 dspy==2.5.43
 
-# Vector store for the course RAG (rag.py loads vectorstore/index.faiss).
-faiss-cpu>=1.8
+# retrieval.py 가 코스 벡터(dataset/course_vectors.npz)에 내적을 건다.
+# 125개뿐이라 FAISS 같은 근사 탐색은 필요 없고, 필터가 남긴 부분집합에만
+# 점수를 매겨야 하는데 그건 FAISS 가 못 하는 일이다.
+numpy>=1.26
 
 # Lens - Gemini Vision + Seoul Open Data RAG
 google-genai>=0.3.0

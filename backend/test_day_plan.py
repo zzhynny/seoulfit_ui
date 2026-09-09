@@ -85,10 +85,9 @@ def test_day_plan_rejects_a_thread_that_has_not_reached_day_plan():
     # A brand-new thread id, never touched -- current_step defaults to
     # "start" (see _get_state's fallback dict), so _parse_num_days(None) == 1
     # used to let a trivial 1-day plan sail through and jump the thread
-    # straight to confirm. A never-used id (rather than /reset-ing THREAD)
-    # sidesteps clear_thread's own bug (its checkpoint keys are plain
-    # thread-id strings, not the tuples it filters for, so /reset currently
-    # deletes nothing -- pre-existing, out of this fix's scope).
+    # straight to confirm. A never-used id keeps this test independent of
+    # THREAD's state regardless of /reset (see test_graph.py for /reset's
+    # own coverage).
     fresh_thread = "test-day-plan-never-seeded-0000000001"
     days = [{"day": 1, "region": "jongno", "interest": "Shopping"}]
     r = client.post("/day-plan", json={"thread_id": fresh_thread, "days": days})

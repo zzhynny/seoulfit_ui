@@ -543,9 +543,14 @@ _memory: MemorySaver | None = None
 
 
 def clear_thread(thread_id: str) -> None:
-    """Delete one thread's checkpoints from the in-memory store."""
+    """Delete one thread's checkpoints from the in-memory store.
+
+    `MemorySaver.storage` is keyed by plain thread-id strings, not the
+    tuples an earlier version of this function filtered for, so that
+    filter never matched anything and /reset was a silent no-op. Use the
+    checkpointer's own `delete_thread`, which also clears `writes` and
+    `blobs` for the thread.
+    """
     if _memory is None:
         return
-    to_del = [k for k in list(_memory.storage) if isinstance(k, tuple) and k[0] == thread_id]
-    for k in to_del:
-        del _memory.storage[k]
+    _memory.delete_thread(thread_id)
