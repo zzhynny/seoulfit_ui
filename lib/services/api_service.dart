@@ -92,6 +92,27 @@ class ApiService {
     );
   }
 
+  /// Stores the per-day plan and advances the thread to `confirm`.
+  Future<TravelState> postDayPlan(List<DaySpec> days) async {
+    final response = await http
+        .post(
+          Uri.parse('$_base/day-plan'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'thread_id': threadId,
+            'days': days.map((d) => d.toJson()).toList(),
+          }),
+        )
+        .timeout(chatTimeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Backend error ${response.statusCode}: ${response.body}');
+    }
+    return TravelState.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
   /// Resets the conversation on the backend.
   Future<void> reset() async {
     await http

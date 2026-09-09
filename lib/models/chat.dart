@@ -8,6 +8,7 @@ class ChatMessage {
     this.readyToBuild = false,
     this.quickReplies = const [],
     this.awaitingField,
+    this.awaitingStep,
   });
 
   final ChatSender sender;
@@ -25,6 +26,11 @@ class ChatMessage {
   /// about. Drives the calendar affordance, which only makes sense while the
   /// buddy is waiting on `travel_dates`.
   final String? awaitingField;
+
+  /// The backend's `current_step` this message was sent from — 'collecting',
+  /// 'day_plan' or 'confirm'. `day_plan` is what reveals the "Plan each day"
+  /// CTA, since that step needs the Day Planner screen rather than a chip.
+  final String? awaitingStep;
 
   /// Reveals the "Build My Itinerary" CTA. Separate from
   /// [showTravelerSelector] because the two coincide only in the mock: the

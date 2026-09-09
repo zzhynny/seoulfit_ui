@@ -110,7 +110,6 @@ void main() {
   test('unanswered slots render as an em dash, not an empty row', () {
     final prefs = toUiPreferences(const api.TravelState(
       travelDates: 'Oct 12 for 5 days',
-      region: '  ',
     ));
 
     expect(prefs.dateRange, 'Oct 12 for 5 days');
@@ -185,7 +184,7 @@ void main() {
 
     final itinerary = toUiItinerary(
       api.Itinerary.fromJson(payload),
-      const api.TravelState(travelDates: 'October 12-14', region: 'Jongno'),
+      const api.TravelState(travelDates: 'October 12-14'),
     );
 
     expect(itinerary.days, hasLength(1));

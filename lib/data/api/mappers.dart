@@ -195,6 +195,17 @@ TripSource toUiSource(api.ItinerarySource source) => TripSource(
       sourceUrl: source.sourceUrl,
     );
 
+/// The Confirm Slots "Region" row now has no single backend slot to read —
+/// `region` moved from one global answer to a per-day pick in `day_specs`.
+/// Joins the days' distinct area labels; empty when nothing was set yet.
+String _regionSummary(List<api.DaySpec> daySpecs) {
+  final labels = <String>{
+    for (final d in daySpecs)
+      if (d.region.trim().isNotEmpty) api.kRegionLabels[d.region] ?? d.region,
+  };
+  return labels.join(', ');
+}
+
 /// Shown as-is on Confirm Slots. A slot the traveller never answered comes
 /// back null; the em dash keeps the row's shape rather than collapsing it.
 TripPreferences toUiPreferences(api.TravelState state) {
@@ -203,7 +214,7 @@ TripPreferences toUiPreferences(api.TravelState state) {
 
   return TripPreferences(
     dateRange: slot(state.travelDates),
-    region: slot(state.region),
+    region: slot(_regionSummary(state.daySpecs)),
     travelStyle: slot(state.category),
     groupSize: slot(state.companion),
     dietaryNotes: slot(state.restrictions),

@@ -43,6 +43,7 @@ class ApiChatRepository implements ChatRepository {
       readyToBuild: state.currentStep == 'confirm',
       quickReplies: _quickRepliesFor(state.currentField),
       awaitingField: state.currentField,
+      awaitingStep: state.currentStep,
     );
   }
 }
@@ -83,8 +84,10 @@ List<String> _quickRepliesFor(String? field) {
       return const ['Packed', 'Relaxed'];
     case 'restrictions':
       return const ['None'];
-    case 'region':
-      return const ['Recommend one', 'Hongdae', 'Gangnam', 'Itaewon'];
+    case 'purpose':
+      // Free text is the point — a chip would collapse it back into a label.
+      // Only the skip is offered.
+      return const ['Skip'];
     default:
       return const [];
   }

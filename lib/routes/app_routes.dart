@@ -17,9 +17,12 @@ import '../screens/onboarding/permissions_screen.dart';
 import '../screens/chat/chat_screen.dart';
 import '../screens/live_help/live_help_screen.dart';
 import '../models/chat.dart';
+import '../models/travel_state.dart';
+import '../services/api_service.dart';
 
 import '../screens/trip/trip_branch_root.dart';
 import '../screens/trip/confirm_slots_screen.dart';
+import '../screens/trip/day_planner_screen.dart';
 import '../screens/trip/crafting_itinerary_screen.dart';
 import '../screens/trip/initial_itinerary_screen.dart';
 import '../screens/trip/make_trip_yours_screen.dart';
@@ -53,6 +56,11 @@ class AppRoutes {
   // brief full-screen transitions rather than places to switch tabs from.
   static const craftingItinerary = '/crafting-itinerary';
   static const reoptimizing = '/reoptimizing';
+
+  // Standalone like the loaders above, not nested under Trip: reached from
+  // the Chat tab mid-intake, before there is a Trip-tab itinerary to nest
+  // under.
+  static const dayPlanner = '/day-planner';
 
   static const error = '/error';
 
@@ -133,6 +141,16 @@ GoRouter buildAppRouter() {
           onFailed: () => context.go(AppRoutes.error),
         ),
       ),
+      GoRoute(
+        path: AppRoutes.dayPlanner,
+        builder: (context, state) => _DayPlannerLoader(
+          api: context.read<ApiService?>(),
+          // POST /day-plan is what advances the thread past `day_plan` into
+          // `confirm` — Confirm Slots is the same screen the chat's own
+          // readyToBuild CTA lands on for that step.
+          onDone: () => context.go(AppRoutes.confirmSlots),
+        ),
+      ),
 
       GoRoute(
         path: AppRoutes.error,
@@ -156,6 +174,9 @@ GoRouter buildAppRouter() {
                 // push(), since Confirm Slots now lives inside the Trip
                 // branch's own nested Navigator, not this one.
                 onBuildItinerary: () => context.go(AppRoutes.confirmSlots),
+                // Day Planner is standalone (see AppRoutes.dayPlanner) —
+                // push(), so Back returns to this exact chat turn.
+                onOpenDayPlanner: () => context.push(AppRoutes.dayPlanner),
               ),
               routes: [
                 GoRoute(
@@ -398,5 +419,50 @@ GoRouter buildAppRouter() {
       ),
     ],
   );
+}
+
+/// Fetches `day_specs` once via GET /state, then hands off to
+/// [DayPlannerScreen]. A StatefulWidget rather than an inline `FutureBuilder`
+/// in the `GoRoute` builder above: that builder can re-run on unrelated
+/// provider rebuilds, and re-fetching `/state` on every one of those would
+/// spend a needless round trip and flash the loading state.
+class _DayPlannerLoader extends StatefulWidget {
+  const _DayPlannerLoader({required this.api, required this.onDone});
+
+  final ApiService? api;
+  final VoidCallback onDone;
+
+  @override
+  State<_DayPlannerLoader> createState() => _DayPlannerLoaderState();
+}
+
+class _DayPlannerLoaderState extends State<_DayPlannerLoader> {
+  // Mocks build with no ApiService; day_specs is empty in that case (the
+  // Figma-parity mock builds never reach this route since MockChatRepository
+  // never sets currentStep to 'day_plan').
+  late final Future<List<DaySpec>> _future = widget.api == null
+      ? Future.value(const <DaySpec>[])
+      : widget.api!.getState().then((s) => s.daySpecs);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<DaySpec>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return DayPlannerScreen(
+          initial: snapshot.data!,
+          onSubmit: (days) async {
+            await widget.api?.postDayPlan(days);
+            widget.onDone();
+          },
+        );
+      },
+    );
+  }
 }
 

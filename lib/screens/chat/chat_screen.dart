@@ -11,10 +11,20 @@ import '../../theme/theme.dart';
 enum ChatMode { plan, onTrip }
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.onOpenHelpTopic, required this.onBuildItinerary});
+  const ChatScreen({
+    super.key,
+    required this.onOpenHelpTopic,
+    required this.onBuildItinerary,
+    required this.onOpenDayPlanner,
+  });
 
   final void Function(LiveHelpTopic topic) onOpenHelpTopic;
   final VoidCallback onBuildItinerary;
+
+  /// Opens the Day Planner screen — the `day_plan` step's CTA, shown instead
+  /// of "Ready? Build My Itinerary" while the backend is waiting on the
+  /// per-day area/focus rows rather than a yes.
+  final VoidCallback onOpenDayPlanner;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -90,6 +100,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   onQuickReply: _send,
                   onPickDates: _pickDates,
                   onBuildItinerary: widget.onBuildItinerary,
+                  onOpenDayPlanner: widget.onOpenDayPlanner,
                 )
               : _OnTripView(onOpenTopic: widget.onOpenHelpTopic),
         ),
@@ -203,6 +214,7 @@ class _PlanView extends StatelessWidget {
     required this.onQuickReply,
     required this.onPickDates,
     required this.sending,
+    required this.onOpenDayPlanner,
   });
 
   final List<ChatMessage> messages;
@@ -214,6 +226,7 @@ class _PlanView extends StatelessWidget {
   final VoidCallback onBuildItinerary;
   final ValueChanged<String> onQuickReply;
   final VoidCallback onPickDates;
+  final VoidCallback onOpenDayPlanner;
 
   /// A turn is in flight. Shown as a typing bubble, and the composer's send
   /// button becomes a spinner.
@@ -291,6 +304,12 @@ class _PlanView extends StatelessWidget {
             },
           ),
         ),
+        // day_plan 단계에서는 일정 생성 대신 Day Planner 로 보낸다.
+        if (messages.isNotEmpty && messages.last.awaitingStep == 'day_plan')
+          _CtaButton(
+            label: 'Plan each day',
+            onPressed: onOpenDayPlanner,
+          ),
         if (messages.any((m) => m.readyToBuild))
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
@@ -395,6 +414,38 @@ class _PlanView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A full-width outlined CTA under the message list, same shape as the
+/// "Ready? Build My Itinerary" button above it — the two are mutually
+/// exclusive states (`day_plan` vs. `confirm`) so only ever one shows.
+class _CtaButton extends StatelessWidget {
+  const _CtaButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: AppColors.primary),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
     );
   }
 }

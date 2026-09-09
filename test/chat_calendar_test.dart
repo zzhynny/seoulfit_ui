@@ -41,7 +41,11 @@ Future<void> pumpChat(WidgetTester tester, ChatRepository repository) async {
       // ChatScreen is a Column that normally lives inside MainShell's
       // Scaffold; its composer TextField needs that Material ancestor.
       home: Scaffold(
-        body: ChatScreen(onOpenHelpTopic: (_) {}, onBuildItinerary: () {}),
+        body: ChatScreen(
+          onOpenHelpTopic: (_) {},
+          onBuildItinerary: () {},
+          onOpenDayPlanner: () {},
+        ),
       ),
     ),
   ));
