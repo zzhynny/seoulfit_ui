@@ -69,3 +69,41 @@ def test_every_course_has_description_fields_joined():
     for c in retrieval.load_courses():
         assert c["interests"], c["course_id"]
         assert c["purpose"], c["course_id"]
+
+
+import numpy as np  # noqa: E402
+
+
+def _fake_vectors(course_ids, favourite):
+    """favourite 만 질의와 같은 방향이고 나머지는 직교하는 단위 벡터들."""
+    dim = 4
+    matrix = np.zeros((len(course_ids), dim), dtype="float32")
+    for i, cid in enumerate(course_ids):
+        matrix[i, 1] = 1.0
+    matrix[course_ids.index(favourite)] = np.array([1, 0, 0, 0], dtype="float32")
+    return course_ids, matrix
+
+
+def test_similarity_orders_the_filtered_pool():
+    pool = retrieval.select_anchors(spec("jongno", "Culture & History"), k=100).courses
+    ids = [c["course_id"] for c in pool]
+    favourite = ids[-1]                      # 필터 순서상 맨 뒤였던 코스
+    q = np.array([1, 0, 0, 0], dtype="float32")
+
+    sel = retrieval.select_anchors(
+        {**spec("jongno", "Culture & History"), "purpose_vec": q},
+        k=3, vectors=_fake_vectors(ids, favourite),
+    )
+    assert sel.courses[0]["course_id"] == favourite
+    assert sel.sims[favourite] == 1.0
+
+
+def test_no_vectors_still_returns_k_courses():
+    sel = retrieval.select_anchors(spec("jongno", "Culture & History"), k=3, vectors=None)
+    assert len(sel.courses) == 3
+    assert sel.sims == {}
+
+
+def test_load_vectors_returns_none_when_file_is_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(retrieval, "VECTORS", tmp_path / "nope.npz")
+    assert retrieval.load_vectors.__wrapped__() is None

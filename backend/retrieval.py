@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, NamedTuple
+
+import numpy as np
 
 from geo import area_matches_requested, infer_area_from_fields
 
@@ -173,3 +176,24 @@ def _rank(pool, query_vec, vectors):
     order = sorted(have, key=lambda c: sims[c["course_id"]], reverse=True)
     missing = [c for c in pool if c["course_id"] not in sims]
     return order + missing, sims
+
+
+@lru_cache(maxsize=1)
+def load_vectors() -> tuple[list[str], "np.ndarray"] | None:
+    """dataset/course_vectors.npz 를 읽어 (ids, matrix) 로 돌려준다.
+
+    없으면 None — 호출자는 유사도 정렬만 건너뛰고 필터 결과로 계속 간다.
+    FAISS 를 쓰지 않는다: 125개는 전수 내적이 근사보다 빠르고 정확하며, 무엇보다
+    필터가 남긴 부분집합에만 점수를 매겨야 하는데 FAISS 는 그걸 못 한다.
+    """
+    if not VECTORS.exists():
+        print(f"[retrieval] {VECTORS.name} not found — ranking disabled, filters still apply")
+        return None
+    z = np.load(VECTORS, allow_pickle=False)
+    ids = [str(x) for x in z["ids"]]
+    # 벡터가 없는 코스는 조용히 순위에서 빠진다. purpose 를 고치고 재빌드를
+    # 잊었을 때 알아차릴 유일한 지점이라 여기서 소리를 낸다.
+    if missing := {c["course_id"] for c in load_courses()} - set(ids):
+        print(f"[retrieval] {len(missing)} courses have no vector — "
+              f"they will not be ranked. Re-run build_vectors.py")
+    return ids, z["vectors"]
