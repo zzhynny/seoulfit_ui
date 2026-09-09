@@ -1,0 +1,1375 @@
+{
+  "_meta": {
+    "purpose": "Per-course descriptions and interest tags used by retrieval. Joined to dataset/course_data_v6.json by course_id.",
+    "vocab": {
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [
+        "halal",
+        "vegan",
+        "vegetarian",
+        "budget",
+        "luxury",
+        "wheelchair",
+        "no_alcohol"
+      ]
+    },
+    "validated_by": "backend/scripts/validate_descriptions.py"
+  },
+  "courses": [
+    {
+      "course_id": "VS_MVP_001",
+      "interests": [
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who wants to see where young Seoul actually spends its weekends, in one district, without crossing the city.",
+      "description": "A single loop through Seongsu. Seongsu Yeonmujang-gil, Amore Seongsu, Seongsu Handmade Shoes Street and Seongsu Self-Photo Booths, then Seoul Forest, Seongsu-dong Galbi Alley for dinner and Seongsu Sky Bridge. Everything is walkable from the last stop, and three of the seven entries are the streets themselves rather than single venues."
+    },
+    {
+      "course_id": "VS_MVP_002_DAY1",
+      "interests": [
+        "Culture & History",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "Day one of three for families with children, built on museums a child can touch rather than look at.",
+      "description": "Seoul Robot & AI Museum and Seoul Science Center, then Dream Forest, Gyeongchun Line and Surak Hyu Treehouse. All of it sits in the northeast, well outside the tourist centre, so the day does not compete with adult sightseeing. No meal stop is listed; the museums and parks have their own cafeterias."
+    },
+    {
+      "course_id": "VS_MVP_002_DAY2",
+      "interests": [
+        "Culture & History",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "Day two for families, trading museums for open space and a river crossing children can ride.",
+      "description": "National Aviation Museum of Korea and Seoul Botanic Park in the far west, then SEOULDAL, the National Assembly Building and the Hangang River Bus. The day ends on the water rather than at a gate. No restaurant is listed, so food comes from the venues themselves."
+    },
+    {
+      "course_id": "VS_MVP_002_DAY3",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The last family day, spent entirely in Jamsil so a tired child is never far from a seat.",
+      "description": "Lotte World Adventure takes most of it, then Seoul Sky and SEA LIFE COEX, Seoul Aquarium, closing at Saemaeul Market. Five hours are budgeted for the theme park alone, which is realistic and leaves the other three as short stops."
+    },
+    {
+      "course_id": "VS_MVP_003_DAY1",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For an eater who would rather work through Seoul's specialist food alleys than sit down at recommended restaurants.",
+      "description": "Jangchung-dong Jokbal Alley, Namsangol Hanok Village, Sindang-dong Tteokbokki Town, Dongdaemun Shopping Town, DDP and Dongdaemun Grilled Fish Alley. Three of the six stops are alleys, not single restaurants, so the actual shop is chosen on arrival. Namsangol Hanok Village is closed Mondays."
+    },
+    {
+      "course_id": "VS_MVP_003_DAY2",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The second food day, moving from Dongdaemun to the Namdaemun and Euljiro side of the old city.",
+      "description": "Namdaemun Market and Namdaemun Galchi-jorim Alley, Deoksugung Palace, Myeong-dong, Euljiro Nogari Alley and Cheonggyecheon Stream. The palace and the stream sit between the meals as walking breaks. Deoksugung Palace is closed Mondays."
+    },
+    {
+      "course_id": "VS_MVP_004",
+      "interests": [
+        "Culture & History",
+        "Shopping",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor whose interest in Korea is its games industry, not its palaces.",
+      "description": "Netmarble Game Museum, SEOULDAL, The Hyundai Seoul, e-Sports Hall of Fame, HiKR Ground and LoL Park. The only course in the set built around gaming venues, and the two halls exist nowhere else in this data. No meal is listed; the malls cover it."
+    },
+    {
+      "course_id": "VS_MVP_005_DAY1",
+      "interests": [
+        "Culture & History",
+        "Shopping",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "Day one of a two-day route following the backdrops of the animation K-POP Demon Hunters, in the order the film uses them.",
+      "description": "N Seoul Tower, Myeong-dong, Gwanghwamun Square, Insadong Ssamziegil, Bukchon Hanok Village and Naksan Park. These are ordinary landmarks; what makes the day a pilgrimage is the sequence rather than any dedicated site. No food stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_005_DAY2",
+      "interests": [
+        "Culture & History",
+        "Shopping",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "Day two of the same film route, crossing to the southeast where the later scenes are set.",
+      "description": "Seokchon Lake, Olympic Park, Seoul Olympic Main Stadium, COEX, Starfield Library and Cheongdam Bridge. Four of the six are outdoor or open halls, so the day runs long in good weather and thin in bad. No restaurant is included, so meals are picked at COEX."
+    },
+    {
+      "course_id": "VS_MVP_006",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For someone with a long layover or a last morning near Gimpo, who needs a full day that never goes downtown.",
+      "description": "Seoul Botanic Park, Space K Seoul, LG Arts Center, Gangseo Wetland Eco Park, National Aviation Museum of Korea and Magok Culture Street. Everything is in Gangseo-gu within a short ride of the airport. No restaurant is listed, so eating happens at the venues."
+    },
+    {
+      "course_id": "VS_MVP_007",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who came for Korean performance and art rather than street life, and wants a day that stays indoors.",
+      "description": "National Gugak Center and National Gugak Museum, lunch at Baeknyeonok or Encore Kalguksu, then Hangaram Art Museum, Seoul Arts Center and Seoul Calligraphy Art Museum. All seven stops sit on the same Seocho campus, so the walking is minimal and the day is weatherproof."
+    },
+    {
+      "course_id": "VS_MVP_008",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a half-day of art and traditional music on Namsan, ending high enough to watch the city switch on.",
+      "description": "From Chungmuro Station up through Namsangol Hanok Village and Seoul Namsan Gugakdang to N Seoul Tower, finishing at piknic. Five stops on one hillside, so the route is a climb rather than a series of transfers. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_009",
+      "interests": [
+        "Food & Cafes",
+        "Shopping",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "A short, cheap afternoon aimed at teenagers, built around a market and an accessory street rather than admission tickets.",
+      "description": "Mangwon Station, Mangwon Market, Mangnidan Street Accessory Shop, then Digital Media City. The first three are within a few blocks of each other; DMC is a train ride away and is the only broadcast-related stop."
+    },
+    {
+      "course_id": "VS_MVP_010",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor drawn to second-hand and old-Seoul texture rather than new buildings.",
+      "description": "Dongmyo Station, Dongmyo Flea Market, Naksan Park and a Daehak-ro Retro Cafe. Four stops on one line, short enough to attach to another afternoon. The flea market carries the day; the park is the walk between it and coffee."
+    },
+    {
+      "course_id": "VS_MVP_011_DAY2",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The second day of a five-day first-visit route, given over to the west side: student streets, a market, and the parks behind the stadium.",
+      "description": "Hongik Univ., Yeonnam-dong, Gyeongui Line Book Street, Mangwon-dong, Mangwon Market, Seoul World Cup Stadium, Haneul Park and Digital Media City. Eight stops in one day is the heaviest in this course; the first four are contiguous and the last three need transit."
+    },
+    {
+      "course_id": "VS_MVP_011_DAY3",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "Day three of five, covering the old centre — the streets the city grew from, then the tower that looks back down on them.",
+      "description": "Jongno Area, Euljiro Area, National Museum of Modern and Contemporary Art, N Seoul Tower and Cheonggyecheon Stream. Two of the five entries are districts rather than venues, so half the day is unstructured walking. No restaurant is listed, and Jongno and Euljiro are where food would come from."
+    },
+    {
+      "course_id": "VS_MVP_011_DAY4",
+      "interests": [
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "Day four, running the whole southeast in one push: Seongsu, then Jamsil, then Gangnam.",
+      "description": "Seongsu-dong, Seoul Forest, Lotte World, Lotte World Mall, Seoul Sky, Seokchon Lake, Jamsil Hangang Park and Gangnam Station. Nearly fifteen hours of stay time is budgeted here, which is more than a day holds — the theme park alone takes five. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_011_DAY5",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The last of five days, kept short and on one hill so it can end at an airport train.",
+      "description": "The War Memorial of Korea, Itaewon, Hannam-dong and Gyeongnidan-gil. Four stops, all on the same side of the river, three of them districts rather than venues. No restaurant is listed, though Gyeongnidan-gil is where the eating is."
+    },
+    {
+      "course_id": "VS_MVP_012_DAY1",
+      "interests": [
+        "Culture & History"
+      ],
+      "constraints": [],
+      "purpose": "The arrival day of a four-day first-visit route, holding one stop so a late landing does not wreck the schedule.",
+      "description": "Gwanghwamun Square only, an hour of it. This is a placeholder for whatever time is left after checking in rather than a day's plan, and it needs filling out from elsewhere. No food stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_012_DAY2",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The full day of a four-day route, sweeping the centre from Myeong-dong out to the river and back over the northern ridge.",
+      "description": "Myeong-dong, N Seoul Tower, Baekbeom Square Park, Seoul Station, Hangang Parks, Itaewon, Euljiro Area and Bugak Skyway. Eight stops across five districts makes this the longest day in the course. No restaurant is listed, so meals come from Myeong-dong or Itaewon."
+    },
+    {
+      "course_id": "VS_MVP_012_DAY3",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "Day three, moving west and south to the student quarter and the island parks of the Han.",
+      "description": "Hongik Univ., Seonyudo Park, Times Square Yeongdeungpo and 63 Building. Four stops that thread along the river rather than clustering, so transit takes a real share of the day. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_012_DAY4",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The departure day, two stops in Gangnam so the route ends near the airport bus rather than across town.",
+      "description": "Gangnam Station and Bongeunsa Temple, a little over two hours together. Short by design; it is the tail of a four-day plan, not a day in itself. No food stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_013_DAY1",
+      "interests": [
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The arrival evening of the shortest first-visit route, holding one district so an evening landing still counts as a day.",
+      "description": "Myeong-dong alone, ninety minutes. It works as an arrival stop because the shops and food stalls run late and it sits near most downtown hotels. No specific restaurant is listed; the street stalls are the meal."
+    },
+    {
+      "course_id": "VS_MVP_013_DAY2",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The one full day of a two-night route, which is why it carries nine stops instead of the usual four.",
+      "description": "Gwanghwamun Square, Gyeongbokgung Palace, Insa-dong, Samcheong-dong, Gwangjang Market, Dongdaemun Design Plaza, Namsan Cable Car, N Seoul Tower and Hangang Parks. Eleven and a half hours of stay time; treat the list as an order of priority rather than a promise. Gyeongbokgung is closed Tuesdays."
+    },
+    {
+      "course_id": "VS_MVP_013_DAY3",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The departure day, three quick stops split between the Gangnam side and the university quarter.",
+      "description": "Gangnam Station, Coex Mall and Hongik Univ. Station. Just over three hours, and the two ends are opposite corners of the city, so it only works with luggage already stored. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_014",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a fan who wants the hallyu circuit and the market food in the same day rather than choosing between them.",
+      "description": "The market comes first, recorded here only under its Korean name 광장시장, then K-Star Road, Amore Store Beauty Experience, Apgujeong and Dosan Park. The market is downtown and the rest is Gangnam, so the day is two halves with a subway ride between them."
+    },
+    {
+      "course_id": "VS_MVP_015_DAY1",
+      "interests": [
+        "Nature & Relaxation"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "The arrival day of a five-day walking route for travellers spending as little as possible.",
+      "description": "Gyeongui Line Forest Park, ninety minutes. A free park near the guesthouse belt, which is the point on a day that starts at the airport. No food stop is listed; eating is left to the neighbourhood."
+    },
+    {
+      "course_id": "VS_MVP_015_DAY2",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "The heavy day of the walking route, covering the palace quarter on foot rather than by transfer.",
+      "description": "Changdeokgung Palace and Secret Garden, Bukchon, Insa-dong, Seodaemun Prison History Hall, Myeong-dong and N Seoul Tower. Thirteen hours of stay time, most of it walking between stops that are genuinely adjacent. No restaurant is listed, which fits a budget route where meals are found rather than booked."
+    },
+    {
+      "course_id": "VS_MVP_015_DAY3",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "A deliberately light day in Yongsan, one museum and one riverbank, for legs that have already walked two days.",
+      "description": "The War Memorial of Korea and Yongsan Park, then Ichon Hangang Park. Both are free and a few minutes apart. Four and a half hours total, so the rest of the day is open. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_015_DAY4",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "A climbing day paired with the cheapest eating street in the old city.",
+      "description": "Inwangsan Mountain, then Sejong Village Food and Culture Alley and Cheonggyecheon Stream. The mountain is the morning and the alley is lunch; the stream walks it off. All three cost nothing to enter."
+    },
+    {
+      "course_id": "VS_MVP_015_DAY5",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "The departure day of the walking route, one stop near the airport line so nothing is rushed.",
+      "description": "Hongik Univ. and the streets around it, two and a half hours. A last cheap meal and a train; that is the whole day. No specific restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_016",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who came because of Korean film and television, and wants the places that keep showing up on screen.",
+      "description": "Nodeulseom Island, National Museum of Korea, Daehak-ro Streets, Yongma Land, Bukchon Hanok Village, Choong Ang High School and Buam-dong. The abandoned fairground and the school are the unusual entries; the rest are standard landmarks that happen to film well. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_017",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who wants an evening the way a resident would spend it, rather than a sightseeing list.",
+      "description": "Yeouido Hangang Park, Jongno and Euljiro Area. Three entries and all three are districts, not venues, so this is a direction rather than a plan. No restaurant is named, and eating in Jongno or Euljiro is most of the point."
+    },
+    {
+      "course_id": "VS_MVP_018",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For someone interested in how the modern city was built, following industrial and railway remains through the centre.",
+      "description": "Donuimun Museum Village, Seoul Museum of History, Euljiro Area, Sewoon Plaza, Dongdaemun Design Plaza, Yongsan Baekbin Railroad, Seoullo 7017, Culture Station Seoul 284 and Mullae Art Village. Nine stops spread over four districts, so it reads better as a menu than a single day. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_019",
+      "interests": [
+        "Culture & History",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a first visit that wants the traditional circuit done properly, in hanbok, in one day.",
+      "description": "Hanbok Rental first, then Gyeongbokgung Palace, Changdeokgung Palace, Bukchon Hanok Village, Insa-dong, Jogyesa Temple, Namsangol Hanok Village and Ikseon-dong. Renting the clothes first is deliberate: it waives palace admission. Gyeongbokgung is closed Tuesdays and Changdeokgung Mondays, so the pair cannot be swapped freely. No restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_020",
+      "interests": [
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor whose trip is a shopping trip, covering department stores, a boutique street and the two largest malls in one run.",
+      "description": "Times Square Yeongdeungpo, IFC Mall, The Hyundai Seoul, Garosu-gil, Apgujeong Select Shop, Lotte World Mall and Starfield Coex Mall. Seven stops, every one of them retail, across Yeouido, Gangnam and Jamsil. No restaurant is listed; the malls carry the food courts."
+    },
+    {
+      "course_id": "VS_MVP_021",
+      "interests": [
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who wants the hours after dark, when the markets reopen and the river lights up.",
+      "description": "Sindang-dong, Dongdaemun Market, Hangang River Cruise, Naksan Park, Gangnam Station and Cheongdam-dong. The Dongdaemun wholesale floors run through the night, which is what makes the order work. No restaurant is listed, so dinner comes from Sindang-dong."
+    },
+    {
+      "course_id": "VS_MVP_022",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes"
+      ],
+      "constraints": [],
+      "purpose": "For an eater who wants three specific restaurants rather than a district to wander.",
+      "description": "애호락 안국본점 in Anguk, 루비스 한남점 in Hannam and 그동네떡볶이 홍대본점 near Hongik. Only three stops, and all three are recorded under Korean names only, so an English-speaking traveller will need the Korean to find them."
+    },
+    {
+      "course_id": "VS_MVP_023",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who would rather do something than look at something, and does not mind that the venue is decided on the day.",
+      "description": "Hangang Water Sports, 템플스트라이크, then Karaoke and Jjimjilbang. The last three are activity categories rather than named businesses, so the actual venue has to be picked on arrival. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_024",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a slow day with no ticket queues, built on a park, a coffee street and a city wall path.",
+      "description": "Seoul Forest, Seoul Forest Cafe Streets and a Seoul City Wall Hike. Three stops in a little over three hours, so it fits into an afternoon rather than filling a day."
+    },
+    {
+      "course_id": "VS_MVP_025",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants to take part in Korean music rather than watch it, including an hour of learning choreography.",
+      "description": "Sinchon Station, a KPOP Dance One-day Class, Hongdae Railroad Street, Gyeongui Line Forest Park, Jazz Bars and Hongik Univ. The dance class is the only participatory K-POP stop in this data. Jazz Bars is a category, not a venue. No restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_026",
+      "interests": [
+        "Culture & History",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "A compact walking loop through the hanok quarter for someone with half a day and no interest in transit.",
+      "description": "From Anguk Station to Bukchon Hanok Village, Unhyeongung Palace, Insa-dong Culture Street and Seoul Museum of Craft Art. Five stops within about a kilometre of each other. No meal stop is listed, though Insa-dong covers it."
+    },
+    {
+      "course_id": "VS_MVP_027",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a walker who wants a mountain and a royal altar in the same morning, ending at a market lunch.",
+      "description": "Gyeongbokgung Station, Sajikdan Altar, Hwanghakjeong Pavilion, Inwangsan Mountain, Suseongdong Valley, Hyoja-dong Streets and Tongin Market. The climb is genuine and the descent lands in Seochon, which is where the food is."
+    },
+    {
+      "course_id": "VS_MVP_028_DAY1",
+      "interests": [
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The opening day of a route for people who already did the palaces on an earlier trip and want the parts they missed.",
+      "description": "Brunch at Yeonhui-dong, then Gyeongui Line Forest Park. Two stops and three hours, arriving-day light. Neither is on a standard first-visit list, which sets the tone for the rest."
+    },
+    {
+      "course_id": "VS_MVP_028_DAY2",
+      "interests": [
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "A day of disused infrastructure and outer-ring trails, chosen because none of it appears on a first visit.",
+      "description": "Jungnang Dulle-gil, Yongma Land, Hangdong Railroad and Hangang Parks. The abandoned fairground and the old rail line are the draw; both are in outer districts and take real travel time. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_028_DAY3",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "An overnight in the mountains on the city's northern edge, which is the one thing a hotel-based trip cannot do.",
+      "description": "Bukhansan Mountain, Bukhansan Caravan & Glamping, then Naksan Park City Wall Trail. The nineteen hours recorded here include the overnight stay, not walking. No restaurant is listed; the campsite handles food."
+    },
+    {
+      "course_id": "VS_MVP_028_DAY4",
+      "interests": [
+        "Culture & History",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The closing day, spent in Gangnam where royal tombs sit two blocks from the largest mall in the city.",
+      "description": "Seolleung and Jeongneung Royal Tombs, Coex Mall and Bongeunsa Temple. Three stops within walking distance of each other, and the contrast between them is the point. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_029_DAY1",
+      "interests": [
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "Day one of a route built to feel like living in Seoul rather than visiting it, starting where residents spend Saturdays.",
+      "description": "Seoul Forest and the Seongsu-dong Area, five hours between them. Two entries, one of them a whole district, so the day is deliberately unstructured. No restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_029_DAY2",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The long day of the resident route, crossing the wealthy neighbourhoods on both sides of the river.",
+      "description": "Hannam-dong, Leeum Museum of Art, Yongsan Park, Bluesquare Performance Hall, Itaewon, Dongjakdaegyo Bridge, Seorae Village, Garosu-gil and Apgujeong Rodeo. Nine stops and seventeen hours of stay time, which no single day absorbs. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_029_DAY3",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The last day, returning to the old centre so the trip ends where a first visit would have begun.",
+      "description": "Bukchon Hanok Village, Gwanghwamun Square and Cheonggyecheon Stream. Four hours, all walkable, a deliberate wind-down after two dense days. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_030_DAY1AND2",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The opening block of the most conventional first-visit route, covering what a traveller would regret missing.",
+      "description": "Myeong-dong, Bukchon Hanok Village, Gwangjang Market and Dongdaemun Market / DDP. This entry covers two days at once, so the four stops are a two-day list rather than one day's walking."
+    },
+    {
+      "course_id": "VS_MVP_030_DAY3",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The middle day of the first-visit route, pairing the government quarter with the hill above it.",
+      "description": "Gwanghwamun Area, Namsan Cable Car / N Seoul Tower and Itaewon. Three stops, two of which are districts. No restaurant is listed, and Itaewon is where dinner would be."
+    },
+    {
+      "course_id": "VS_MVP_030_DAY4",
+      "interests": [
+        "K-POP & Hallyu",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The Gangnam day, ending at the bridge fountain because it only runs after dark.",
+      "description": "Gangnam Station, Starfield Coex Mall, K-Star Road and Banpo Bridge Moonlight Rainbow Fountain. The fountain fixes the order — it is the only stop with a fixed showtime. No meal is listed; the mall covers it."
+    },
+    {
+      "course_id": "VS_MVP_030_DAY5",
+      "interests": [
+        "Culture & History"
+      ],
+      "constraints": [],
+      "purpose": "The departure day, one district near the airport line so a morning flight is not a problem.",
+      "description": "Hongik Univ. and the streets around it, two and a half hours. A last walk rather than a plan. No food stop is listed, though the area is full of them."
+    },
+    {
+      "course_id": "VS_MVP_031",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who is eating their way through the city and wants the districts that specialise, not individual restaurants.",
+      "description": "Seongsu-dong Cafe Street, Jongno Hanok Cafes, Yeonnam-dong Cafe Street, Namdaemun Hairtail Alley, Itaewon World Food Street and Apgujeong Rodeo Street. Every stop is a street rather than a venue, so the specific shop is chosen on the spot, and the six sit in six different districts."
+    },
+    {
+      "course_id": "VS_MVP_032",
+      "interests": [
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who only wants to know where Seoul is currently spending its money.",
+      "description": "The Hyundai Seoul, Seongsu-dong and Apgujeong Rodeo Street. Three commercial districts, all of which appear in other courses, so this works better as a hint about where to go than as a day's itinerary. No restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_033_DAY1",
+      "interests": [
+        "Culture & History",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The arrival day of a museum-led route, kept to the two adjacent quarters that need no planning.",
+      "description": "Bukchon and Insa-dong, three hours together. Both are walkable from the same subway exit, which suits a day that starts at an airport. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_033_DAY2",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "A day on the city's converted infrastructure — a station, an overpass and a stream that were all something else first.",
+      "description": "Culture Station Seoul 284, Seoullo 7017, Myeong-dong, Cheonggyecheon Stream and Dongdaemun Design Plaza. The three conversions bracket the shopping in the middle. No restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_033_DAY3",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The Gangnam day of the museum route, ending high enough to see how much of the city is new.",
+      "description": "Bongeunsa Temple, Coex Mall, Seoul Sky and Sewoon Plaza. The temple and the mall face each other across one road; Sewoon Plaza is downtown and sits oddly at the end. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_033_DAY4",
+      "interests": [
+        "Culture & History"
+      ],
+      "constraints": [],
+      "purpose": "The national museum day, three institutions and nothing else, for a traveller who wants depth over coverage.",
+      "description": "National Hangeul Museum, National Museum of Korea and National Museum of Modern and Contemporary Art, Korea. The first two share a campus in Ichon; the third is downtown. Six hours indoors, so weather is irrelevant. No restaurant is listed; the museums have their own."
+    },
+    {
+      "course_id": "VS_MVP_034",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For someone in Seoul to work, with a free afternoon and no time to plan, who needs a list to cut down rather than a route to follow.",
+      "description": "Gyeongbokgung Palace, Gwanghwamun Square, Cheonggyecheon Stream, Myeong-dong, Bongeunsa Temple, Starfield Coex Mall, Hyundai Motor Studio Seoul, 63 Building Observatory, Yeouido Hangang Park and IFC Mall. Ten stops and fifteen hours across four districts, which is a menu and not a day. Gyeongbokgung is closed Tuesdays. No restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_035_DAY1",
+      "interests": [
+        "Culture & History"
+      ],
+      "constraints": [
+        "halal"
+      ],
+      "purpose": "The arrival day of a four-day route arranged around prayer and halal food, which is why it starts where both are easiest.",
+      "description": "Itaewon and Seoul Central Mosque. The mosque sits at the top of the halal restaurant street, so the two stops are one walk. No individual restaurant is listed, so the meal is chosen on site from what is around the mosque."
+    },
+    {
+      "course_id": "VS_MVP_035_DAY2",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [
+        "halal"
+      ],
+      "purpose": "The sightseeing day of the halal route, covering the palace and the tower that a first visit expects.",
+      "description": "Gyeongbokgung Palace, Myeong-dong, Namsan Cable Car and N Seoul Tower. Gyeongbokgung is closed Tuesdays. No halal restaurant is listed for this day, so food is chosen on site — Myeong-dong is the practical option between the palace and the cable car."
+    },
+    {
+      "course_id": "VS_MVP_035_DAY3",
+      "interests": [
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [
+        "halal"
+      ],
+      "purpose": "The family day of the halal route, all of it inside one Jamsil complex so children are never far from a rest.",
+      "description": "Lotte World, Lotte World Mall Duty Free and Jamsil Hangang Park. Five hours are budgeted for the theme park alone. No halal restaurant is listed, so eating is chosen on site inside the mall."
+    },
+    {
+      "course_id": "VS_MVP_035_DAY4",
+      "interests": [
+        "Shopping"
+      ],
+      "constraints": [
+        "halal"
+      ],
+      "purpose": "The departure day, returning to Itaewon for a last halal meal before the airport terminal check-in.",
+      "description": "Itaewon, Starfield Coex Mall and CALT - City Airport Terminal. Ending at the terminal means luggage and boarding passes are handled before the airport bus. No restaurant is listed, so the meal is chosen on site in Itaewon."
+    },
+    {
+      "course_id": "VS_MVP_036_DAY1",
+      "interests": [
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "The first day of a route that keeps both food and lodging cheap, buying groceries rather than eating out and sleeping where the bath is the room.",
+      "description": "Lotte Mart Seoul Station Branch, Namdaemun Market, then a Jjimjilbang. The bathhouse is the night's accommodation, not an activity, and it is recorded as a category rather than a named business."
+    },
+    {
+      "course_id": "VS_MVP_036_DAY2",
+      "interests": [
+        "Shopping"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "The middle day of the budget route, spent in underground arcades where the prices are lowest.",
+      "description": "Myeong-dong Shopping Street, Express Bus Terminal Station Underground Shopping Center, Famille Station, then a Guest House. Two of the four are the transfer complex under the bus terminal. Guest House is a category, not a booking. No restaurant is listed; the arcades have cheap food courts."
+    },
+    {
+      "course_id": "VS_MVP_036_DAY3",
+      "interests": [
+        "Food & Cafes"
+      ],
+      "constraints": [
+        "budget"
+      ],
+      "purpose": "The last budget day, a market lunch and free street performance instead of a paid attraction.",
+      "description": "Mangwon Market and Hongdae Street Performance. Three hours, and neither costs anything beyond the food. The performance is a category rather than a scheduled show, so what is on depends on the day."
+    },
+    {
+      "course_id": "VS_MVP_037_DAY1AND2",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who wants to do things rather than look at them, from wearing hanbok into a palace to cycling the river.",
+      "description": "Hanbok Experience at Palaces, Lotte World, Seoul Sky, Lotte World Mall, Riding at Hangang River and Food Delivery at Hangang River. This entry covers two days at once. The delivery stop is the well-known ritual of ordering fried chicken to the riverbank, which is the meal."
+    },
+    {
+      "course_id": "VS_MVP_037_DAY3",
+      "interests": [
+        "Culture & History"
+      ],
+      "constraints": [],
+      "purpose": "The closing day, one workshop and one street, short enough to fit before a flight.",
+      "description": "Traditional Culture Experience, then Hongdae Street Performance. Three hours, both recorded as categories rather than named venues, so the specific class and the show are decided that morning. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_038_DAY1",
+      "interests": [
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "The arrival day of a five-day route for music fans, holding a single stop that is free and open late.",
+      "description": "HiKR GROUND, ninety minutes. A tourism centre with K-POP exhibits and a media studio, which makes it the right kind of low-commitment first evening. No food stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_038_DAY2",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The sightseeing day of the fan route — the landmarks that appear behind idols in photoshoots rather than any dedicated venue.",
+      "description": "Gwanghwamun Square, Gyeongbokgung Palace, Bukchon, Samcheong-dong, Ikseon-dong, N Seoul Tower and Dongdaemun Market. Seven stops and eleven hours; nothing here is K-POP specific, which is worth knowing before booking the day. Gyeongbokgung is closed Tuesdays. No restaurant is listed."
+    },
+    {
+      "course_id": "VS_MVP_038_DAY3",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The broadcasting day, built around the studio complex where music shows are actually recorded.",
+      "description": "Hongik Univ., Digital Media City and Haneul Park. DMC is the only stop with a real industry connection; the other two are the walk on either side of it. No meal stop is listed."
+    },
+    {
+      "course_id": "VS_MVP_038_DAY4",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "A lighter day pairing a campus, a riverside tower and a late food alley.",
+      "description": "Ewha Womans Univ, Yeouido / 63 Building and Jonggak Station Food Alley. The alley is the meal and runs late, which suits a day that ends downtown."
+    },
+    {
+      "course_id": "VS_MVP_038_DAY5",
+      "interests": [
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "The departure day, and the only stop in the whole route that is a label headquarters rather than a backdrop.",
+      "description": "Yongsan, then HYBE. Three hours. The building is not a museum and there is nothing to enter, so this is a photograph and a walk. No food stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_001",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a BTS listener who wants the locations used in the group's photobooks and videos, in one day.",
+      "description": "Gyeongbokgung Palace, Korea House, Nodeul Island and Songpa Naru Park. Four ordinary landmarks scattered across three parts of the city; the connection is the shoot, not the site, and none of them mark it. No meal stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_002",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants a day of contemporary art, following the galleries a BTS member has said he visits.",
+      "description": "Seoul Museum of Art, Gana Art Center, PKM Gallery, Leeum, Samsung Museum of Art, National Museum of Korea, ending with coffee at Biscuit Floor. Five venues running from north to south, three of them closed Mondays, and nothing about the day is K-POP beyond the framing."
+    },
+    {
+      "course_id": "VK_THEME_003",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a walker who wants the lane behind the royal shrine, where old craft workshops now sit next to new restaurants.",
+      "description": "Seosulla-gil Road, Jongmyo Shrine, Sewoon Plaza, Cheonggyecheon Stream and Hanyangdoseong Seoul City Wall Stamp Tour. The route runs along the shrine wall and out to the stream. No restaurant is listed, though the lane itself is where the food is."
+    },
+    {
+      "course_id": "VK_THEME_004",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes"
+      ],
+      "constraints": [],
+      "purpose": "The traditional circuit done in one day, for a first visit that wants palaces, hanok lanes and a market meal without improvising.",
+      "description": "Insa-dong, Ikseon-dong Hanok Street, Bukchon Hanok Village, Changdeokgung Palace Complex, Changgyeonggung Palace and Gwangjang Market. Two palaces in one afternoon is ambitious; both are closed Mondays."
+    },
+    {
+      "course_id": "VK_THEME_005",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants to see the old city and the rebuilt city next to each other rather than on separate days.",
+      "description": "HiKR Ground, Cheonggyecheon Stream, Deoksugung Palace, Seoul Museum of Art and Seoul Museum of History. The palace sits between two museums that explain what happened to it. Deoksugung is closed Mondays. No meal stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_006",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a drinker who wants to understand Korean rice wine rather than only order it, ending at a tasting gallery.",
+      "description": "HiKR Ground, Bosingak Belfry, Insa-dong, Changdeokgung Palace Complex and The Sool Gallery. The gallery is the point and the rest is the walk to it. Changdeokgung is closed Mondays. No restaurant is listed, which matters on a day built around drinking."
+    },
+    {
+      "course_id": "VK_THEME_007",
+      "interests": [
+        "Culture & History"
+      ],
+      "constraints": [],
+      "purpose": "For a student or a returning visitor curious about Korean campus life, which is open to the public and free.",
+      "description": "Yonsei University, Sogang University, Ewha Womans University and Seoul National University, strung along Line 2. The first three are close together in the northwest; Seoul National is far south and adds an hour. No meal stop is listed, though every campus has cheap cafeterias."
+    },
+    {
+      "course_id": "VK_THEME_008",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "An everything-at-once day for families, mixing a theme park, a river cruise, a museum and a show.",
+      "description": "Lotte World, Starfield COEX Mall, Yeouido Hangang Park, HiKR Ground, Myeongdong Nanta Theatre, National Museum of Korea, E-Land Cruise and K-POP Square Hongdae. Eight stops across seven parts of the city and fifteen hours of stay time, so this needs splitting over two or three days. No restaurant is listed."
+    },
+    {
+      "course_id": "VK_THEME_009",
+      "interests": [
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a family that wants a full day without transfers, using the one district where a tower, a lake and a theme park share a station.",
+      "description": "Lotte World Tower & Mall, Songpa Naru Park, Lotte World and Olympic Park. All four are in Jamsil and walkable from each other. No restaurant is listed; the mall has the food."
+    },
+    {
+      "course_id": "VK_THEME_010",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "The shortest defensible answer to what a first-time visitor should see, if they only have one day.",
+      "description": "Seoul Metropolitan Library, Seoul Plaza, Myeong-dong, Namsangol Hanok Village and N Seoul Tower. Five stops in a line from the old city hall up the hill, so there is little transit. No restaurant is listed, though Myeong-dong is the obvious meal."
+    },
+    {
+      "course_id": "VK_THEME_011",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "A Jamsil afternoon framed as an actor's own picks, useful because the four stops genuinely sit together.",
+      "description": "Lotte World Tower SEOUL SKY, Songpa Naru Park, Songnidan-gil Street and Soma Museum of Art. Songnidan-gil is the local eating street and the reason the day is not just the tower. No restaurant is listed by name."
+    },
+    {
+      "course_id": "VK_THEME_012",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "The hanok quarter walked as a group member's route, which in practice is the standard Bukchon loop.",
+      "description": "Bukchon Hanok Village, Dong-Lim Knot Museum, Samcheong-dong Street and Gyeongbokgung Palace. The knot museum is the one stop most Bukchon walks miss. Gyeongbokgung is closed Tuesdays. No meal stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_013",
+      "interests": [
+        "Culture & History",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For an eater working the two adjacent old quarters, where the craft shops and the food are on the same lanes.",
+      "description": "Ssamzigil, Museum Kimchikan, Jongno 3 and Ikseon-dong Hanok Street. The kimchi museum explains what is being eaten a street away. No specific restaurant is listed, so the meal is picked from the lanes."
+    },
+    {
+      "course_id": "VK_THEME_014",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "Built for a mother and daughter travelling together, alternating skincare and spa stops with places to sit down and eat.",
+      "description": "Spa 1978, Café Dior, Amore Seongsu, OME Cooking Lab, Sulwhasoo Dosan Flagship Store, Ikseon-dong Hanok Street and Myeong-dong. The cooking lab is a class rather than a restaurant. Seven stops across five districts is more travel than the pacing suggests."
+    },
+    {
+      "course_id": "VK_THEME_015",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes"
+      ],
+      "constraints": [],
+      "purpose": "A palace and hanok walk arranged so that a child has somewhere of their own halfway through.",
+      "description": "Gyeongbokgung Palace, The Children's Museum of the National Folk Museum of Korea, Bukchon Cultural Center, Bukchon Hanok Village and Osulloc Tea House – Bukchon Branch. Everything is inside one quarter, ending over tea. Gyeongbokgung is closed Tuesdays."
+    },
+    {
+      "course_id": "VK_THEME_016",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants the food of one small old quarter rather than a survey of the city's cuisine.",
+      "description": "Sejong Village Food Street, Tongin Market and Cheongwadae Sarangchae. The market runs a token system where a coin buys a portion from any stall, which is the practical reason to come. Three stops, all within Seochon."
+    },
+    {
+      "course_id": "VK_THEME_017",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a fan who wants the hanok settings a group has used, which turn out to be teahouses and a furniture museum rather than venues.",
+      "description": "Ikseon-dong Hanok Street, Korea Furniture Museum, Sooyeon Sanbang and Seonungak. The museum is reservation-only and the two teahouses are the meal. Nothing here is marked as a filming site."
+    },
+    {
+      "course_id": "VK_THEME_018",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a drama viewer who wants the houses and galleries two specific series were shot in.",
+      "description": "Baek In-je House, K.O.N.G Gallery, Passi 0914 and Seoul Wave Art Center. The house is a preserved colonial-era residence and is the only stop that would be worth the trip without the drama."
+    },
+    {
+      "course_id": "VK_THEME_019",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who wants to cook Korean food once rather than only eat it, then see where the ingredients and the vessels come from.",
+      "description": "HANSIK Space E:eum, The Sool Gallery, Seoul Museum of Craft Art and Songhyeon Green Plaza. The first is a class and the second a tasting room, so the day is participatory rather than observational. All four are within one quarter."
+    },
+    {
+      "course_id": "VK_THEME_020",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a repeat visitor who wants an ordinary residential district rather than a tourist one, framed as an actor's home ground.",
+      "description": "Amsa-dong Prehistoric Site Museum, Cheonho-dong Rose Village, Gobundari Market and Songwol Naengmyeon. The neolithic site is genuinely unusual and the noodle shop is the meal. Everything is in Gangdong-gu, far east of the centre."
+    },
+    {
+      "course_id": "VK_THEME_021",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants the printing and lighting district after dark, when the workshops close and the drinking streets open.",
+      "description": "Sewoon Plaza, Cheonggyecheon Old Books Street, Gwangjang Market, Bangsan Market and Euljiro Nogari Alley. Bangsan sells packaging and paper, not food; the eating is at the market and the alley."
+    },
+    {
+      "course_id": "VK_THEME_022",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "A short walk through the old administrative quarter, four stops that share one subway exit.",
+      "description": "Ikseon-dong Hanok Street, Unhyeongung Royal Residence, Insadong Cultural Street and Seoul Museum of Craft Art. The residence is a royal house rather than a palace and is usually empty. No restaurant is listed, though the hanok street is full of them."
+    },
+    {
+      "course_id": "VK_THEME_023",
+      "interests": [
+        "Culture & History",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For someone who wants to see a play or musical in Korean, in the district that exists for it.",
+      "description": "Marronnier Park, Arko Arts Theater, Daehakro Arts Theater, Naksan Park and Seoul City Wall Museum. Two of the five are theatres, so the day only works if something is running. The park walk above the district is the filler between shows. No meal stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_024",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "The downtown shopping district walked as a group's picks, with a market lunch and a cable car at the end.",
+      "description": "Myeong-dong, Namdaemun Market Gourmand Alley, Bank of Korea Money Museum and Namsan Cable Car. The kalguksu alley is the meal; the money museum is a free hour indoors between the two."
+    },
+    {
+      "course_id": "VK_THEME_025",
+      "interests": [
+        "Food & Cafes",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "A half day in the district that has become Seoul's coffee centre, framed as a singer's own route.",
+      "description": "Seoul Forest, Understand Avenue and Seongsu-dong Cafe Street. Three stops and no ticketed venue, so this attaches to another afternoon rather than filling a day. The cafe street is a district, not a shop, so the choice is made on arrival. No restaurant is listed."
+    },
+    {
+      "course_id": "VK_THEME_026",
+      "interests": [
+        "Food & Cafes",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants a riverside evening in a residential neighbourhood rather than a landmark park.",
+      "description": "Mangnidan Street, Mangwon Market and Mangwon Hangang Park. The order matters: buy food at the market, eat it at the river. Three stops within a few blocks."
+    },
+    {
+      "course_id": "VK_THEME_027",
+      "interests": [
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For an eater who wants specific restaurants idols have been photographed in, and nothing else.",
+      "description": "Geumdwaeji Sikdang, Yoojung Restaurant and Shinuiju Chapsal Sundae. Three restaurants and no sightseeing at all, which makes this a list to slot into other days rather than an itinerary. All three take long queues at peak hours."
+    },
+    {
+      "course_id": "VK_THEME_028",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes"
+      ],
+      "constraints": [],
+      "purpose": "For a first visit that wants the national institutions and the palace in one day, ending at a market rather than a restaurant.",
+      "description": "Gwanghwamun Gate, Gyeongbokgung Palace, National Museum of Modern and Contemporary Art, National Museum of Korea, Ground Seesaw Seochon and Tongin Market. The two national museums are far apart, which is the weak link in the sequence. Gyeongbokgung is closed Tuesdays."
+    },
+    {
+      "course_id": "VK_THEME_029",
+      "interests": [
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller interested in Korean traditional medicine as something to try, not to read about.",
+      "description": "Seoul K-Medi Center, Tea Therapy, Aromind and Mosim. All four involve a treatment, a consultation or a prescribed meal, so the day is bookings rather than walking. Mosim is the meal."
+    },
+    {
+      "course_id": "VK_THEME_030",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants to see the warehouse district that turned into galleries and coffee bars, while it is still current.",
+      "description": "Seoul Forest, Daelim Changgo Gallery, Seongsu-dong Cafe Street and Seongsu-dong Handmade Shoes Street. The gallery is a converted rice warehouse and the shoe street is what the district did before the cafes."
+    },
+    {
+      "course_id": "VK_THEME_031",
+      "interests": [
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a walker interested in what Seoul did with a landfill and a decommissioned oil depot.",
+      "description": "Oil Tank Culture Park, Haneul Park, World Cup Park and Nanji Hangang Park. Four parks that share one hillside in the west, all built on reclaimed industrial ground. The stair climb to Haneul Park is steep. No food stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_032",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a couple who want an evening that ends on the water, with a concert or exhibition before it.",
+      "description": "Seoul Arts Center, Hangaram Art Museum in Seoul Arts Center, Seorae Village, Some Sevit and Banpo Hangang Park. The last two are lit at night, which sets the order. No restaurant is listed, though Seorae Village is the dinner stop in practice."
+    },
+    {
+      "course_id": "VK_THEME_033",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Shopping",
+        "Nature & Relaxation"
+      ],
+      "constraints": [
+        "vegan"
+      ],
+      "purpose": "Presented as a plant-based day, though what it actually offers is a temple, a recycling centre and a coffee district rather than anywhere to eat.",
+      "description": "Jogyesa Temple, Seoul Upcycling Plaza, Amore Seongsu and Seongsu-dong Cafe Street. No vegan restaurant is listed anywhere in this course, so meals have to be chosen on site — the cafe street is the only realistic option and it is a district rather than a named shop. Seoul Upcycling Plaza is closed Sundays."
+    },
+    {
+      "course_id": "VK_THEME_034",
+      "interests": [
+        "Culture & History",
+        "Shopping"
+      ],
+      "constraints": [
+        "luxury"
+      ],
+      "purpose": "For a traveller spending freely, pairing a palace and a private collection with designer retail and a hanok hotel.",
+      "description": "Changdeokgung Palace Complex, Korea Furniture Museum, Cheongdam Fashion Street and Rakkojae Seoul Bukchon Hanok Hotel. The furniture museum is by reservation only and the hotel is where the night is spent. Changdeokgung is closed Mondays. No restaurant is listed."
+    },
+    {
+      "course_id": "VK_THEME_035",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants the international quarter, where a private art museum sits above the bar streets.",
+      "description": "Leeum, Samsung Museum of Art, Namsan Outdoor Botanical Garden, Gyeongnidan Street and Itaewon Shopping Street. The museum is closed Mondays. No restaurant is listed, which is odd for this district — the two streets are where the eating is."
+    },
+    {
+      "course_id": "VK_THEME_036",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a first visit that wants to see what the district the song made famous is actually like.",
+      "description": "Convention and Exhibition Center, COEX Aquarium, Seoul Bongeunsa Temple, Dosan Park and Sinsa-dong Garosu-gil Road. The temple across the road from the convention centre is the sharpest contrast in the day. No restaurant is listed."
+    },
+    {
+      "course_id": "VK_THEME_037",
+      "interests": [
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "A deliberately simple day: the river in the morning, air conditioning in the afternoon.",
+      "description": "Yanghwa Hangang Park, The Hyundai Seoul and IFC Mall. Three stops, and the two malls face each other across Yeouido, so the afternoon needs no transit. No restaurant is listed; both malls have large food halls."
+    },
+    {
+      "course_id": "VK_THEME_038",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who finds old railways interesting, following what happened to Seoul's disused lines and its first station.",
+      "description": "Culture Station Seoul 284, Seosomun Historical Park, Seoul Museum of History, Hongdae, Gyeongui Line Forest Park and Hwarangdae Railroad Park. The first is the original station building and the last two are lines turned into walks. Hwarangdae is in the far northeast and adds an hour. No meal stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_039",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu",
+        "Nature & Relaxation",
+        "Shopping"
+      ],
+      "constraints": [],
+      "purpose": "For a viewer of one particular period drama who wants the three places it was filmed.",
+      "description": "Cheonggyecheon Stream, Gwanghwamun Market and National Meteorological Museum of Korea. Three stops and about four hours, so it is half a day rather than a full one. No restaurant is listed, though the market is where food would come from."
+    },
+    {
+      "course_id": "VK_THEME_040",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller who wants a mountain trail and a boat in the same day, with a hanok quarter in between.",
+      "description": "Bukhansan Dulle Trail Section 1, Bukchon Hanok Village, Banpo Hangang Park and Hyundai Yacht Seoul Branch. The trail is in the far north and the yacht is south of the river, so the two ends are an hour apart. No meal stop is listed."
+    },
+    {
+      "course_id": "VK_THEME_041",
+      "interests": [
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a traveller bringing a dog, who needs to know which Seoul spaces will actually let one in rather than guessing at the gate.",
+      "description": "Oil Tank Culture Park, Nodeul Island and Seoul Forest, all outdoor and all in different districts. Three and a half hours of stay time does not fill a day, so this belongs inside another itinerary. No food stop is listed. Oil Tank Culture Park and Nodeul Island are closed Mondays."
+    },
+    {
+      "course_id": "VK_THEME_042",
+      "interests": [
+        "Food & Cafes",
+        "K-POP & Hallyu"
+      ],
+      "constraints": [],
+      "purpose": "For a drama viewer chasing one series, which used a designer plaza, a hillside banquet hall and a working market.",
+      "description": "Dongdaemun Design Plaza, Samcheonggak, Daerim Market and Four Seasons Charles H. The market is in Eunpyeong and the banquet hall is up a hill in Seongbuk, so the four are further apart than the list suggests."
+    },
+    {
+      "course_id": "VK_THEME_043",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a visitor who wants the independence movement told in order, at the places it happened.",
+      "description": "National Memorial of Korean Provisional Government, Seodaemun Prison History Museum, Seodaemun Independence Park, Dongnimmun Gate and Dongnimmun Yeongcheon Market. The first four are one continuous site and the market at the end is lunch. The prison is heavy going and takes longer than the hour allotted."
+    },
+    {
+      "course_id": "VK_THEME_044",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "A slow walk uphill through the quarter west of the palace, ending at two libraries built into the hillside.",
+      "description": "Boan1942, Sangchonjae House, Suseongdonggyegok Valley, Inwangsan Mountain Chosochaekbang and Cheongun Literature Library. Boan1942 is a former inn turned gallery and the hillside bookshop is a converted guard post. The climb is gentle but constant."
+    },
+    {
+      "course_id": "VK_THEME_045",
+      "interests": [
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a viewer of one action series, though the three locations have almost nothing to do with each other.",
+      "description": "Suraksan Mountain, Yongma Land and Seoul Marina Club & Yacht. A mountain in the far northeast, an abandoned fairground in the east and a marina on the western river. Half a day of travel for three hours of stops. No food is listed."
+    },
+    {
+      "course_id": "VK_THEME_046",
+      "interests": [
+        "Culture & History",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a museum day that never needs a transfer, using the district where three national collections share one park.",
+      "description": "National Museum of Korea, National Hangeul Museum, Yongsan Family Park and Amorepacific Museum of Art. The first three are on one campus and the fourth is a short walk. Almost all of it is indoors. No restaurant is listed; the museums have cafeterias."
+    },
+    {
+      "course_id": "VK_THEME_047",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a repeat visitor who wants the western riverside neighbourhoods rather than the centre.",
+      "description": "Mangwon Hangang Park, Seoul Battleship Park, Mangwon Market, Hongdae and Gyeongui Line Forest Park. The battleship park is a decommissioned navy vessel moored on the river and is the one stop nobody expects. The market is the meal."
+    },
+    {
+      "course_id": "VK_THEME_048",
+      "interests": [
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a fan of one group's reality show, which spent its time in a herbal spa and on a shopping street.",
+      "description": "Supsok Hanbang Land, Seoul Namsan Park and Sinsa-dong Garosu-gil Road. Three stops and no fixed schedule; the spa is the only one that needs booking. No restaurant is listed, though the shopping street has plenty."
+    },
+    {
+      "course_id": "VK_THEME_049",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a viewer of one legal drama, which filmed in a private museum, along the stream and at a riverside restaurant.",
+      "description": "Leeum, Samsung Museum of Art, Cheonggyecheon Stream, Yeouido Hangang Park and Maison Hannam. The museum is closed Mondays and the restaurant is the meal. Four stops that thread across the city rather than cluster."
+    },
+    {
+      "course_id": "VK_THEME_050",
+      "interests": [
+        "Culture & History",
+        "Food & Cafes",
+        "K-POP & Hallyu",
+        "Nature & Relaxation"
+      ],
+      "constraints": [],
+      "purpose": "For a viewer of one action film, whose locations happen to make a coherent day on their own.",
+      "description": "Culture Station Seoul 284, Bank of Korea Money Museum, Banpo Hangang Park, Nodeul Island and Cheolgil Tteokbokki. The first two are a short walk apart downtown, the last three follow the river. The tteokbokki stall is the meal."
+    }
+  ]
+}
