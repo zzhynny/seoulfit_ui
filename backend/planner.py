@@ -190,8 +190,14 @@ def fetch_nearby_places(
     radius: int = 1700,
     min_rating: float = 4.0,
     max_results: int = 5,
+    keyword: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Google Places Nearby Search for one area."""
+    """Google Places Nearby Search for one area.
+
+    `keyword`, when given, is passed straight through to the Nearby Search
+    `keyword` param -- Places has no structured cuisine/diet field, so this is
+    the only lever available to bias results (e.g. "vegetarian") toward a
+    dietary restriction. None (default) omits it, same behavior as before."""
     if not api_key:
         return []
 
@@ -204,6 +210,8 @@ def fetch_nearby_places(
         "key": api_key,
         "language": "en",
     }
+    if keyword:
+        params["keyword"] = keyword
 
     data = _google_get(url, params)
     results = data.get("results", []) or []
@@ -476,13 +484,26 @@ def build_google_supplement_for_area(
     area: str,
     purpose: str,
     api_key: str,
+    exclude_families: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
-    """Collect Google Places supplement for one requested area."""
+    """Collect Google Places supplement for one requested area.
+
+    `exclude_families`: from meal_slots.restrictions_to_excluded_families().
+    Places has no structured cuisine/diet field to post-filter on, so this
+    biases the restaurant/cafe fetch queries instead -- currently only the
+    vegetarian/vegan case (all non-"other" families excluded) is recognized;
+    anything else leaves the queries unchanged, same as before."""
     if not api_key:
         return []
 
     purpose_lower = purpose.lower()
     supplement: list[dict[str, Any]] = []
+
+    # meal_slots._KNOWN_FAMILIES minus "other" -- if all of those are excluded,
+    # the restriction was vegetarian/vegan-shaped (see restrictions_to_excluded_families).
+    want_vegetarian = bool(exclude_families) and "other" not in exclude_families
+    veg_keyword = "vegetarian" if want_vegetarian else None
+    veg_query_prefix = "vegetarian " if want_vegetarian else ""
 
     # Cafes are essential for Seoul travel and the current project use case.
     need_cafe = any(k in purpose_lower for k in ["cafe", "coffee", "relax", "카페"])
@@ -494,11 +515,12 @@ def build_google_supplement_for_area(
             radius=1800,
             min_rating=4.1,
             max_results=5,
+            keyword=veg_keyword,
         )
         if len(cafes) < 3:
             cafes += fetch_text_places(
                 area=area,
-                query=f"best cafes in {_area_label(area)} Seoul",
+                query=f"{veg_query_prefix}best cafes in {_area_label(area)} Seoul",
                 api_key=api_key,
                 radius=2500,
                 min_rating=4.0,
@@ -515,11 +537,12 @@ def build_google_supplement_for_area(
         radius=1800,
         min_rating=4.0,
         max_results=5,
+        keyword=veg_keyword,
     )
     if len(restaurants) < 3:
         restaurants += fetch_text_places(
             area=area,
-            query=f"popular restaurants in {_area_label(area)} Seoul",
+            query=f"{veg_query_prefix}popular restaurants in {_area_label(area)} Seoul",
             api_key=api_key,
             radius=2500,
             min_rating=4.0,
@@ -598,6 +621,7 @@ def build_google_supplement_by_areas(
     location: str,
     purpose: str,
     api_key: str,
+    exclude_families: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
     """Collect Google Places supplement for every requested area."""
     if not api_key:
@@ -621,6 +645,7 @@ def build_google_supplement_by_areas(
             area=area,
             purpose=purpose,
             api_key=api_key,
+            exclude_families=exclude_families,
         )
         all_places.extend(places)
 
@@ -1801,6 +1826,7 @@ def _resolve_locked_meals(
     expected_days: int,
     meal_type: str = "dinner",
     exclude_by_day: dict[int, tuple[str, ...]] | None = None,
+    exclude_families: tuple[str, ...] = (),
 ) -> dict[int, dict[str, Any]]:
     """Resolve one `meal_type` pick per day via meal_slots.fill_meal_slot()
     (Michelin tier 1 -> Google Places tier 2) BEFORE the Gemini call, so the
@@ -1815,9 +1841,9 @@ def _resolve_locked_meals(
     If that leaves tier 1 empty, tier 2/3 kick in exactly as they would for
     any other exclusion -- no separate dedup logic.
 
-    Cuisine-avoidance filtering is out of scope here: exclude_families is
-    never passed, so tier 1 is never family-filtered and tier 2 (Google) is
-    always accepted unverified rather than left empty.
+    `exclude_families`: from meal_slots.restrictions_to_excluded_families() --
+    see fill_meal_slot's own exclude_reason guard for what this can and can't
+    guarantee (cuisine-avoidance only, tier 2/Google still returned unverified).
 
     A day with no resolvable area, no trip_start_date, or a tier-3/unfilled
     result is simply absent from the returned dict -- same as always having
@@ -1841,6 +1867,7 @@ def _resolve_locked_meals(
         result = meal_slots.fill_meal_slot(
             area=day_area, weekday=weekday, slot_start=slot_start, slot_end=slot_end,
             exclude_names=(exclude_by_day or {}).get(day_num, ()),
+            exclude_families=exclude_families,
         )
         if result["status"] == "filled":
             locked[day_num] = result
@@ -1922,6 +1949,11 @@ def plan_node(state: TravelState) -> TravelState:
     pace = state.get("pace")
     budget = ""
     dietary = state.get("restrictions") or "none"
+    # Best-effort text->cuisine_family mapping (vegetarian/vegan only for now --
+    # see meal_slots.restrictions_to_excluded_families). Computed once and
+    # threaded into every restaurant-picking path below: locked meals (both
+    # meal types) and the Google Places supplement.
+    exclude_families = meal_slots.restrictions_to_excluded_families(dietary)
 
     # Only matters if num_days is ever set (see _resolve_num_days) while
     # travel_dates text is empty/stale -- surfaces the day count to the LLM
@@ -1937,6 +1969,7 @@ def plan_node(state: TravelState) -> TravelState:
     expected_days = _parse_num_days(duration, override=num_days) if (duration or num_days) else 0
     locked_meals = _resolve_locked_meals(
         state.get("trip_start_date"), requested_areas, expected_days, meal_type="dinner",
+        exclude_families=exclude_families,
     )
     # Lunch excludes each day's already-locked dinner pick, so the same
     # restaurant never gets locked into both meals on one day -- reuses
@@ -1947,6 +1980,7 @@ def plan_node(state: TravelState) -> TravelState:
     locked_lunch_meals = _resolve_locked_meals(
         state.get("trip_start_date"), requested_areas, expected_days, meal_type="lunch",
         exclude_by_day=dinner_names_by_day,
+        exclude_families=exclude_families,
     )
 
     google_supplement: list[dict[str, Any]] = []
@@ -1956,6 +1990,7 @@ def plan_node(state: TravelState) -> TravelState:
             location=location,
             purpose=purpose,
             api_key=GOOGLE_PLACES_API_KEY,
+            exclude_families=exclude_families,
         )
     else:
         print("[planner] GOOGLE_PLACES_API_KEY 없음 -- Google Places 보완 생략")

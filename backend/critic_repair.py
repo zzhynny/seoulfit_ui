@@ -1236,6 +1236,14 @@ class RepairAgent:
         logs: list[str],
         trip_start_date: str | None = None,
     ) -> dict[str, Any]:
+        # Dietary-restriction awareness: `pool` (build_candidate_pool) only ever
+        # holds course POIs and planning_context["google_supplement"] -- neither
+        # carries a cuisine_family field (that data lives solely in
+        # meal_slots.py's restaurant.json), so there is nothing to post-filter
+        # on here. Instead, plan_node already builds google_supplement with
+        # exclude_families applied at the Google Places query level (see
+        # planner.build_google_supplement_for_area) -- this method's candidates
+        # inherit that bias for free, without needing their own filtering pass.
         used = used_name_set(itinerary)
 
         for idx, day in enumerate(itinerary.get("days") or []):

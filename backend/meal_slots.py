@@ -1,6 +1,6 @@
 """meal_slots.py — 미쉐린 서울 restaurant.json을 식사 슬롯 후보로 쓰기 위한
-순수 함수 로더/필터. 네트워크 호출 없음. generator/validator에는 아직 연결하지
-않는다 (이번 작업 범위 밖).
+순수 함수 로더/필터. 네트워크 호출 없음(2층 Google 폴백은 planner.py를 통해서만
+나감). planner.py의 plan_node/_resolve_locked_meals에 연결되어 있다.
 
 지역 판정은 geo.py의 기존 alias/좌표 로직(infer_area, area_matches_requested)을
 그대로 재사용한다 — 새 지역 정의를 만들지 않는다.
@@ -46,6 +46,38 @@ MEAL_AREA_CENTERS: dict[str, tuple[float, float]] = {
 _missing_areas = set(geo.SEOUL_AREA_CENTERS) - set(MEAL_AREA_CENTERS)
 if _missing_areas:
     raise ValueError(f"MEAL_AREA_CENTERS missing areas from geo.SEOUL_AREA_CENTERS: {sorted(_missing_areas)}")
+
+
+# cuisine_family.json's actual categories (see dataset/cuisine_family.json) --
+# kept as a literal tuple rather than derived at import time so a bad/edited
+# dataset file can't silently change what this module is allowed to exclude.
+_KNOWN_FAMILIES: tuple[str, ...] = (
+    "korean", "japanese", "chinese", "western", "contemporary", "asian", "other",
+)
+
+# This dataset has no per-restaurant vegetarian/vegan flag -- the only signal
+# is `cuisine` literally being "Vegan"/"Vegetarian", and both bucket into
+# cuisine_family "other" (see dataset/cuisine_family.json). Excluding every
+# OTHER family is the closest fill_meal_slot's exclude_families can get to
+# "steer toward a vegetarian pick": it does not guarantee the result actually
+# is one -- "other" also holds Thai/Mediterranean/Mexican/etc. -- so this is
+# best-effort, not a safety guarantee (see fill_meal_slot's own exclude_reason
+# guard: this whole mechanism is scoped to cuisine_avoidance, not allergy).
+_VEG_KEYWORDS = ("vegetarian", "vegan", "plant-based", "채식", "비건")
+
+
+def restrictions_to_excluded_families(restrictions: str | None) -> tuple[str, ...]:
+    """Best-effort mapping from the free-text `state["restrictions"]` answer to
+    the cuisine_family.json categories fill_meal_slot(exclude_families=...)
+    understands. Currently recognizes vegetarian/vegan only -- the concrete
+    case this was reported missing for. Unrecognized or empty text returns ()
+    (no exclusion), same as before this function existed."""
+    text = (restrictions or "").strip().lower()
+    if not text or text in {"none", "no", "n/a", "없음"}:
+        return ()
+    if any(k in text for k in _VEG_KEYWORDS):
+        return tuple(f for f in _KNOWN_FAMILIES if f != "other")
+    return ()
 
 
 def _to_minutes(hhmm: str) -> int:
