@@ -17,7 +17,6 @@ import '../screens/onboarding/permissions_screen.dart';
 import '../screens/chat/chat_screen.dart';
 import '../screens/live_help/live_help_screen.dart';
 import '../models/chat.dart';
-import '../models/travel_state.dart';
 import '../services/api_service.dart';
 
 import '../screens/trip/trip_branch_root.dart';
@@ -143,12 +142,18 @@ GoRouter buildAppRouter() {
       ),
       GoRoute(
         path: AppRoutes.dayPlanner,
-        builder: (context, state) => _DayPlannerLoader(
+        builder: (context, state) => DayPlannerLoader(
           api: context.read<ApiService?>(),
           // POST /day-plan is what advances the thread past `day_plan` into
           // `confirm` — Confirm Slots is the same screen the chat's own
           // readyToBuild CTA lands on for that step.
           onDone: () => context.go(AppRoutes.confirmSlots),
+          // A stale plan (thread already moved on) — back to chat, not a
+          // scary error screen.
+          onStale: () => context.go(AppRoutes.chat),
+          // A real failure (bad payload, network) — same escape hatch the
+          // sibling loaders (CraftingItineraryScreen, ReoptimizingScreen) use.
+          onFailed: () => context.go(AppRoutes.error),
         ),
       ),
 
@@ -419,50 +424,5 @@ GoRouter buildAppRouter() {
       ),
     ],
   );
-}
-
-/// Fetches `day_specs` once via GET /state, then hands off to
-/// [DayPlannerScreen]. A StatefulWidget rather than an inline `FutureBuilder`
-/// in the `GoRoute` builder above: that builder can re-run on unrelated
-/// provider rebuilds, and re-fetching `/state` on every one of those would
-/// spend a needless round trip and flash the loading state.
-class _DayPlannerLoader extends StatefulWidget {
-  const _DayPlannerLoader({required this.api, required this.onDone});
-
-  final ApiService? api;
-  final VoidCallback onDone;
-
-  @override
-  State<_DayPlannerLoader> createState() => _DayPlannerLoaderState();
-}
-
-class _DayPlannerLoaderState extends State<_DayPlannerLoader> {
-  // Mocks build with no ApiService; day_specs is empty in that case (the
-  // Figma-parity mock builds never reach this route since MockChatRepository
-  // never sets currentStep to 'day_plan').
-  late final Future<List<DaySpec>> _future = widget.api == null
-      ? Future.value(const <DaySpec>[])
-      : widget.api!.getState().then((s) => s.daySpecs);
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<DaySpec>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        return DayPlannerScreen(
-          initial: snapshot.data!,
-          onSubmit: (days) async {
-            await widget.api?.postDayPlan(days);
-            widget.onDone();
-          },
-        );
-      },
-    );
-  }
 }
 
