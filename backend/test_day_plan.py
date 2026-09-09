@@ -120,3 +120,34 @@ def test_editing_a_field_from_confirm_keeps_the_travellers_day_plan(monkeypatch)
     body = r.json()
     assert body["current_step"] == "confirm"
     assert body["day_specs"] == days
+
+
+def test_editing_travel_dates_to_a_new_length_recomputes_the_day_plan():
+    """Regression: keeping day_specs on a confirm re-ask (round 1's fix) is
+    only correct while the trip is still the same length. Stretching the
+    trip from 3 to 5 days must throw the stale 3-entry plan away and route
+    back to day_plan -- otherwise Task 6's retrieve_node builds the wrong
+    number of days with nothing to show for it."""
+    _seed()
+    days = [{"day": 1, "region": "hongdae", "interest": "Food & Cafes"},
+            {"day": 2, "region": "seongsu", "interest": "Shopping"},
+            {"day": 3, "region": "jongno", "interest": "Culture & History"}]
+    client.post("/day-plan", json={"thread_id": THREAD, "days": days})
+
+    from api import _config, _graph
+    # Mimic handle_confirm_node re-asking travel_dates from the confirm
+    # screen (it clears trip_start_date alongside travel_dates + pending).
+    _graph.update_state(_config(THREAD), {
+        "asked": graph.FIELD_ORDER, "travel_dates": None, "trip_start_date": None,
+        "pending": "travel_dates", "current_step": "collecting",
+    })
+
+    # Picker-format text, same as conversational_intake_screen.dart emits.
+    # Sept 6 -> Sept 10 inclusive = 5 days, up from the original 3.
+    r = client.post("/chat", json={
+        "thread_id": THREAD, "message": "September 6, 2026 to September 10, 2026",
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["current_step"] == "day_plan"
+    assert len(body["day_specs"]) == 5

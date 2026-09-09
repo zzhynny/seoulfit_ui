@@ -283,10 +283,19 @@ def _ask(state: TravelState, updates: dict, field: str | None) -> TravelState:
       day_specs already holds their own picks, so land back on confirm
       without recomputing anything. Recomputing here would silently wipe a
       custom day plan on every unrelated field edit.
+
+    The second case has its own edge: if the edited field was travel_dates
+    and the trip is now a different length, the existing day_specs no longer
+    covers the trip (Task 6's retrieve_node walks day_specs to decide how
+    many days to build). So "keep it" only holds while the length still
+    matches -- otherwise this collapses back into the first case.
     """
+    from rag import _parse_num_days
+
     if field is None:
         merged = {**state, **updates}
-        if merged.get("day_specs"):
+        specs = merged.get("day_specs")
+        if specs and len(specs) == _parse_num_days(merged.get("travel_dates")):
             return {**merged, "pending": None, "current_step": "confirm"}
         return {
             **merged,
