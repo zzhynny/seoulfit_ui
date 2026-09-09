@@ -32,55 +32,23 @@ except Exception:
 
 from date_utils import weekday_for_day
 from planner import compute_transit_legs, _google_get
+# Single source of truth for area aliases/centers/adjacency (see geo.py's own
+# docstring) -- critic_repair.py used to keep its own drifted copy (19 of
+# geo.py's 33 areas, and a narrower adjacency table); import instead of
+# redefining so Critic/Repair see the same areas planner.py already tags POIs
+# with.
+from geo import (
+    SEOUL_AREA_CENTERS,
+    AREA_ALIASES,
+    area_matches_requested,
+)
 
 
 # ---------------------------------------------------------------------------
 # Area configuration
 # ---------------------------------------------------------------------------
-
-SEOUL_AREA_CENTERS: dict[str, tuple[float, float]] = {
-    "hongdae": (37.5563, 126.9227),
-    "hapjeong": (37.5499, 126.9143),
-    "mangwon": (37.5530, 126.9028),
-    "yeonnam": (37.5663, 126.9236),
-    "seongsu": (37.5447, 127.0558),
-    "wangsimni": (37.5612, 127.0371),
-    "gangnam": (37.4979, 127.0276),
-    "sinsa": (37.5196, 127.0228),
-    "garosu-gil": (37.5207, 127.0227),
-    "jongno": (37.5729, 126.9794),
-    "insadong": (37.5741, 126.9861),
-    "myeongdong": (37.5636, 126.9857),
-    "itaewon": (37.5347, 126.9946),
-    "sinchon": (37.5596, 126.9373),
-    "dongdaemun": (37.5666, 127.0097),
-    "yeouido": (37.5217, 126.9244),
-    "mapo": (37.5479, 126.9130),
-    "jamsil": (37.5133, 127.1028),
-    "dmc": (37.5770, 126.8902),
-}
-
-AREA_ALIASES: dict[str, list[str]] = {
-    "hongdae": ["hongdae", "hongik", "hongik univ", "홍대", "hongik university"],
-    "hapjeong": ["hapjeong", "합정"],
-    "mangwon": ["mangwon", "망원"],
-    "yeonnam": ["yeonnam", "연남"],
-    "seongsu": ["seongsu", "성수", "seongsu-dong", "성수동"],
-    "wangsimni": ["wangsimni", "왕십리"],
-    "gangnam": ["gangnam", "강남"],
-    "sinsa": ["sinsa", "신사"],
-    "garosu-gil": ["garosu", "garosu-gil", "가로수길"],
-    "jongno": ["jongno", "종로"],
-    "insadong": ["insadong", "인사동"],
-    "myeongdong": ["myeongdong", "명동"],
-    "itaewon": ["itaewon", "이태원"],
-    "sinchon": ["sinchon", "신촌"],
-    "dongdaemun": ["dongdaemun", "동대문"],
-    "yeouido": ["yeouido", "여의도"],
-    "mapo": ["mapo", "마포"],
-    "jamsil": ["jamsil", "잠실"],
-    "dmc": ["digital media city", "dmc", "상암", "디지털미디어시티"],
-}
+# (SEOUL_AREA_CENTERS / AREA_ALIASES / area_matches_requested now come from
+# geo.py -- imported above, not redefined here.)
 
 
 # ---------------------------------------------------------------------------
@@ -215,26 +183,6 @@ def infer_area_from_poi(poi: dict[str, Any]) -> str | None:
         return nearest_area
 
     return None
-
-
-def area_matches_requested(area: str | None, requested: str) -> bool:
-    if not area:
-        return False
-
-    area = normalize_text(area)
-    requested = normalize_text(requested)
-
-    if area == requested:
-        return True
-
-    adjacent = {
-        "hongdae": {"hongdae", "hapjeong", "mangwon", "yeonnam", "mapo"},
-        "seongsu": {"seongsu", "wangsimni"},
-        "gangnam": {"gangnam", "sinsa", "garosu-gil"},
-        "jongno": {"jongno", "insadong", "myeongdong"},
-    }
-
-    return area in adjacent.get(requested, {requested})
 
 
 def belongs_to_other_requested_area(
