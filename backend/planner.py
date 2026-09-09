@@ -24,7 +24,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import dspy
 import requests
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
@@ -46,7 +45,6 @@ from geo import (
 # lm_context removed — DSPy replaced with direct Gemini calls
 from rag import (
     _parse_num_days,
-    build_query,
     parse_day_segments,
     retrieve_for_segments,
 )
@@ -749,11 +747,20 @@ def _format_requested_area_rules(
 
 
 # ---------------------------------------------------------------------------
-# DSPy signatures
+# Itinerary-planning prompt
 # ---------------------------------------------------------------------------
+# Was a dspy.Signature class (ItineraryPlanner) with InputField/OutputField
+# declarations and a dspy.Predict wired up via get_planner() -- both the
+# Predict machinery and its FixJSON/get_fixer counterpart were dead code
+# (the actual planning call is the raw Gemini call in _gemini_text() /
+# plan_node below; _parse_itinerary_json's own fallback uses _gemini_text
+# too, not get_fixer()). Removed the dspy plumbing but kept this docstring's
+# text verbatim -- it's reused as-is for the LLM system prompt (see
+# `system_prompt = _ITINERARY_PLANNER_PROMPT` below). Body indentation is
+# kept exactly as the original class docstring had it (not dedented) so the
+# string value is byte-for-byte unchanged.
 
-class ItineraryPlanner(dspy.Signature):
-    """Generate a personalized Seoul travel itinerary for foreign tourists.
+_ITINERARY_PLANNER_PROMPT = """Generate a personalized Seoul travel itinerary for foreign tourists.
 
     You are given:
     1. the user's trip details,
@@ -845,47 +852,6 @@ class ItineraryPlanner(dspy.Signature):
       ]
     }
     """
-
-    duration: str = dspy.InputField(desc="Trip length, e.g. '2 days'.")
-    location: str = dspy.InputField(desc="Destination or requested neighborhoods.")
-    budget: str = dspy.InputField(desc="Total trip budget.")
-    dietary: str = dspy.InputField(desc="Dietary restrictions or preferences.")
-    purpose: str = dspy.InputField(desc="Trip purpose, e.g. cafes, shopping, K-POP.")
-    candidate_courses: str = dspy.InputField(
-        desc="Candidate courses and Google Places supplement as compact text."
-    )
-    itinerary_json: str = dspy.OutputField(
-        desc="Strict JSON itinerary matching the schema."
-    )
-
-
-class FixJSON(dspy.Signature):
-    """Repair a JSON document that failed to parse.
-
-    Output ONLY the corrected JSON object. No prose, no markdown fences.
-    Preserve all fields and values from the broken input; only fix syntax.
-    """
-    broken_json: str = dspy.InputField(desc="Malformed JSON text.")
-    error_message: str = dspy.InputField(desc="Parser error.")
-    fixed_json: str = dspy.OutputField(desc="Strictly valid JSON only.")
-
-
-_planner: dspy.Predict | None = None
-_fixer: dspy.Predict | None = None
-
-
-def get_planner() -> dspy.Predict:
-    global _planner
-    if _planner is None:
-        _planner = dspy.Predict(ItineraryPlanner)
-    return _planner
-
-
-def get_fixer() -> dspy.Predict:
-    global _fixer
-    if _fixer is None:
-        _fixer = dspy.Predict(FixJSON)
-    return _fixer
 
 
 # ---------------------------------------------------------------------------
@@ -2004,7 +1970,7 @@ def plan_node(state: TravelState) -> TravelState:
     )
 
     try:
-        system_prompt = ItineraryPlanner.__doc__ or ""
+        system_prompt = _ITINERARY_PLANNER_PROMPT
         pace_line = _pace_target_line(state)
         locked_meals_lines = (
             _locked_meals_prompt_lines(locked_meals)
