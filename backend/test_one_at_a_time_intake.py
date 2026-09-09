@@ -93,8 +93,10 @@ def main():
         s2 = _turn(s2, "???")
     assert s2["current_step"] == "confirm", s2["current_step"]
     assert s2["asked"] == graph.FIELD_ORDER
-    # region is the one field with a fallback: MISSING/NONE -> recommendation.
-    assert s2["region"].endswith("(recommended)"), s2["region"]
+    # purpose is the one field that stores an explicit "" instead of leaving the
+    # key unset when skipped/garbled -- the planner needs a value to synthesise
+    # a sentence from, not a missing key.
+    assert s2["purpose"] == "", s2.get("purpose")
 
     # 6. Editing one field from the summary re-asks THAT field only, then goes
     #    straight back to the summary instead of restarting the questionnaire.

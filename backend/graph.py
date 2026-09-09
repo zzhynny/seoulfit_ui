@@ -59,7 +59,7 @@ def _classify_intent(user_message: str) -> SimpleNamespace:
         f'Message: "{user_message}"\n\n'
         "Return JSON with exactly this field:\n"
         '- intent: "CONFIRM" if user confirms/agrees/wants to proceed. '
-        "Otherwise return exactly one of: travel_dates, category, restrictions, companion, pace, region "
+        "Otherwise return exactly one of: travel_dates, category, restrictions, companion, pace, purpose "
         "(the field they want to change)."
     )
     data = _gemini_json(prompt)
@@ -76,7 +76,7 @@ FIELD_LABELS = {
     "restrictions": "Restrictions",
     "companion":    "Traveling With",
     "pace":         "Trip Style",
-    "region":       "Seoul Area",
+    "purpose":      "Trip Purpose",
 }
 
 ALL_FIELDS = list(FIELD_LABELS.keys())
@@ -96,13 +96,16 @@ FIELD_QUESTIONS = {
     "restrictions": "Any dietary or physical restrictions? (or 'none')",
     "companion":    "Who are you traveling with? (solo/couple/friends/family)",
     "pace":         "Packed schedule or relaxed pace?",
-    "region":       "Which area of Seoul? (e.g. Hongdae, Gangnam, Itaewon) -- or I can recommend!",
+    # 자유 서술이다. 라벨로 정규화하지 않는다 — 뭉개면 임베딩할 게 없어진다.
+    # 이 문장이 코스 purpose 와의 유사도 순위를 정한다.
+    "purpose":      "Last one -- what's this trip for? (e.g. 'first time with my "
+                    "parents', 'a free afternoon on a work trip') Or tap skip.",
 }
 
-# The order the buddy asks in, one field per turn. Deliberately not
-# ALL_FIELDS order: region goes last so _recommend_region has a category to
-# work from when the traveller wants a suggestion instead of picking an area.
-FIELD_ORDER = ["travel_dates", "category", "companion", "pace", "restrictions", "region"]
+# 한 턴에 한 필드씩 묻는 순서. purpose 가 마지막인 이유는 앞의 다섯 답이 목적을
+# 안 적었을 때 쓸 합성 문장의 재료이기 때문이다 (planner._synth_purpose).
+# region 은 여기 없다 — 날짜마다 다른 게 정상이라 Day Planner 화면이 받는다.
+FIELD_ORDER = ["travel_dates", "category", "companion", "pace", "restrictions", "purpose"]
 
 # One JSON instruction line per field, fed to _extract_field. Lifted verbatim
 # from the old combined extraction prompt so behaviour per field is unchanged.
@@ -115,8 +118,7 @@ FIELD_EXTRACT = {
                     'says onto the closest label (e.g. beauty/spa/healing -> '
                     '"Nature & Relaxation"; museums/palaces/hanok -> '
                     '"Culture & History"; BTS/drama locations -> "K-POP & Hallyu"). '
-                    'Comma-separated if multiple. "MISSING" if the reply does not '
-                    'answer the question.',
+                    '"MISSING" if the reply does not answer the question.',
     "companion":    'companion: solo/couple/friends/family. "MISSING" if the reply does '
                     'not answer the question.',
     "pace":         'pace: "packed" for busy or "relaxed" for slow pace. "MISSING" if the '
@@ -124,10 +126,10 @@ FIELD_EXTRACT = {
     "restrictions": 'restrictions: dietary or physical restrictions. "none" if the user '
                     'says they have no restrictions. "MISSING" if the reply does not '
                     'answer the question.',
-    "region":       'region: one or more areas from Hongdae/Seongsu/Gangnam/Itaewon/'
-                    'Myeongdong/Jongno/Bukchon/Mapo/Insadong/Dongdaemun/Sinchon/Apgujeong. '
-                    'Comma-separated if multiple. "NONE" if the user asks for a '
-                    'recommendation or does not specify.',
+    "purpose":      'purpose: the traveller\'s own words for what this trip is for, '
+                    'copied verbatim and translated to English if needed. Do NOT '
+                    'summarise into a category. "MISSING" if they skipped, declined, '
+                    'or did not answer.',
 }
 
 
@@ -147,31 +149,6 @@ def _extract_field(field: str, text: str) -> str:
     return str(data.get(field, "MISSING")).strip()
 
 
-_CATEGORY_REGIONS: dict[str, str] = {
-    "beauty":   "Hongdae or Gangnam",
-    "history":  "Jongno or Bukchon",
-    "food":     "Gwangjang Market or Myeongdong",
-    "shopping": "Myeongdong or Gangnam",
-    "activity": "Hongdae or Mapo",
-}
-
-
-def _recommend_region(category: str | None) -> str:
-    if not category:
-        return "Hongdae or Myeongdong"
-    cat = category.lower()
-    for key, region in _CATEGORY_REGIONS.items():
-        if key in cat:
-            return region
-    return "Hongdae or Myeongdong"
-
-
-def _parse_regions(raw: str) -> str:
-    parts = re.split(r'\s+and\s+|\s*&\s*|\s*,\s*', raw.strip(), flags=re.IGNORECASE)
-    cleaned = [p.strip().title() for p in parts if p.strip()]
-    return ", ".join(cleaned) if cleaned else raw.strip()
-
-
 def build_summary(state: TravelState) -> str:
     lines = "\n".join(
         f"{FIELD_LABELS[f]}: {state.get(f) or '--'}" for f in ALL_FIELDS
@@ -179,7 +156,7 @@ def build_summary(state: TravelState) -> str:
     return (
         f"Here's your Seoul trip summary:\n\n{lines}\n\n"
         "Ready to generate your itinerary? Type 'confirm'.\n"
-        "Want to change something? Just tell me (e.g. 'change region', 'edit dates')."
+        "Want to change something? Just tell me (e.g. 'change purpose', 'edit dates')."
     )
 
 
@@ -249,12 +226,10 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     """Turn one extracted value into the state update for its slot."""
     value = (raw or "").strip()
 
-    if field == "region":
-        # "NONE" (asked us to recommend) and "MISSING" (didn't answer) both land
-        # on the category-based suggestion — same as the old collecting_region.
-        if not value or value.upper() in ("MISSING", "NONE"):
-            return {"region": f"{_recommend_region(state.get('category'))} (recommended)"}
-        return {"region": _parse_regions(value)}
+    if field == "purpose":
+        # 건너뛰기는 정상 경로다. 빈 문자열로 두면 planner 가 다른 슬롯으로
+        # 문장을 합성한다 — 목적을 적는 사람이 소수라서 그쪽이 다수 경로다.
+        return {"purpose": "" if not value or value.upper() == "MISSING" else value}
 
     if not value or value.upper() == "MISSING":
         return {}
