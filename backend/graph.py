@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import json
 from datetime import date, datetime
+from typing import Any
 from types import SimpleNamespace
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.graph import StateGraph, END
@@ -10,6 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from state import TravelState
 from planner import make_retrieve_node, plan_node
 from critic_repair import make_critic_repair_node
+from retrieval import DAY_PLAN_REGION_ORDER
 
 # ---------------------------------------------------------------------------
 # Module-level API key (set by build_graph)
@@ -133,6 +135,14 @@ FIELD_EXTRACT = {
 }
 
 
+# 앱의 관심사 어휘. FIELD_EXTRACT["category"], Flutter 칩,
+# course_descriptions.json 의 interests 가 전부 이 문자열을 그대로 쓴다.
+INTEREST_LABELS = [
+    "Culture & History", "Food & Cafes", "Shopping",
+    "K-POP & Hallyu", "Nature & Relaxation",
+]
+
+
 def _extract_field(field: str, text: str) -> str:
     """Pull ONE slot out of the reply to that slot's own question.
 
@@ -237,10 +247,43 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     return {field: value}
 
 
+DEFAULT_INTEREST = "Culture & History"
+
+
+def default_day_specs(state: TravelState) -> list[dict[str, Any]]:
+    """day_plan 단계에 들어가는 순간 채워 넣는 날짜별 기본값.
+
+    화면은 이 값을 GET /state 로 읽어 보여주기만 한다. 기본값 로직을 서버와
+    화면 양쪽에 두면 반드시 어긋나므로 여기 한 곳에만 둔다. 그리고 day_specs 가
+    항상 존재하므로 "비어 있을 때" 라는 분기가 생기지 않는다.
+
+    지역은 코스 풀이 넓은 곳부터 서로 다르게 배분한다 — 그대로 두어도 권역이
+    다양한 무난한 여행이 된다. 관심사는 채팅에서 답한 값을 모든 날에 깐다.
+    """
+    from rag import _parse_num_days
+
+    days = _parse_num_days(state.get("travel_dates"))
+    interest = (state.get("category") or "").strip() or DEFAULT_INTEREST
+    order = DAY_PLAN_REGION_ORDER
+    return [
+        {"day": i + 1, "region": order[i % len(order)], "interest": interest}
+        for i in range(days)
+    ]
+
+
 def _ask(state: TravelState, updates: dict, field: str | None) -> TravelState:
     """Apply `updates`, then either ask `field` or fall through to the summary."""
     if field is None:
-        return {**state, **updates, "pending": None, "current_step": "confirm"}
+        return {
+            **state, **updates,
+            "pending": None,
+            "current_step": "day_plan",
+            "day_specs": default_day_specs({**state, **updates}),
+            "messages": [AIMessage(content=(
+                "Got it. Now pick an area and a focus for each day -- "
+                "I've filled in a starting point you can change."
+            ))],
+        }
     return {
         **state, **updates,
         "pending": field,
@@ -384,6 +427,10 @@ def route_entry(state: TravelState) -> str:
     if step == "critic":
         return "critic_repair"
 
+    if step == "day_plan":
+        # 화면이 POST /day-plan 으로 넘어가기 전까지는 그래프가 할 일이 없다.
+        return END
+
     if step == "confirm":
         messages = state.get("messages", [])
         if messages and isinstance(messages[-1], HumanMessage):
@@ -394,11 +441,9 @@ def route_entry(state: TravelState) -> str:
 
 
 def _after_collect(state: TravelState) -> str:
-    # Collecting only reaches "confirm" once every field has had its question,
-    # and the traveller has never seen the summary at that point -- so always
-    # show it. Routing straight to handle_confirm here used to hijack a plain
-    # answer like "ok" into generating the itinerary.
-    return "confirm" if state.get("current_step") == "confirm" else END
+    # 마지막 질문에 답하면 day_plan 으로 넘어간다. 그래프는 여기서 멈추고,
+    # 다음 진입은 POST /day-plan 이 current_step 을 confirm 으로 옮긴 뒤다.
+    return END
 
 
 def _after_handle_confirm(state: TravelState) -> str:
@@ -442,11 +487,7 @@ def build_graph(api_key: str):
         END:              END,
     })
 
-    builder.add_conditional_edges(
-        "collect",
-        _after_collect,
-        {"confirm": "confirm", END: END},
-    )
+    builder.add_conditional_edges("collect", _after_collect, {END: END})
 
     builder.add_edge("confirm", END)
 
