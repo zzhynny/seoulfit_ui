@@ -1469,6 +1469,15 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 ],
             }
 
+        # Snapshot of the planner-validated itinerary (already ran through
+        # planner._validate_and_repair_itinerary before this node runs), taken
+        # BEFORE Critic/Repair touch it. RepairAgent mutates a day's `pois` list
+        # in place rather than copying it, so without this snapshot an exception
+        # partway through repair() would leave `itinerary` itself half-mutated --
+        # this is the clean fallback the except branch below returns instead.
+        import copy
+        fallback_itinerary = copy.deepcopy(itinerary)
+
         try:
             before_report = critic.evaluate(state)
 
@@ -1521,11 +1530,30 @@ def make_critic_repair_node(base_dir: Any | None = None):
             }
 
         except Exception as e:
+            # Fall back to the pre-Critic/Repair snapshot rather than whatever
+            # partially-mutated state `itinerary` is in, and flag the failure so
+            # the frontend can tell this itinerary was never actually validated
+            # (same nested-in-itinerary + top-level shape as the success path,
+            # with before/after/repair_log left empty instead of omitted so
+            # callers reading those subfields don't need a separate null-check).
+            fallback_itinerary["critic_report"] = {
+                "verification_failed": True,
+                "error": str(e),
+                "before": None,
+                "after": None,
+                "repair_applied": False,
+                "repair_log": [],
+            }
             return {
                 **state,
+                "itinerary": fallback_itinerary,
+                "critic_report": fallback_itinerary["critic_report"],
                 "current_step": "done",
                 "messages": [
-                    AIMessage(content=f"⚠️ Critic-Repair 오류: {e}")
+                    AIMessage(content=(
+                        f"⚠️ Critic-Repair 오류: {e}\n"
+                        "검증되지 않은 일정을 그대로 반환합니다 (repair 적용 안 됨)."
+                    ))
                 ],
             }
 
