@@ -376,7 +376,7 @@ def apply_slot_edits(
     itinerary: dict[str, Any],
     edits: dict[str, Any],
     pool: dict[str, dict[str, Any]],
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], set[str]]:
     """User Selection 화면에서 사용자가 건드린 슬롯 상태를 itinerary에 반영한다
     (POST /revalidate). 여기서는 구조만 바꾸고 검증/복구는 안 한다 — 호출부가
     이 결과를 CriticAgent/RepairAgent에 넘긴다.
@@ -387,6 +387,14 @@ def apply_slot_edits(
     적용 순서: 제외 -> 교체 -> day 내 재정렬 -> day 번호 이동. 이 순서가
     아니면(예: 재정렬을 먼저 하면) day_order에 적힌 이름이 swap으로 바뀐
     새 이름과 안 맞을 수 있어서 이 순서를 지킨다.
+
+    Returns (itinerary, swapped_in_names) -- swapped_in_names is the
+    normalized-name set of POIs actually swapped in during step 2 (a swap
+    whose target missed `pool` and silently kept the original POI is NOT
+    included). This is RepairAgent.repair()'s structural signal for "the
+    traveller explicitly picked this POI" -- passed through by api.py's
+    /revalidate handler so _trim_overfilled_days can protect it without
+    parsing notes text. Callers that only need the itinerary can ignore it.
     """
     import copy
 
@@ -410,6 +418,7 @@ def apply_slot_edits(
     # 2. 교체 — 후보 풀에서 새 POI를 찾아 통째로 갈아끼운다. 풀에 없으면(예:
     # /swap-candidates를 거치지 않고 임의 이름을 보낸 경우) 원본을 그대로 둔다
     # — 조용히 실패해서 슬롯이 사라지는 것보다 낫다.
+    swapped_in_names: set[str] = set()
     if swapped:
         for d in days:
             new_pois = []
@@ -418,9 +427,11 @@ def apply_slot_edits(
                 new_name = swapped.get(key)
                 new_item = pool.get(normalize_text(new_name)) if new_name else None
                 if new_item:
-                    new_pois.append(as_output_poi(
+                    new_poi = as_output_poi(
                         new_item, note_suffix="Swapped via /swap-candidates."
-                    ))
+                    )
+                    new_pois.append(new_poi)
+                    swapped_in_names.add(normalize_text(new_poi.get("name")))
                 else:
                     new_pois.append(p)
             d["pois"] = new_pois
@@ -445,7 +456,7 @@ def apply_slot_edits(
                 d["day"] = safe_int(d.get("day"), 0) + safe_int(shift, 0)
         days.sort(key=lambda d: safe_int(d.get("day"), 0))
 
-    return itinerary
+    return itinerary, swapped_in_names
 
 
 def candidates_for_area(
@@ -917,10 +928,23 @@ class CriticAgent:
 # ---------------------------------------------------------------------------
 
 class RepairAgent:
-    def repair(self, state: dict[str, Any], report: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    def repair(
+        self,
+        state: dict[str, Any],
+        report: dict[str, Any],
+        user_selected_names: set[str] | None = None,
+    ) -> tuple[dict[str, Any], list[str]]:
+        """`user_selected_names`: normalized names of POIs the traveller
+        explicitly picked (today: POST /revalidate's swapped_slots, passed
+        in by api.py -- see apply_slot_edits' second return value). Defaults
+        to none, so the graph's own critic_repair_node (which has no user
+        selection to speak of, before any User Selection screen exists) is
+        unaffected. Used only to protect those POIs from _trim_overfilled_days
+        below; nothing else in this method reads it."""
         itinerary = state.get("itinerary") or {}
         pool = build_candidate_pool(state)
         logs: list[str] = []
+        user_selected_names = user_selected_names or set()
 
         if not itinerary.get("days"):
             return itinerary, logs
@@ -936,6 +960,13 @@ class RepairAgent:
         # _repair_closed_on_assigned_day when neither same-day-swap nor
         # move-to-another-day works out.
         removed_pois: list[dict[str, Any]] = []
+
+        # Names _repair_underfilled_days itself inserts in this call, kept as
+        # a plain in-memory set (not written onto the POI dict -- the output
+        # shape API consumers see stays exactly as it was) so
+        # _trim_overfilled_days can tell "Repair's own filler" apart from
+        # everything else without any notes-text guessing.
+        repair_inserted_names: set[str] = set()
 
         # Dedup FIRST, not last: _repair_underfilled_days below counts
         # len(pois) against the pace minimum, and a duplicate the LLM already
@@ -982,6 +1013,7 @@ class RepairAgent:
             logs=logs,
             trip_start_date=state.get("trip_start_date"),
             pace=state.get("pace"),
+            inserted_names=repair_inserted_names,
         )
 
         # No second dedup pass here: _repair_closed_on_assigned_day's "(b)
@@ -996,6 +1028,15 @@ class RepairAgent:
         # start, so it never re-picks a name that's already placed. Verified
         # by tracing every insertion/move site in this class, not just this
         # one -- see test_repair_dedup_order.py.
+
+        itinerary = self._trim_overfilled_days(
+            itinerary=itinerary,
+            requested_areas=requested_areas,
+            logs=logs,
+            pace=state.get("pace"),
+            repair_inserted_names=repair_inserted_names,
+            user_selected_names=user_selected_names,
+        )
 
         itinerary["repair_log"] = logs
         itinerary["removed_pois"] = removed_pois
@@ -1271,6 +1312,7 @@ class RepairAgent:
         logs: list[str],
         trip_start_date: str | None = None,
         pace: str | None = None,
+        inserted_names: set[str] | None = None,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
         # Floor only -- see _evaluate_days for why the ceiling half is never
@@ -1313,11 +1355,133 @@ class RepairAgent:
                     note_suffix="Added by Repair Agent to make the day sufficiently complete."
                 )
                 pois.append(poi)
-                used.add(normalize_text(poi.get("name")))
+                name_key = normalize_text(poi.get("name"))
+                used.add(name_key)
+                if inserted_names is not None:
+                    inserted_names.add(name_key)
                 added += 1
 
             if added:
                 logs.append(f"Added {added} POI(s) to Day {day.get('day')} because the day was under-filled.")
+
+        return itinerary
+
+    def _trim_overfilled_days(
+        self,
+        *,
+        itinerary: dict[str, Any],
+        requested_areas: list[str],
+        logs: list[str],
+        pace: str | None,
+        repair_inserted_names: set[str],
+        user_selected_names: set[str],
+    ) -> dict[str, Any]:
+        """Trim each day back down to pace_bounds(pace)'s max, once every
+        other repair step above has already run.
+
+        Protects, in priority order (never removed even if the day stays
+        over max as a result -- see the "not enough removable" branch
+        below):
+          (a) a POI in `user_selected_names` (the traveller explicitly
+              swapped it in via POST /revalidate -- see RepairAgent.repair's
+              docstring).
+          (b) any meal-slot POI (is_meal_poi -- structural, not notes-based).
+          (c) a POI that is currently the itinerary-wide SOLE coverage for a
+              requested area (self._coverage counts itinerary-wide, exactly
+              like CriticAgent._evaluate_area_coverage -- so this uses the
+              same yardstick Critic will grade against). Deliberately NOT
+              planner.py's own per-day version (planner.py:1500, untouched)
+              -- that would let this trim protect a POI Critic doesn't
+              actually need protected on this day, or fail to protect one it
+              does.
+
+        Removes, in priority order, from the non-protected remainder:
+          (1) a POI `repair_inserted_names` marks as _repair_underfilled_days'
+              own filler from this same repair() call.
+          (2) whichever POI has the largest average haversine distance to
+              the day's other POIs (computed once against the day's original
+              POI list, not recomputed after each removal -- excess counts
+              are small in practice, and this keeps the pass O(n^2) instead
+              of O(n^3)).
+        """
+        _poi_min, poi_max = pace_bounds(pace)
+        days = itinerary.get("days") or []
+        if not days:
+            return itinerary
+
+        # Itinerary-wide, same method _coverage()/_evaluate_area_coverage use.
+        coverage = self._coverage(itinerary, requested_areas)
+
+        def _is_sole_area_coverage(poi: dict[str, Any]) -> bool:
+            area = infer_area_from_poi(poi)
+            return any(
+                area_matches_requested(area, req) and coverage.get(req, 0) <= 1
+                for req in requested_areas
+            )
+
+        def _avg_dist_km(pois: list[dict[str, Any]], i: int) -> float:
+            ci = _poi_coords(pois[i])
+            if ci is None:
+                return -1.0  # unknown location -- never preferred for removal by distance
+            dists = [
+                haversine_km(ci[0], ci[1], cj[0], cj[1])
+                for j, p in enumerate(pois) if j != i
+                for cj in [_poi_coords(p)] if cj is not None
+            ]
+            return sum(dists) / len(dists) if dists else -1.0
+
+        for day in days:
+            pois = day.get("pois") or []
+            if len(pois) <= poi_max:
+                continue
+
+            protected_idx: set[int] = set()
+            for i, poi in enumerate(pois):
+                name_key = normalize_text(poi_name(poi))
+                if name_key in user_selected_names:
+                    protected_idx.add(i)
+                elif is_meal_poi(poi):
+                    protected_idx.add(i)
+                elif _is_sole_area_coverage(poi):
+                    protected_idx.add(i)
+
+            excess = len(pois) - poi_max
+            removable = [i for i in range(len(pois)) if i not in protected_idx]
+
+            if len(removable) < excess:
+                logs.append(
+                    f"Day {day.get('day')}: {len(pois)} POIs exceed the pace max "
+                    f"({poi_max}) but only protected POIs (user-selected/meal slot/"
+                    f"sole area coverage) would be left -- not trimmed."
+                )
+                continue
+
+            to_remove: set[int] = set()
+
+            # (1) Repair's own under-fill insertions, farthest-first.
+            repair_added = [
+                i for i in removable
+                if normalize_text(poi_name(pois[i])) in repair_inserted_names
+            ]
+            for i in sorted(repair_added, key=lambda i: -_avg_dist_km(pois, i)):
+                if len(to_remove) >= excess:
+                    break
+                to_remove.add(i)
+
+            # (2) then farthest-average-distance among whatever's left.
+            if len(to_remove) < excess:
+                remaining = [i for i in removable if i not in to_remove]
+                for i in sorted(remaining, key=lambda i: -_avg_dist_km(pois, i)):
+                    if len(to_remove) >= excess:
+                        break
+                    to_remove.add(i)
+
+            removed_names = [poi_name(pois[i]) for i in sorted(to_remove)]
+            day["pois"] = [p for i, p in enumerate(pois) if i not in to_remove]
+            logs.append(
+                f"Day {day.get('day')}: trimmed {len(to_remove)} POI(s) down to the "
+                f"pace max ({poi_max}): {removed_names}."
+            )
 
         return itinerary
 

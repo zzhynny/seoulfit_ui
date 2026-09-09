@@ -844,7 +844,7 @@ def revalidate(req: RevalidateRequest):
 
     try:
         pool = build_candidate_pool(state)
-        edited_itinerary = apply_slot_edits(
+        edited_itinerary, user_selected_names = apply_slot_edits(
             state["itinerary"], req.edits.model_dump(), pool
         )
         edited_state = {**state, "itinerary": edited_itinerary}
@@ -852,7 +852,9 @@ def revalidate(req: RevalidateRequest):
         critic = CriticAgent()
         before_report = critic.evaluate(edited_state)
 
-        repaired_itinerary, repair_log = RepairAgent().repair(edited_state, before_report)
+        repaired_itinerary, repair_log = RepairAgent().repair(
+            edited_state, before_report, user_selected_names=user_selected_names,
+        )
         for day in repaired_itinerary.get("days") or []:
             day["transit_legs"] = compute_transit_legs(day.get("pois") or [])
 
