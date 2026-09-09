@@ -505,7 +505,12 @@ def candidates_for_area(
     *,
     exclude: set[str] | None = None,
     preferred_types: set[str] | None = None,
+    exclude_closed_on: str | None = None,
 ) -> list[dict[str, Any]]:
+    """`exclude_closed_on`: an English weekday name (see date_utils.weekday_for_day).
+    When given, drops any candidate whose `closed_weekday` list contains it -- so a
+    repair insertion never lands a POI that's regularly closed on the very day it's
+    being added to. None (default) skips this check, same as before."""
     exclude = exclude or set()
     preferred_types = preferred_types or set()
 
@@ -524,6 +529,9 @@ def candidates_for_area(
             ptype = normalize_text(item.get("type"))
             if not any(t in ptype for t in preferred_types):
                 continue
+
+        if exclude_closed_on and exclude_closed_on in (item.get("closed_weekday") or []):
+            continue
 
         items.append(item)
 
@@ -978,6 +986,7 @@ class RepairAgent:
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+            trip_start_date=state.get("trip_start_date"),
         )
 
         # Runs before the meal/under-fill repairs below so that a POI removed
@@ -997,6 +1006,7 @@ class RepairAgent:
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+            trip_start_date=state.get("trip_start_date"),
         )
 
         itinerary = self._repair_underfilled_days(
@@ -1004,6 +1014,7 @@ class RepairAgent:
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+            trip_start_date=state.get("trip_start_date"),
         )
 
         itinerary = self._remove_duplicates(
@@ -1015,6 +1026,18 @@ class RepairAgent:
         itinerary["removed_pois"] = removed_pois
         return itinerary, logs
 
+    def _weekday_for(self, trip_start_date: str | None, day_num: int) -> str | None:
+        """Best-effort weekday lookup for a day number -- None if trip_start_date
+        is missing or day_num can't be resolved to a real date. Same fallback
+        pattern _repair_closed_on_assigned_day already uses, factored out so the
+        other repair steps can filter closed-on-that-day candidates too."""
+        if not trip_start_date:
+            return None
+        try:
+            return weekday_for_day(trip_start_date, day_num, lang="en")
+        except (ValueError, TypeError):
+            return None
+
     def _repair_missing_areas(
         self,
         *,
@@ -1022,6 +1045,7 @@ class RepairAgent:
         pool: dict[str, dict[str, Any]],
         requested_areas: list[str],
         logs: list[str],
+        trip_start_date: str | None = None,
     ) -> dict[str, Any]:
         if not requested_areas:
             return itinerary
@@ -1042,10 +1066,12 @@ class RepairAgent:
             target_day = days[target_day_idx]
             needed = 2 - current
 
+            weekday = self._weekday_for(trip_start_date, safe_int(target_day.get("day"), 0))
             candidates = candidates_for_area(
                 pool,
                 area,
                 exclude=used,
+                exclude_closed_on=weekday,
             )
 
             inserted = 0
@@ -1208,6 +1234,7 @@ class RepairAgent:
         pool: dict[str, dict[str, Any]],
         requested_areas: list[str],
         logs: list[str],
+        trip_start_date: str | None = None,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
 
@@ -1216,6 +1243,7 @@ class RepairAgent:
             if any(is_meal_poi(p) for p in pois):
                 continue
 
+            weekday = self._weekday_for(trip_start_date, safe_int(day.get("day"), 0))
             target_area = self._target_area_for_day(day, requested_areas, idx)
             candidates = []
             if target_area:
@@ -1224,6 +1252,7 @@ class RepairAgent:
                     target_area,
                     exclude=used,
                     preferred_types={"restaurant", "cafe"},
+                    exclude_closed_on=weekday,
                 )
 
             if not candidates:
@@ -1234,6 +1263,7 @@ class RepairAgent:
                     and not belongs_to_other_requested_area(
                         item.get("area"), target_area, requested_areas
                     )
+                    and not (weekday and weekday in (item.get("closed_weekday") or []))
                 ]
 
             if candidates:
@@ -1256,6 +1286,7 @@ class RepairAgent:
         pool: dict[str, dict[str, Any]],
         requested_areas: list[str],
         logs: list[str],
+        trip_start_date: str | None = None,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
 
@@ -1264,6 +1295,7 @@ class RepairAgent:
             if len(pois) >= 5:
                 continue
 
+            weekday = self._weekday_for(trip_start_date, safe_int(day.get("day"), 0))
             target_area = self._target_area_for_day(day, requested_areas, idx)
             candidates = []
 
@@ -1272,6 +1304,7 @@ class RepairAgent:
                     pool,
                     target_area,
                     exclude=used,
+                    exclude_closed_on=weekday,
                 )
 
             if not candidates:
@@ -1281,6 +1314,7 @@ class RepairAgent:
                     and not belongs_to_other_requested_area(
                         item.get("area"), target_area, requested_areas
                     )
+                    and not (weekday and weekday in (item.get("closed_weekday") or []))
                 ]
 
             added = 0
