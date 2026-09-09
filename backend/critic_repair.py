@@ -929,6 +929,16 @@ class RepairAgent:
         # move-to-another-day works out.
         removed_pois: list[dict[str, Any]] = []
 
+        # Dedup FIRST, not last: _repair_underfilled_days below counts
+        # len(pois) against the pace minimum, and a duplicate the LLM already
+        # put in makes a day look full when it's actually one short. Doing
+        # this upfront means every later step's counts (area coverage, meal
+        # presence, POI count) are accurate instead of inflated by dupes.
+        itinerary = self._remove_duplicates(
+            itinerary=itinerary,
+            logs=logs,
+        )
+
         itinerary = self._repair_missing_areas(
             itinerary=itinerary,
             pool=pool,
@@ -965,10 +975,18 @@ class RepairAgent:
             trip_start_date=state.get("trip_start_date"),
         )
 
-        itinerary = self._remove_duplicates(
-            itinerary=itinerary,
-            logs=logs,
-        )
+        # No second dedup pass here: _repair_closed_on_assigned_day's "(b)
+        # move to another day" branch above appends to the destination day
+        # without checking its existing POIs, which looks like it could
+        # reintroduce a duplicate -- but it can't. The dedup at the top of
+        # this method already made every name unique across the whole
+        # itinerary before this method's `used` snapshot was taken, so the
+        # POI being moved exists in exactly one place (its source day) at
+        # move time; the destination can't already hold it. Every other step
+        # in this chain re-derives `used` from the itinerary fresh at its own
+        # start, so it never re-picks a name that's already placed. Verified
+        # by tracing every insertion/move site in this class, not just this
+        # one -- see test_repair_dedup_order.py.
 
         itinerary["repair_log"] = logs
         itinerary["removed_pois"] = removed_pois
