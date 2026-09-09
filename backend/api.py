@@ -440,6 +440,14 @@ def day_plan(req: DayPlanRequest):
     thread_id = _require_thread_id(req.thread_id)
     state = _get_state(thread_id)
 
+    # A state conflict, not malformed input -- 409, distinct from the 400s
+    # below. Without this, a thread that never finished intake (travel_dates
+    # still None) sails through: _parse_num_days(None) == 1, so a 1-day plan
+    # passes the length check trivially and current_step jumps to confirm
+    # with every other slot still empty.
+    if state.get("current_step") != "day_plan":
+        raise HTTPException(status_code=409, detail="thread is not ready for a day plan")
+
     expected = _parse_num_days(state.get("travel_dates"))
     days = [d.model_dump() for d in req.days]
 

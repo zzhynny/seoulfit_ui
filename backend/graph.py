@@ -272,13 +272,27 @@ def default_day_specs(state: TravelState) -> list[dict[str, Any]]:
 
 
 def _ask(state: TravelState, updates: dict, field: str | None) -> TravelState:
-    """Apply `updates`, then either ask `field` or fall through to the summary."""
+    """Apply `updates`, then either ask `field` or fall through.
+
+    `field is None` fires in two different situations, and they must not be
+    treated the same:
+    - Intake just finished for the first time (no day_specs yet) -> fill in
+      the day-plan defaults and send the traveller there.
+    - The traveller edited one field from the confirm screen (`asked` stays
+      full across that re-ask, so this reads as "no more fields" again) ->
+      day_specs already holds their own picks, so land back on confirm
+      without recomputing anything. Recomputing here would silently wipe a
+      custom day plan on every unrelated field edit.
+    """
     if field is None:
+        merged = {**state, **updates}
+        if merged.get("day_specs"):
+            return {**merged, "pending": None, "current_step": "confirm"}
         return {
-            **state, **updates,
+            **merged,
             "pending": None,
             "current_step": "day_plan",
-            "day_specs": default_day_specs({**state, **updates}),
+            "day_specs": default_day_specs(merged),
             "messages": [AIMessage(content=(
                 "Got it. Now pick an area and a focus for each day -- "
                 "I've filled in a starting point you can change."
