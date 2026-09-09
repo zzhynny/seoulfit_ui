@@ -98,7 +98,8 @@ GET /detailCommon2&contentId={cid}
 
 ### 결과물
 
-`course_data.json`에 필드 추가 후 `build_index.py --rebuild`
+`course_data.json`에 필드 추가. (FAISS 인덱스를 재생성하던 `build_index.py`는
+검색 재설계로 삭제됨 — 더 이상 별도 빌드 단계가 없다.)
 
 **호출량:** 750장소 x 2 = 1,500회. 오퍼레이션별로 나뉘므로 각각 하루면 끝난다.
 

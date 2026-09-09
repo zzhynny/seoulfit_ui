@@ -9,30 +9,6 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime, timedelta
-from pathlib import Path
-
-
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
-
-_BASE_DIR = Path(__file__).resolve().parent
-# v2: course_data.json + POI별 is_area_type / requires_review 플래그
-# (거리/구역을 가리키는 POI를 구분하기 위해 추가됨).
-# v3: v2 + seoul.json 매칭으로 얻은 opening_hours 필드(93건; 없으면 필드 생략).
-# v4: v3 + TourAPI(EngService2) 배치 매칭으로 얻은 opening_hours 추가(99건, source=tourapi).
-# v5: v4 + is_generic_activity 플래그(16건) — "Karaoke"/"Jjimjilbang"처럼 특정
-#     업체가 아니라 활동 카테고리 라벨인 POI를 표시(126개 코스 전수 검토로 확정).
-# v6: v5 + opening_hours.closed_weekday(151건) — Google Places Legacy Place
-#     Details(opening_hours.weekday_text)로 얻은 정기 휴무 요일. LLM 웹서칭
-#     기반 closure_check.py보다 훨씬 신뢰도가 높아(151/192 vs grounding
-#     인용 첨부율 12.5%) 정기 휴무 판정은 이쪽으로 옮김(scripts/
-#     google_places_closed_weekday_fill.py).
-# 원본 course_data.json은 그대로 두고 별도 파일로 관리한다.
-# v1~v6 전부 backend/dataset/ 밑으로 이동(원격의 "move data files under
-# dataset/" 구조에 맞춤, 2026-09-02). 안 쓰는 중간 버전 파일도 지우지 않고
-# 그대로 dataset/ 안에 둔다.
-COURSE_DATA_PATH = _BASE_DIR / "dataset" / "course_data_v6.json"
 
 
 # ---------------------------------------------------------------------------

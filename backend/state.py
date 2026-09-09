@@ -28,7 +28,7 @@ class TravelState(TypedDict, total=False):
     messages: Annotated[list, add_messages]  # 대화 히스토리 (reducer 적용)
 
     # RAG + planning
-    retrieved_courses: list[dict[str, Any]]   # FAISS 검색 결과 코스 리스트 (flat merge of all segment anchors)
+    retrieved_courses: list[dict[str, Any]]   # select_anchors 결과 코스 리스트 (flat merge of all segment anchors)
     day_segments: Optional[list[dict[str, Any]]]  # per-day-segment anchor courses (Index A)
     itinerary: Optional[dict[str, Any]]       # 최종 일정 (구조화된 JSON)
 

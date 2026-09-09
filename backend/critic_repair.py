@@ -160,18 +160,6 @@ def area_label(area: str | None) -> str:
     return labels.get(area, area.title())
 
 
-def extract_requested_areas(location: str | None, purpose: str | None = None) -> list[str]:
-    text = f"{location or ''} {purpose or ''}".lower()
-    found: list[str] = []
-
-    for area, aliases in AREA_ALIASES.items():
-        if any(alias.lower() in text for alias in aliases):
-            if area not in found:
-                found.append(area)
-
-    return found
-
-
 def _areas_from_day_specs(state: dict[str, Any]) -> list[str]:
     """Day-by-day regions, de-duplicated in first-seen order.
 
