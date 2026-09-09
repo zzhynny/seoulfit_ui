@@ -172,6 +172,16 @@ def extract_requested_areas(location: str | None, purpose: str | None = None) ->
     return found
 
 
+def _areas_from_day_specs(state: dict[str, Any]) -> list[str]:
+    """Day-by-day regions, de-duplicated in first-seen order.
+
+    state["region"] no longer exists (Task 4 removed it) -- areas now come
+    from the per-day picks the traveller made, the same derivation plan_node
+    uses.
+    """
+    return list(dict.fromkeys(s["region"] for s in (state.get("day_specs") or [])))
+
+
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     r = 6371.0
     p1 = math.radians(lat1)
@@ -706,10 +716,7 @@ class CriticAgent:
         if requested:
             return list(requested)
 
-        return extract_requested_areas(
-            state.get("region"),
-            state.get("category"),
-        )
+        return _areas_from_day_specs(state)
 
     def _evaluate_area_coverage(
         self,
@@ -961,10 +968,7 @@ class RepairAgent:
         if not itinerary.get("days"):
             return itinerary, logs
 
-        requested_areas = report.get("requested_areas") or extract_requested_areas(
-            state.get("region"),
-            state.get("category"),
-        )
+        requested_areas = report.get("requested_areas") or _areas_from_day_specs(state)
 
         # Structured record of POIs dropped outright (as opposed to swapped or
         # moved) so a diagnostic UI can say *why* a stop disappeared -- not

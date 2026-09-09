@@ -37,18 +37,13 @@ from geo import (
     SEOUL_AREA_CENTERS,
     area_label as _area_label,
     area_matches_requested as _area_matches_requested,
-    extract_requested_areas as _extract_requested_areas,
     get_area_center as _get_area_center,
     haversine_km as _haversine_km,
     infer_area_from_fields as _infer_area_from_text_or_coords,
 )
 # lm_context removed — DSPy replaced with direct Gemini calls
-from rag import (
-    _parse_num_days,
-    build_query,
-    parse_day_segments,
-    retrieve_for_segments,
-)
+from rag import _parse_num_days
+from retrieval import base_id, load_vectors, select_anchors
 from state import TravelState
 
 load_dotenv()
@@ -1870,39 +1865,100 @@ def _locked_meals_prompt_lines(locked_meals: dict[int, dict[str, Any]]) -> str:
 # Graph nodes
 # ---------------------------------------------------------------------------
 
+def _synth_purpose(state: TravelState) -> str:
+    """사용자가 목적을 적었으면 그 문장, 아니면 다른 슬롯으로 한 문장을 만든다.
+
+    목적을 적는 사람은 소수라 이쪽이 다수 경로다. 그리고 이 합성이 companion 과
+    pace 를 검색에 처음 쓰이게 한다 — 지금까지 두 슬롯은 수집만 되고 순위에는
+    한 번도 영향을 주지 않았다.
+    """
+    written = (state.get("purpose") or "").strip()
+    if written:
+        return written[:300]
+
+    days = _parse_num_days(state.get("travel_dates"))
+    pace = (state.get("pace") or "").strip().lower()
+    companion = (state.get("companion") or "").strip().lower()
+    interest = (state.get("category") or "").strip()
+
+    pace_word = {"packed": "packed", "relaxed": "relaxed"}.get(pace, "")
+    who = {
+        "solo": "a solo traveller", "couple": "a couple",
+        "friends": "a group of friends", "family": "a family with children",
+    }.get(companion, "a traveller")
+
+    parts = ["A"]
+    if pace_word:
+        parts.append(pace_word)
+    parts.append(f"{days}-day trip for {who}")
+    if interest:
+        parts.append(f"focused on {interest}")
+    return " ".join(parts) + "."
+
+
 def make_retrieve_node(api_key: str):
     set_planner_api_key(api_key)
 
     def retrieve_node(state: TravelState) -> TravelState:
-        segments = parse_day_segments(
-            location=state.get("region") or "",
-            purpose=state.get("category") or "",
-            duration=state.get("travel_dates") or "",
-            num_days=_resolve_num_days(state),
-        )
-
-        try:
-            segments_with_data, all_courses = retrieve_for_segments(
-                api_key=api_key,
-                segments=segments,
-                purpose=state.get("category") or "",
-            )
-        except Exception as e:
-            # ponytail: no **state spread — returning a replacement messages list
-            # (not just the new message) would overwrite the checkpoint history.
+        day_specs = state.get("day_specs") or []
+        if not day_specs:
             return {
                 "current_step": "confirm",
-                "messages": [AIMessage(content=f"⚠️ Failed to retrieve courses: {e}")],
+                "messages": [AIMessage(content="⚠️ No day plan found. Please set each day's area first.")],
             }
+
+        vectors = load_vectors()
+        query_vec = _embed_purpose(_synth_purpose(state)) if vectors else None
+
+        segments, all_courses, used = [], [], set()
+        seen_ids: set[str] = set()
+        for spec in day_specs:
+            sel = select_anchors(
+                {**spec, "purpose_vec": query_vec}, exclude=used, vectors=vectors
+            )
+            if sel.relaxed:
+                print(f"[retrieval] day {spec['day']} {spec['region']}/{spec['interest']}: {sel.relaxed}")
+            used |= {base_id(c["course_id"]) for c in sel.courses}
+            segments.append({
+                "day_numbers": [spec["day"]],
+                "area": spec["region"],
+                "purpose_hint": spec["interest"],
+                "anchor_courses": sel.courses,
+            })
+            for c in sel.courses:
+                if c["course_id"] not in seen_ids:
+                    seen_ids.add(c["course_id"])
+                    all_courses.append(c)
 
         return {
             **state,
             "retrieved_courses": all_courses,
-            "day_segments": segments_with_data,
+            "day_segments": segments,
             "current_step": "planning",
         }
 
     return retrieve_node
+
+
+def _embed_purpose(text: str):
+    """질의 임베딩. 일정 생성당 1회 — 모든 날이 같은 목적을 쓴다.
+
+    실패하면 None 을 돌려 유사도 정렬만 건너뛴다. 예전에는 여기서 예외가 나면
+    retrieve_node 가 통째로 죽어 대화가 멈췄다.
+    """
+    from build_vectors import EMBEDDING_MODEL, normalize
+    import numpy as np
+
+    try:
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        client = GoogleGenerativeAIEmbeddings(
+            model=EMBEDDING_MODEL, google_api_key=_PLANNER_GEMINI_KEY
+        )
+        vec = np.asarray(client.embed_query(text), dtype="float32")
+        return normalize(vec.reshape(1, -1))[0]
+    except Exception as e:
+        print(f"[retrieval] query embedding failed ({type(e).__name__}) — filter-only")
+        return None
 
 
 def plan_node(state: TravelState) -> TravelState:
@@ -1915,7 +1971,6 @@ def plan_node(state: TravelState) -> TravelState:
             "messages": [AIMessage(content="⚠️ No candidate courses found. Try different details.")],
         }
 
-    location = state.get("region") or ""
     purpose = state.get("category") or ""
     duration = state.get("travel_dates") or ""
     num_days = _resolve_num_days(state)
@@ -1931,8 +1986,12 @@ def plan_node(state: TravelState) -> TravelState:
     # common path.
     duration_text = duration or (f"{num_days} days" if num_days else "")
 
-    requested_areas = _extract_requested_areas(location, purpose)
+    # 날짜별 지역의 합집합. 예전에는 region 문자열에서 추출했는데, 이제 사용자가
+    # 날마다 지정하므로 추측이 없다.
+    requested_areas = list(dict.fromkeys(s["region"] for s in (state.get("day_specs") or [])))
     print(f"[planner] requested_areas = {requested_areas}")
+
+    location = ", ".join(_area_label(a) for a in requested_areas)
 
     expected_days = _parse_num_days(duration, override=num_days) if (duration or num_days) else 0
     locked_meals = _resolve_locked_meals(

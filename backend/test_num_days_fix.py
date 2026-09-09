@@ -50,14 +50,6 @@ def test_resolve_num_days():
     print("OK - _resolve_num_days")
 
 
-def test_parse_day_segments_override_bypasses_text_parsing():
-    # "asdf" alone would legacy-parse to 1 day; override must win regardless.
-    segments = rag.parse_day_segments(location="", purpose="", duration="asdf", num_days=4)
-    assert len(segments) == 1
-    assert segments[0]["day_numbers"] == [1, 2, 3, 4], segments[0]["day_numbers"]
-    print("OK - parse_day_segments num_days override")
-
-
 def test_pace_bounds():
     assert planner._pace_bounds({"pace": "relaxed"}) == (5, 6)
     assert planner._pace_bounds({"pace": "packed"}) == (7, 8)
@@ -397,7 +389,6 @@ def test_plan_node_with_origin_date_picker_format():
 if __name__ == "__main__":
     test_parse_num_days_override()
     test_resolve_num_days()
-    test_parse_day_segments_override_bypasses_text_parsing()
     test_pace_bounds()
     test_pace_target_line()
     test_fold_least_filled_not_round_robin()
