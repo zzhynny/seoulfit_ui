@@ -310,7 +310,16 @@ class _PlanView extends StatelessWidget {
             label: 'Plan each day',
             onPressed: onOpenDayPlanner,
           ),
-        if (messages.any((m) => m.readyToBuild))
+        // Must check only the LAST message, not `.any` over history: a
+        // confirm-stage edit that changes trip length bounces current_step
+        // back to day_plan, appending a new message whose readyToBuild is
+        // false -- but an earlier confirm-summary message's readyToBuild
+        // stays true forever in the list, so `.any` would show this button
+        // alongside the "Plan each day" CTA above. readyToBuild and
+        // awaitingStep are set together from the same currentStep on each
+        // message (api_chat_repository.dart), so checking last keeps the
+        // two states in this Column truly mutually exclusive.
+        if (messages.isNotEmpty && messages.last.readyToBuild)
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
             child: SizedBox(
@@ -420,7 +429,8 @@ class _PlanView extends StatelessWidget {
 
 /// A full-width outlined CTA under the message list, same shape as the
 /// "Ready? Build My Itinerary" button above it — the two are mutually
-/// exclusive states (`day_plan` vs. `confirm`) so only ever one shows.
+/// exclusive states (`day_plan` vs. `confirm`) so only ever one shows, as
+/// long as both gates read `messages.last` and nothing scans history.
 class _CtaButton extends StatelessWidget {
   const _CtaButton({required this.label, required this.onPressed});
 
