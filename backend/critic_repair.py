@@ -1608,6 +1608,36 @@ def reorder_supplements(
 
 MAX_CRITIC_REPAIR_ROUNDS = 3
 
+# Critic rules with no corresponding RepairAgent method -- see
+# RepairAgent.repair()'s call list (_repair_missing_areas/
+# _repair_closed_on_assigned_day/_repair_missing_meals/
+# _repair_underfilled_days/_remove_duplicates/_trim_overfilled_days) against
+# the CriticIssue codes those actually address
+# (REQUESTED_AREA_UNDER_COVERED/CLOSED_ON_ASSIGNED_DAY/NO_MEAL_SLOT/
+# TOO_FEW_POIS/DUPLICATE_POIS -- trim has no CriticIssue code of its own).
+# Counting a code here toward run_critic_repair_loop's convergence check
+# would make a round that fixed every OTHER issue look like it "didn't
+# improve" (repair can never reduce something it has no method for), or
+# mark an itinerary whose only remaining problem is one of these as never
+# converging even though nothing more Repair could ever do about it.
+#
+# Still fully surfaced everywhere else: stays in report["issues"] and
+# feeds overall_score/feasibility_score exactly as before -- see
+# _convergence_issue_count below, the ONLY place this set is consulted.
+#
+# NO_DAYS is deliberately NOT included even though it also has no repair
+# method (repair() bails out immediately when itinerary has zero days) --
+# that's a fundamentally broken itinerary, not "otherwise fine but for one
+# rule Repair can't touch", and reporting it as converged would be actively
+# misleading rather than useful.
+#
+# When a repair method is added for one of these, remove its code from this
+# set -- nothing else about the loop needs to change.
+NON_REPAIRABLE_CODES: frozenset[str] = frozenset({
+    "SCATTERED_DAY_ROUTE",
+    "HIGH_FOREIGNER_FRICTION",
+})
+
 
 def _issue_counts_by_code(issues: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
@@ -1615,6 +1645,14 @@ def _issue_counts_by_code(issues: list[dict[str, Any]]) -> dict[str, int]:
         code = issue.get("code", "UNKNOWN")
         counts[code] = counts.get(code, 0) + 1
     return counts
+
+
+def _convergence_issue_count(issues: list[dict[str, Any]]) -> int:
+    """Issue count used ONLY for run_critic_repair_loop's own round-over-round
+    stop/rollback/converged decisions -- excludes NON_REPAIRABLE_CODES (see
+    its docstring). Every other consumer (report["issues"], overall_score,
+    feasibility_score) is untouched by this and still sees everything."""
+    return sum(1 for issue in issues if issue.get("code") not in NON_REPAIRABLE_CODES)
 
 
 def run_critic_repair_loop(
@@ -1631,14 +1669,23 @@ def run_critic_repair_loop(
     behave identically -- fixing convergence in only one would just
     relocate the same bug to whichever path was left alone.
 
-    Convergence signal: len(report["issues"]) -- see CriticAgent.evaluate.
-    A flat per-violation-instance count, NOT severity-weighted, and not
-    perfectly uniform per rule: DUPLICATE_POIS and HIGH_FOREIGNER_FRICTION
-    each collapse to at most one issue for the whole itinerary no matter how
-    many instances exist, while e.g. CLOSED_ON_ASSIGNED_DAY is one issue per
-    closed POI found. `rounds` in the return value logs the per-rule
-    breakdown (`issue_counts_by_code`) every round, not just the total, so
-    an unexpected non-convergence can be diagnosed after the fact.
+    Convergence signal: _convergence_issue_count(report["issues"]) -- see
+    CriticAgent.evaluate for how issues are produced. A flat
+    per-violation-instance count, NOT severity-weighted, and not perfectly
+    uniform per rule: DUPLICATE_POIS and HIGH_FOREIGNER_FRICTION each
+    collapse to at most one issue for the whole itinerary no matter how many
+    instances exist, while e.g. CLOSED_ON_ASSIGNED_DAY is one issue per
+    closed POI found. Codes in NON_REPAIRABLE_CODES (Critic rules with no
+    RepairAgent method -- currently SCATTERED_DAY_ROUTE and
+    HIGH_FOREIGNER_FRICTION) are excluded from this count specifically so
+    they can never be the reason a round "didn't improve" or an itinerary
+    never converges -- they remain fully visible in report["issues"] and
+    still feed overall_score/feasibility_score, just outside what this loop
+    compares round to round. `rounds` in the return value logs BOTH the raw
+    total (`issue_count`) and the convergence-filtered total
+    (`convergence_issue_count`), plus the per-rule breakdown
+    (`issue_counts_by_code`), every round, so an unexpected non-convergence
+    can be diagnosed after the fact.
 
     Each round hands repair() a fresh deepcopy of the current best
     itinerary. repair() mutates its input's day/pois lists in place, so
@@ -1669,11 +1716,15 @@ def run_critic_repair_loop(
     before_report = critic.evaluate(state)
     best_itinerary = itinerary
     best_report = before_report
-    best_count = len(before_report["issues"])
+    # `best_count` (filtered, drives the loop) vs the raw total: logged as
+    # both convergence_issue_count/issue_count per round so a suspicious
+    # non-convergence can be diagnosed without re-deriving one from the other.
+    best_count = _convergence_issue_count(before_report["issues"])
 
     rounds: list[dict[str, Any]] = [{
         "round": 0,
-        "issue_count": best_count,
+        "issue_count": len(before_report["issues"]),
+        "convergence_issue_count": best_count,
         "issue_counts_by_code": _issue_counts_by_code(before_report["issues"]),
         "outcome": "initial",
     }]
@@ -1691,7 +1742,7 @@ def run_critic_repair_loop(
             user_selected_names=user_selected_names,
         )
         after_report = critic.evaluate({**state, "itinerary": repaired_itinerary})
-        after_count = len(after_report["issues"])
+        after_count = _convergence_issue_count(after_report["issues"])
 
         if after_count < best_count:
             best_itinerary = repaired_itinerary
@@ -1700,7 +1751,8 @@ def run_critic_repair_loop(
             all_repair_log.extend(repair_log)
             rounds.append({
                 "round": round_num,
-                "issue_count": after_count,
+                "issue_count": len(after_report["issues"]),
+                "convergence_issue_count": after_count,
                 "issue_counts_by_code": _issue_counts_by_code(after_report["issues"]),
                 "repair_log": repair_log,
                 "outcome": "converged" if after_count == 0 else "improved",
@@ -1712,7 +1764,8 @@ def run_critic_repair_loop(
             # previous round (or the initial evaluate) produced.
             rounds.append({
                 "round": round_num,
-                "issue_count": after_count,
+                "issue_count": len(after_report["issues"]),
+                "convergence_issue_count": after_count,
                 "issue_counts_by_code": _issue_counts_by_code(after_report["issues"]),
                 "repair_log": repair_log,
                 "outcome": "rolled_back",
@@ -1772,7 +1825,13 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 "repair_log": result["repair_log"],
                 "converged": result["converged"],
                 "rounds": result["rounds"],
-                "remaining_issues": [] if result["converged"] else result["report"]["issues"],
+                # Always the report's actual issues, independent of
+                # `converged` -- converged now only means "no more
+                # repairable issues" (see NON_REPAIRABLE_CODES), so a
+                # lingering SCATTERED_DAY_ROUTE/HIGH_FOREIGNER_FRICTION must
+                # still show up here even when converged is True. Naturally
+                # [] whenever there truly are none.
+                "remaining_issues": result["report"]["issues"],
             }
 
             requested = result["report"].get("requested_areas") or []
