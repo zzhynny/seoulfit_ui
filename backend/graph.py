@@ -101,11 +101,11 @@ FIELD_QUESTIONS = {
     # 자유 서술이다. 라벨로 정규화하지 않는다 — 뭉개면 임베딩할 게 없어진다.
     # 이 문장이 코스 purpose 와의 유사도 순위를 정한다.
     "purpose":      "Last one -- what's this trip for? (e.g. 'first time with my "
-                    "parents', 'a free afternoon on a work trip') Or tap skip.",
+                    "parents', 'a free afternoon on a work trip')",
 }
 
-# 한 턴에 한 필드씩 묻는 순서. purpose 가 마지막인 이유는 앞의 다섯 답이 목적을
-# 안 적었을 때 쓸 합성 문장의 재료이기 때문이다 (planner._synth_purpose).
+# 한 턴에 한 필드씩 묻는 순서. purpose 가 마지막인 이유는 앞의 다섯 답으로
+# 여행 성격이 이미 잡힌 다음에 물어야 "뭐 얘기하지" 없이 답하기 쉽기 때문이다.
 # region 은 여기 없다 — 날짜마다 다른 게 정상이라 Day Planner 화면이 받는다.
 FIELD_ORDER = ["travel_dates", "category", "companion", "pace", "restrictions", "purpose"]
 
@@ -244,8 +244,10 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     value = (raw or "").strip()
 
     if field == "purpose":
-        # 건너뛰기는 정상 경로다. 빈 문자열로 두면 planner 가 다른 슬롯으로
-        # 문장을 합성한다 — 목적을 적는 사람이 소수라서 그쪽이 다수 경로다.
+        # collect_node re-asks before a MISSING purpose ever reaches here (see
+        # the purpose branch there), so this only fires for a direct _store
+        # call. Keep the same "empty means skipped" contract for callers that
+        # bypass the chat flow entirely (tests, scripts).
         return {"purpose": "" if not value or value.upper() == "MISSING" else value}
 
     if not value or value.upper() == "MISSING":
@@ -398,6 +400,17 @@ def collect_node(state: TravelState) -> TravelState:
         return {**state, "messages": [AIMessage(
             content=f"Sorry, I had trouble understanding that. Could you try again? ({e})"
         )]}
+
+    if field == "purpose" and (not raw.strip() or raw.strip().upper() == "MISSING"):
+        # Every other field tolerates MISSING and moves on -- purpose used to
+        # as well ("Or tap skip"), but it's the one slot planner.py has no
+        # good default for: a blank purpose meant guessing a sentence out of
+        # pace/companion/category instead of what the traveller actually
+        # wants. `pending` stays put, same as the travel_dates retry above.
+        return {**state, "messages": [AIMessage(content=(
+            "I'd like an actual answer here -- even a few words ('birthday trip', "
+            "'layover, killing time') is enough. What's this trip for?"
+        ))]}
 
     updates = _store(field, raw, state)
 

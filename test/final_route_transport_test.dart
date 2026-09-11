@@ -14,7 +14,13 @@ Itinerary routed() {
     options: [
       TransitChoice(
         label: 'Subway',
-        segments: ['Line 2', 'Line 3'],
+        // Verbatim ODsay shape -- this is what overflowed the card by 534px
+        // when the legs were join()ed into a single unbounded Text.
+        segments: [
+          '🚇 Line 2  Gangnam → Euljiro 3-ga  (21 min, 9 stops)',
+          '🚶 3 min (210m)',
+          '🚇 Line 3  Euljiro 3-ga → Anguk  (6 min, 3 stops)',
+        ],
         totalMinutes: 18,
         fareWon: 1400,
         transfers: 1,
@@ -147,9 +153,24 @@ void main() {
     // text that read as noise. Each fact gets its own label.
     await pump(tester, routed());
 
-    expect(find.text('Line 2 → Line 3'), findsOneWidget);
     expect(find.text('1 transfer'), findsOneWidget);
     expect(find.text('₩1,400'), findsOneWidget);
     expect(find.text('220m walk'), findsOneWidget);
+  });
+
+  testWidgets('a multi-leg route renders one line per leg, inside the card',
+      (tester) async {
+    // The legs used to be join()ed into one Text inside a min-size Row, which
+    // hands a non-flex child an unbounded main axis -- a real ODsay leg
+    // ("🚇 Line 2  Gangnam → Hongik Univ  (25 min, 12 stops)") overflowed
+    // the card by hundreds of pixels. One leg per row, each one Expanded.
+    await pump(tester, routed());
+
+    expect(find.text('Line 2  Gangnam → Euljiro 3-ga  (21 min, 9 stops)'),
+        findsOneWidget);
+    expect(find.text('3 min (210m)'), findsOneWidget);
+    expect(find.text('Line 3  Euljiro 3-ga → Anguk  (6 min, 3 stops)'),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
