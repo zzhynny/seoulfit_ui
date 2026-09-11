@@ -1,12 +1,15 @@
-"""TDD self-checks for the three retrieval fixes. No framework, no live network.
+"""TDD self-checks for the remaining retrieval fixes. No framework, no live network.
 
   1. geo: Yongsan is a recognized area (alias + center).
-  2. rag.segment_k: retrieval breadth scales with a segment's day count.
-  3. rag.rerank_courses_by_area: courses whose POIs sit in the requested area
-     are ordered first, stably.
-  4. planner.build_google_supplement_for_area: an off-category purpose (K-beauty)
+  2. planner.build_google_supplement_for_area: an off-category purpose (K-beauty)
      now pulls purpose-matching POIs via a generic text search (network seams
      monkeypatched — the one unavoidable mock).
+
+rag.segment_k and rag.rerank_courses_by_area were deleted in the retrieval
+redesign (Task 6) -- their job (breadth-by-day-count, area-based re-rank of
+vector-search hits) is superseded by retrieval.select_anchors's hard region
+filter (retrieval.filter_pool / retrieval._in_region), so the tests that
+covered them were removed rather than ported.
 
 Run: backend/venv/bin/python test_retrieval_fixes.py
 """
@@ -24,40 +27,6 @@ def test_yongsan_recognized():
         "a Yongsan-gu address should infer the 'yongsan' area"
     assert geo.area_matches_requested("itaewon", "yongsan"), \
         "Itaewon (in Yongsan-gu) should satisfy a Yongsan request"
-
-
-def test_segment_k_scales_with_days():
-    import rag
-    assert rag.segment_k(1) == 2, "1-day segment -> k=2 (day+1, floor 2)"
-    assert rag.segment_k(4) == 5, "4-day segment -> k=5"
-    assert rag.segment_k(5) == 6, "5-day segment -> k=6"
-    assert rag.segment_k(10) == 6, "long segment clamps at k=6"
-    assert rag.segment_k(0) == 2, "0/None-day segment floors at k=2"
-
-
-def _course(cid, area_poi):
-    """A course whose single POI lives at the given (name/address/lat/lng)."""
-    return {"course_id": cid, "sequence": [area_poi]}
-
-
-def test_area_rerank_orders_matching_first():
-    import rag
-    seongsu_poi = {"poi_name": "Seongsu Cafe", "address_en": "Seongdong-gu, Seoul",
-                   "lat": 37.5447, "lng": 127.0558}
-    gangnam_poi = {"poi_name": "Gangnam Store", "address_en": "Gangnam-gu, Seoul",
-                   "lat": 37.4979, "lng": 127.0276}
-    off = _course("OFF", gangnam_poi)
-    hit = _course("HIT", seongsu_poi)
-
-    ranked = rag.rerank_courses_by_area([off, hit], "seongsu")
-    assert [c["course_id"] for c in ranked] == ["HIT", "OFF"], \
-        "in-area course must come first"
-
-    # stability: two in-area courses keep their original relative order
-    hit2 = _course("HIT2", seongsu_poi)
-    ranked2 = rag.rerank_courses_by_area([hit, hit2], "seongsu")
-    assert [c["course_id"] for c in ranked2] == ["HIT", "HIT2"], \
-        "equal (both in-area) courses keep input order"
 
 
 def test_generic_supplement_for_offcategory_purpose():
@@ -91,8 +60,6 @@ def test_generic_supplement_for_offcategory_purpose():
 def main():
     tests = [
         test_yongsan_recognized,
-        test_segment_k_scales_with_days,
-        test_area_rerank_orders_matching_first,
         test_generic_supplement_for_offcategory_purpose,
     ]
     failed = 0

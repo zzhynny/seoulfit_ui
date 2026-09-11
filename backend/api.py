@@ -107,6 +107,11 @@ _METERED_PATHS = {
     "/chat", "/poi-summary", "/poi-detail", "/poi-image",
     "/analyze-landmark", "/nearby", "/nearby-poi", "/nearby-shopping",
     "/emergency-rooms", "/place-photo",
+    # /reset really deletes a session's state now (it used to be a no-op),
+    # and /day-plan writes day_specs -- both write to state protected only
+    # by an unguessable thread id (there's no login), so an unmetered loop
+    # can churn either one indefinitely.
+    "/reset", "/day-plan",
 }
 # 120/min, not 30: user_selection_screen renders one card per candidate stop
 # and each fires fetchPoiDetail on build, and final_itinerary_map_screen
@@ -247,7 +252,8 @@ class StateResponse(BaseModel):
     restrictions: Optional[str] = None
     companion: Optional[str] = None
     pace: Optional[str] = None
-    region: Optional[str] = None
+    purpose: Optional[str] = None
+    day_specs: Optional[list[dict]] = None
     current_step: str
     # Which slot the buddy is waiting on right now, so the client can show the
     # matching quick replies / date picker. None outside the collecting step.
@@ -331,7 +337,7 @@ def _get_state(thread_id: str) -> dict:
         return snapshot.values
     return {
         "travel_dates": None, "category": None, "restrictions": None,
-        "companion": None, "pace": None, "region": None,
+        "companion": None, "pace": None, "purpose": None, "day_specs": None,
         "current_step": "start", "confirmed": False, "messages": [],
     }
 
@@ -341,6 +347,24 @@ def _latest_ai_message(state: dict) -> Optional[str]:
         if isinstance(msg, AIMessage):
             return msg.content
     return None
+
+
+def _state_response(state: dict, *, reply: Optional[str] = None) -> StateResponse:
+    """StateResponse 를 만드는 유일한 곳. 필드가 늘 때마다 세 군데를 고치던 걸 막는다."""
+    return StateResponse(
+        travel_dates=state.get("travel_dates"),
+        category=state.get("category"),
+        restrictions=state.get("restrictions"),
+        companion=state.get("companion"),
+        pace=state.get("pace"),
+        purpose=state.get("purpose"),
+        day_specs=state.get("day_specs"),
+        current_step=state.get("current_step", "start"),
+        current_field=state.get("pending"),
+        confirmed=state.get("confirmed", False),
+        reply=reply if reply is not None else _latest_ai_message(state),
+        itinerary=state.get("itinerary"),
+    )
 
 
 def _run(thread_id: str, user_input: Optional[str]) -> dict:
@@ -370,19 +394,7 @@ def chat(req: ChatRequest):
     state = _get_state(req.thread_id)
     pending_question = FIELD_QUESTIONS.get(state.get("pending") or "")
     if req.message and is_blocked(req.message, pending_question):
-        return StateResponse(
-            travel_dates=state.get("travel_dates"),
-            category=state.get("category"),
-            restrictions=state.get("restrictions"),
-            companion=state.get("companion"),
-            pace=state.get("pace"),
-            region=state.get("region"),
-            current_step=state.get("current_step", "start"),
-            current_field=state.get("pending"),
-            confirmed=state.get("confirmed", False),
-            reply=_BLOCKED_REPLY,
-            itinerary=state.get("itinerary"),
-        )
+        return _state_response(state, reply=_BLOCKED_REPLY)
 
     try:
         new_state = _run(req.thread_id, req.message)
@@ -391,38 +403,14 @@ def chat(req: ChatRequest):
         traceback.print_exc()          # prints full stack to uvicorn terminal
         raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
 
-    return StateResponse(
-        travel_dates=new_state.get("travel_dates"),
-        category=new_state.get("category"),
-        restrictions=new_state.get("restrictions"),
-        companion=new_state.get("companion"),
-        pace=new_state.get("pace"),
-        region=new_state.get("region"),
-        current_step=new_state.get("current_step", "start"),
-        current_field=new_state.get("pending"),
-        confirmed=new_state.get("confirmed", False),
-        reply=_latest_ai_message(new_state),
-        itinerary=new_state.get("itinerary"),
-    )
+    return _state_response(new_state)
 
 
 @app.get("/state", response_model=StateResponse)
 def get_state(thread_id: str):
     """Return current state without invoking the graph."""
     state = _get_state(_require_thread_id(thread_id))
-    return StateResponse(
-        travel_dates=state.get("travel_dates"),
-        category=state.get("category"),
-        restrictions=state.get("restrictions"),
-        companion=state.get("companion"),
-        pace=state.get("pace"),
-        region=state.get("region"),
-        current_step=state.get("current_step", "start"),
-        current_field=state.get("pending"),
-        confirmed=state.get("confirmed", False),
-        reply=_latest_ai_message(state),
-        itinerary=state.get("itinerary"),
-    )
+    return _state_response(state)
 
 
 @app.post("/reset")
@@ -430,6 +418,56 @@ def reset(thread_id: str):
     """Clear one thread's conversation without touching any other sessions."""
     clear_thread(_require_thread_id(thread_id))
     return {"status": "reset"}
+
+
+class DaySpec(BaseModel):
+    day: int
+    region: str
+    interest: str
+
+
+class DayPlanRequest(BaseModel):
+    thread_id: str
+    days: list[DaySpec]
+
+
+@app.post("/day-plan", response_model=StateResponse)
+def day_plan(req: DayPlanRequest):
+    """Day Planner 화면이 정한 날짜별 지역·관심사를 저장하고 confirm 으로 넘긴다.
+
+    어휘가 어긋나면 400 으로 시끄럽게 실패한다. retrieval 의 필터는 문자열
+    비교라서, 통과시키면 조용히 0개를 반환하고 그날 앵커가 사라진다.
+    """
+    from graph import DAY_PLAN_REGIONS, INTEREST_LABELS
+    from rag import _parse_num_days
+
+    thread_id = _require_thread_id(req.thread_id)
+    state = _get_state(thread_id)
+
+    # A state conflict, not malformed input -- 409, distinct from the 400s
+    # below. Without this, a thread that never finished intake (travel_dates
+    # still None) sails through: _parse_num_days(None) == 1, so a 1-day plan
+    # passes the length check trivially and current_step jumps to confirm
+    # with every other slot still empty.
+    if state.get("current_step") != "day_plan":
+        raise HTTPException(status_code=409, detail="thread is not ready for a day plan")
+
+    expected = _parse_num_days(state.get("travel_dates"))
+    days = [d.model_dump() for d in req.days]
+
+    if len(days) != expected:
+        raise HTTPException(status_code=400, detail=f"expected {expected} days, got {len(days)}")
+    if sorted(d["day"] for d in days) != list(range(1, expected + 1)):
+        raise HTTPException(status_code=400, detail="day numbers must be 1..N with no gaps or repeats")
+    for d in days:
+        if d["region"] not in DAY_PLAN_REGIONS:
+            raise HTTPException(status_code=400, detail=f"unknown region: {d['region']}")
+        if d["interest"] not in INTEREST_LABELS:
+            raise HTTPException(status_code=400, detail=f"unknown interest: {d['interest']}")
+
+    days.sort(key=lambda d: d["day"])
+    _graph.update_state(_config(thread_id), {"day_specs": days, "current_step": "confirm"})
+    return _state_response(_get_state(thread_id))
 
 
 class PoiSummaryRequest(BaseModel):

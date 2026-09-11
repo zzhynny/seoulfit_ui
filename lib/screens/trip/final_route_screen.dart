@@ -406,6 +406,8 @@ class _HopGuide extends StatelessWidget {
             ),
 
           if (hop.options.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _RouteSteps(segments: hop.options.first.segments),
             const SizedBox(height: 8),
             _FactRow(option: hop.options.first),
           ],
@@ -472,10 +474,71 @@ String _won(int fare) {
   return '₩$buffer';
 }
 
-/// The leading option's specifics. These used to be joined with middle dots
-/// into a single grey run of text -- which lines, how many changes, the fare
-/// and how far you still walk are four different questions, so they get four
-/// slots with their own icons.
+/// The leading option leg by leg, one line each.
+///
+/// These used to be joined with " → " into a single [Text] inside a
+/// `Row(mainAxisSize: min)`, which hands its non-flex children an unbounded
+/// main axis -- so a four-leg route ("🚇 Line 2  Gangnam → Hongik Univ
+/// (25 min, 12 stops)" x4) blew the card out by 500+ pixels. A leg per row
+/// is both the fix and the thing a traveller actually reads on the platform.
+class _RouteSteps extends StatelessWidget {
+  const _RouteSteps({required this.segments});
+
+  final List<String> segments;
+
+  /// ODsay prefixes each leg with 🚇/🚌/🚶. Swap it for the Material icon the
+  /// rest of the card uses so the column doesn't read as two icon sets.
+  static (IconData, String) _split(String segment) {
+    const icons = {'🚇': Icons.train, '🚌': Icons.directions_bus, '🚶': Icons.directions_walk};
+    for (final entry in icons.entries) {
+      if (segment.startsWith(entry.key)) {
+        return (entry.value, segment.substring(entry.key.length).trim());
+      }
+    }
+    return (Icons.circle, segment);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (segments.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final segment in segments)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(_split(segment).$1, size: 14, color: const Color(0xFF5E836A)),
+                ),
+                const SizedBox(width: 8),
+                // Expanded, not bare Text: the leg names are long and the
+                // row must wrap inside the card rather than run past it.
+                Expanded(
+                  child: Text(
+                    _split(segment).$2,
+                    style: AppTextStyles.caption.copyWith(
+                      fontSize: 11.5,
+                      height: 1.35,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The leading option's numbers -- how many changes, the fare, how far you
+/// still walk. Three different questions, so three slots with their own icons.
+/// The leg list lives in [_RouteSteps]; anything here stays short enough to
+/// sit side by side.
 class _FactRow extends StatelessWidget {
   const _FactRow({required this.option});
 
@@ -484,8 +547,6 @@ class _FactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final facts = <(IconData, String)>[
-      if (option.segments.isNotEmpty)
-        (Icons.timeline, option.segments.join(' → ')),
       if (option.transfers != null && option.transfers! > 0)
         (Icons.swap_horiz,
             '${option.transfers} transfer${option.transfers == 1 ? "" : "s"}'),
@@ -497,21 +558,36 @@ class _FactRow extends StatelessWidget {
     if (facts.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
-      spacing: 12,
+      spacing: 6,
       runSpacing: 6,
       children: [
         for (final (icon, text) in facts)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 13, color: const Color(0xFF8A857D)),
-              const SizedBox(width: 4),
-              Text(
-                text,
-                style: AppTextStyles.caption
-                    .copyWith(fontSize: 11, color: AppColors.textSecondary),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.borderAlt),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 13, color: const Color(0xFF8A857D)),
+                const SizedBox(width: 4),
+                // Flexible + ellipsis: a Row this size hands a bare Text an
+                // unbounded main axis, and unbounded is how the card
+                // overflowed in the first place.
+                Flexible(
+                  child: Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption
+                        .copyWith(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );

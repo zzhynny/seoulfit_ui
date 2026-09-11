@@ -43,6 +43,7 @@ class ApiChatRepository implements ChatRepository {
       readyToBuild: state.currentStep == 'confirm',
       quickReplies: _quickRepliesFor(state.currentField),
       awaitingField: state.currentField,
+      awaitingStep: state.currentStep,
     );
   }
 }
@@ -66,25 +67,23 @@ class ApiChatRepository implements ChatRepository {
 List<String> _quickRepliesFor(String? field) {
   switch (field) {
     case 'category':
-      // The five interest labels, verbatim. They must match graph.py's
-      // FIELD_EXTRACT["category"] and each course's `interests` field exactly —
-      // the match is a string compare, not a similarity score, so a chip that
-      // reads "Culture" instead of "Culture & History" silently stops matching.
-      return const [
-        'Culture & History',
-        'Food & Cafes',
-        'Shopping',
-        'K-POP & Hallyu',
-        'Nature & Relaxation',
-      ];
+      // Must match graph.py's FIELD_EXTRACT["category"] and each course's
+      // `interests` field exactly -- the match is a string compare, not a
+      // similarity score, so a chip that reads "Culture" instead of
+      // "Culture & History" silently stops matching. kInterestLabels is the
+      // single shared copy of that vocabulary (day_planner_screen.dart's
+      // dropdown uses the same constant).
+      return kInterestLabels;
     case 'companion':
       return const ['Solo', 'Couple', 'Friends', 'Family'];
     case 'pace':
       return const ['Packed', 'Relaxed'];
     case 'restrictions':
       return const ['None'];
-    case 'region':
-      return const ['Recommend one', 'Hongdae', 'Gangnam', 'Itaewon'];
+    case 'purpose':
+      // Free text is the point — a chip would collapse it back into a label.
+      // Only the skip is offered.
+      return const ['Skip'];
     default:
       return const [];
   }

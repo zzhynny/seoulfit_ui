@@ -15,8 +15,12 @@ class TravelState(TypedDict, total=False):
     restrictions: Optional[str]        # 식이/신체 제약
     companion: Optional[str]           # 동행자
     pace: Optional[str]                # 여행 스타일
-    region: Optional[str]              # 서울 지역
-    current_step: str                  # start | collecting | confirm | retrieving | planning | critic | done
+    purpose: Optional[str]             # 여행 목적. 사용자 문장 원문 또는 "" (건너뜀).
+                                        # retrieval 의 유사도 질의로 쓰인다.
+    day_specs: Optional[list[dict[str, Any]]]  # [{day, region, interest}] — Day Planner
+                                        # 화면이 정하고 POST /day-plan 이 쓴다.
+                                        # day_plan 단계 진입 시 서버가 기본값을 채운다.
+    current_step: str                  # start | collecting | day_plan | confirm | retrieving | planning | critic | done
     pending: Optional[str]             # 지금 답을 기다리는 슬롯 이름 (collect_node가 한 턴에 하나씩 질문)
     asked: list[str]                   # 이미 질문한 슬롯들. 같은 걸 두 번 묻지 않기 위한 기록이라
                                         # 값이 비어도 다시 묻지 않는다 (건너뛰기 = 빈 슬롯)
@@ -24,7 +28,7 @@ class TravelState(TypedDict, total=False):
     messages: Annotated[list, add_messages]  # 대화 히스토리 (reducer 적용)
 
     # RAG + planning
-    retrieved_courses: list[dict[str, Any]]   # FAISS 검색 결과 코스 리스트 (flat merge of all segment anchors)
+    retrieved_courses: list[dict[str, Any]]   # select_anchors 결과 코스 리스트 (flat merge of all segment anchors)
     day_segments: Optional[list[dict[str, Any]]]  # per-day-segment anchor courses (Index A)
     itinerary: Optional[dict[str, Any]]       # 최종 일정 (구조화된 JSON)
 

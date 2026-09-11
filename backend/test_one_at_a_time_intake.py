@@ -89,12 +89,26 @@ def main():
     #    Without this the loop spins on the same question forever.
     assert not s2.get("category")
     assert "category" in s2["asked"]
-    for _ in graph.FIELD_ORDER[2:]:
+    for field in graph.FIELD_ORDER[2:]:
+        if field == "purpose":
+            break
         s2 = _turn(s2, "???")
+    assert s2["pending"] == "purpose", s2["pending"]
+
+    # purpose is the one field that does NOT tolerate "???"/MISSING: the
+    # planner has no good default for it (unlike the others, which fall back
+    # to graph.DEFAULT_INTEREST or an empty slot), so an unintelligible reply
+    # re-asks instead of banking an empty string and moving on.
+    s2 = _turn(s2, "???")
+    assert s2["pending"] == "purpose", s2["pending"]
+    assert s2["current_step"] == "collecting", s2["current_step"]
+    assert "skip" not in graph.FIELD_QUESTIONS["purpose"].lower()  # no "or tap skip" any more
+
+    graph._gemini_raw = _answer_with("a birthday trip with my sister")
+    s2 = _turn(s2, "a birthday trip with my sister")
+    assert s2["purpose"] == "a birthday trip with my sister", s2.get("purpose")
     assert s2["current_step"] == "confirm", s2["current_step"]
     assert s2["asked"] == graph.FIELD_ORDER
-    # region is the one field with a fallback: MISSING/NONE -> recommendation.
-    assert s2["region"].endswith("(recommended)"), s2["region"]
 
     # 6. Editing one field from the summary re-asks THAT field only, then goes
     #    straight back to the summary instead of restarting the questionnaire.

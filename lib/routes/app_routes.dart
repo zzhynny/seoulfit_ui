@@ -17,9 +17,11 @@ import '../screens/onboarding/permissions_screen.dart';
 import '../screens/chat/chat_screen.dart';
 import '../screens/live_help/live_help_screen.dart';
 import '../models/chat.dart';
+import '../services/api_service.dart';
 
 import '../screens/trip/trip_branch_root.dart';
 import '../screens/trip/confirm_slots_screen.dart';
+import '../screens/trip/day_planner_screen.dart';
 import '../screens/trip/crafting_itinerary_screen.dart';
 import '../screens/trip/initial_itinerary_screen.dart';
 import '../screens/trip/make_trip_yours_screen.dart';
@@ -53,6 +55,11 @@ class AppRoutes {
   // brief full-screen transitions rather than places to switch tabs from.
   static const craftingItinerary = '/crafting-itinerary';
   static const reoptimizing = '/reoptimizing';
+
+  // Standalone like the loaders above, not nested under Trip: reached from
+  // the Chat tab mid-intake, before there is a Trip-tab itinerary to nest
+  // under.
+  static const dayPlanner = '/day-planner';
 
   static const error = '/error';
 
@@ -133,6 +140,22 @@ GoRouter buildAppRouter() {
           onFailed: () => context.go(AppRoutes.error),
         ),
       ),
+      GoRoute(
+        path: AppRoutes.dayPlanner,
+        builder: (context, state) => DayPlannerLoader(
+          api: context.read<ApiService?>(),
+          // POST /day-plan is what advances the thread past `day_plan` into
+          // `confirm` — Confirm Slots is the same screen the chat's own
+          // readyToBuild CTA lands on for that step.
+          onDone: () => context.go(AppRoutes.confirmSlots),
+          // A stale plan (thread already moved on) — back to chat, not a
+          // scary error screen.
+          onStale: () => context.go(AppRoutes.chat),
+          // A real failure (bad payload, network) — same escape hatch the
+          // sibling loaders (CraftingItineraryScreen, ReoptimizingScreen) use.
+          onFailed: () => context.go(AppRoutes.error),
+        ),
+      ),
 
       GoRoute(
         path: AppRoutes.error,
@@ -156,6 +179,9 @@ GoRouter buildAppRouter() {
                 // push(), since Confirm Slots now lives inside the Trip
                 // branch's own nested Navigator, not this one.
                 onBuildItinerary: () => context.go(AppRoutes.confirmSlots),
+                // Day Planner is standalone (see AppRoutes.dayPlanner) —
+                // push(), so Back returns to this exact chat turn.
+                onOpenDayPlanner: () => context.push(AppRoutes.dayPlanner),
               ),
               routes: [
                 GoRoute(

@@ -160,16 +160,14 @@ def area_label(area: str | None) -> str:
     return labels.get(area, area.title())
 
 
-def extract_requested_areas(location: str | None, purpose: str | None = None) -> list[str]:
-    text = f"{location or ''} {purpose or ''}".lower()
-    found: list[str] = []
+def _areas_from_day_specs(state: dict[str, Any]) -> list[str]:
+    """Day-by-day regions, de-duplicated in first-seen order.
 
-    for area, aliases in AREA_ALIASES.items():
-        if any(alias.lower() in text for alias in aliases):
-            if area not in found:
-                found.append(area)
-
-    return found
+    state["region"] no longer exists (Task 4 removed it) -- areas now come
+    from the per-day picks the traveller made, the same derivation plan_node
+    uses.
+    """
+    return list(dict.fromkeys(s["region"] for s in (state.get("day_specs") or [])))
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -706,10 +704,7 @@ class CriticAgent:
         if requested:
             return list(requested)
 
-        return extract_requested_areas(
-            state.get("region"),
-            state.get("category"),
-        )
+        return _areas_from_day_specs(state)
 
     def _evaluate_area_coverage(
         self,
@@ -961,10 +956,7 @@ class RepairAgent:
         if not itinerary.get("days"):
             return itinerary, logs
 
-        requested_areas = report.get("requested_areas") or extract_requested_areas(
-            state.get("region"),
-            state.get("category"),
-        )
+        requested_areas = report.get("requested_areas") or _areas_from_day_specs(state)
 
         # Structured record of POIs dropped outright (as opposed to swapped or
         # moved) so a diagnostic UI can say *why* a stop disappeared -- not

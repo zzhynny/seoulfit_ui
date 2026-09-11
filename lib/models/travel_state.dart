@@ -14,10 +14,60 @@ List<Map<String, dynamic>> _asJsonList(Object? raw) {
   ];
 }
 
+/// One day's area and focus, as set on the Day Planner screen.
+///
+/// `region` is a geo.py key (lower case, e.g. 'jongno'), not a label —
+/// the backend filters by exact string, so the two must not drift.
+class DaySpec {
+  const DaySpec({required this.day, required this.region, required this.interest});
+
+  final int day;
+  final String region;
+  final String interest;
+
+  factory DaySpec.fromJson(Map<String, dynamic> json) => DaySpec(
+        day: json['day'] as int,
+        region: json['region'] as String? ?? '',
+        interest: json['interest'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() =>
+      {'day': day, 'region': region, 'interest': interest};
+
+  DaySpec copyWith({String? region, String? interest}) =>
+      DaySpec(day: day, region: region ?? this.region, interest: interest ?? this.interest);
+}
+
+/// Region keys the app offers, with their display labels. Keys must exist in
+/// geo.SEOUL_AREA_CENTERS or POST /day-plan rejects them with a 400.
+const Map<String, String> kRegionLabels = {
+  'jongno': 'Jongno',
+  'myeongdong': 'Myeongdong',
+  'hongdae': 'Hongdae',
+  'gangnam': 'Gangnam',
+  'seongsu': 'Seongsu',
+  'itaewon': 'Itaewon',
+  'bukchon': 'Bukchon',
+  'insadong': 'Insadong',
+  'mapo': 'Mapo',
+  'dongdaemun': 'Dongdaemun',
+  'sinchon': 'Sinchon',
+  'apgujeong': 'Apgujeong',
+};
+
+/// The five interest labels, verbatim. Shared with graph.FIELD_EXTRACT and
+/// each course's `interests` — the match is a string compare, not a score.
+const List<String> kInterestLabels = [
+  'Culture & History',
+  'Food & Cafes',
+  'Shopping',
+  'K-POP & Hallyu',
+  'Nature & Relaxation',
+];
+
 /// Mirrors the StateResponse Pydantic model from the FastAPI backend.
 class TravelState {
   final String? travelDates;
-  final String? region;
   final String? restrictions;
   final String? category;
   final String? companion;
@@ -32,9 +82,16 @@ class TravelState {
   final String? reply;
   final Itinerary? itinerary;
 
+  /// Free-text trip purpose, the sixth and last collecting question. May be
+  /// empty — it's skippable.
+  final String? purpose;
+
+  /// One row per trip day, already filled in by the backend the moment
+  /// intake ends. The Day Planner screen displays and edits these.
+  final List<DaySpec> daySpecs;
+
   const TravelState({
     this.travelDates,
-    this.region,
     this.restrictions,
     this.category,
     this.companion,
@@ -44,13 +101,14 @@ class TravelState {
     this.confirmed = false,
     this.reply,
     this.itinerary,
+    this.purpose,
+    this.daySpecs = const [],
   });
 
   factory TravelState.fromJson(Map<String, dynamic> json) {
     final itineraryJson = _asJsonMap(json['itinerary']);
     return TravelState(
       travelDates: json['travel_dates'] as String?,
-      region: json['region'] as String?,
       restrictions: json['restrictions'] as String?,
       category: json['category'] as String?,
       companion: json['companion'] as String?,
@@ -61,13 +119,16 @@ class TravelState {
       reply: json['reply'] as String?,
       itinerary:
           itineraryJson != null ? Itinerary.fromJson(itineraryJson) : null,
+      purpose: json['purpose'] as String?,
+      daySpecs: (json['day_specs'] as List<dynamic>? ?? const [])
+          .map((e) => DaySpec.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
   /// Raw slot values keyed by backend field name.
   Map<String, String?> get slots => {
         'travel_dates': travelDates,
-        'region': region,
         'restrictions': restrictions,
         'category': category,
         'companion': companion,

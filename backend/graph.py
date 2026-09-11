@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import json
 from datetime import date, datetime
+from typing import Any
 from types import SimpleNamespace
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.graph import StateGraph, END
@@ -10,6 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from state import TravelState
 from planner import make_retrieve_node, plan_node
 from critic_repair import make_critic_repair_node
+from retrieval import DAY_PLAN_REGION_ORDER
 
 # ---------------------------------------------------------------------------
 # Module-level API key (set by build_graph)
@@ -59,7 +61,7 @@ def _classify_intent(user_message: str) -> SimpleNamespace:
         f'Message: "{user_message}"\n\n'
         "Return JSON with exactly this field:\n"
         '- intent: "CONFIRM" if user confirms/agrees/wants to proceed. '
-        "Otherwise return exactly one of: travel_dates, category, restrictions, companion, pace, region "
+        "Otherwise return exactly one of: travel_dates, category, restrictions, companion, pace, purpose "
         "(the field they want to change)."
     )
     data = _gemini_json(prompt)
@@ -76,7 +78,7 @@ FIELD_LABELS = {
     "restrictions": "Restrictions",
     "companion":    "Traveling With",
     "pace":         "Trip Style",
-    "region":       "Seoul Area",
+    "purpose":      "Trip Purpose",
 }
 
 ALL_FIELDS = list(FIELD_LABELS.keys())
@@ -96,13 +98,16 @@ FIELD_QUESTIONS = {
     "restrictions": "Any dietary or physical restrictions? (or 'none')",
     "companion":    "Who are you traveling with? (solo/couple/friends/family)",
     "pace":         "Packed schedule or relaxed pace?",
-    "region":       "Which area of Seoul? (e.g. Hongdae, Gangnam, Itaewon) -- or I can recommend!",
+    # 자유 서술이다. 라벨로 정규화하지 않는다 — 뭉개면 임베딩할 게 없어진다.
+    # 이 문장이 코스 purpose 와의 유사도 순위를 정한다.
+    "purpose":      "Last one -- what's this trip for? (e.g. 'first time with my "
+                    "parents', 'a free afternoon on a work trip')",
 }
 
-# The order the buddy asks in, one field per turn. Deliberately not
-# ALL_FIELDS order: region goes last so _recommend_region has a category to
-# work from when the traveller wants a suggestion instead of picking an area.
-FIELD_ORDER = ["travel_dates", "category", "companion", "pace", "restrictions", "region"]
+# 한 턴에 한 필드씩 묻는 순서. purpose 가 마지막인 이유는 앞의 다섯 답으로
+# 여행 성격이 이미 잡힌 다음에 물어야 "뭐 얘기하지" 없이 답하기 쉽기 때문이다.
+# region 은 여기 없다 — 날짜마다 다른 게 정상이라 Day Planner 화면이 받는다.
+FIELD_ORDER = ["travel_dates", "category", "companion", "pace", "restrictions", "purpose"]
 
 # One JSON instruction line per field, fed to _extract_field. Lifted verbatim
 # from the old combined extraction prompt so behaviour per field is unchanged.
@@ -115,8 +120,7 @@ FIELD_EXTRACT = {
                     'says onto the closest label (e.g. beauty/spa/healing -> '
                     '"Nature & Relaxation"; museums/palaces/hanok -> '
                     '"Culture & History"; BTS/drama locations -> "K-POP & Hallyu"). '
-                    'Comma-separated if multiple. "MISSING" if the reply does not '
-                    'answer the question.',
+                    '"MISSING" if the reply does not answer the question.',
     "companion":    'companion: solo/couple/friends/family. "MISSING" if the reply does '
                     'not answer the question.',
     "pace":         'pace: "packed" for busy or "relaxed" for slow pace. "MISSING" if the '
@@ -124,11 +128,26 @@ FIELD_EXTRACT = {
     "restrictions": 'restrictions: dietary or physical restrictions. "none" if the user '
                     'says they have no restrictions. "MISSING" if the reply does not '
                     'answer the question.',
-    "region":       'region: one or more areas from Hongdae/Seongsu/Gangnam/Itaewon/'
-                    'Myeongdong/Jongno/Bukchon/Mapo/Insadong/Dongdaemun/Sinchon/Apgujeong. '
-                    'Comma-separated if multiple. "NONE" if the user asks for a '
-                    'recommendation or does not specify.',
+    "purpose":      'purpose: the traveller\'s own words for what this trip is for, '
+                    'copied verbatim and translated to English if needed. Do NOT '
+                    'summarise into a category. "MISSING" if they skipped, declined, '
+                    'or did not answer.',
 }
+
+
+# 앱의 관심사 어휘. FIELD_EXTRACT["category"], Flutter 칩,
+# course_descriptions.json 의 interests 가 전부 이 문자열을 그대로 쓴다.
+INTEREST_LABELS = [
+    "Culture & History", "Food & Cafes", "Shopping",
+    "K-POP & Hallyu", "Nature & Relaxation",
+]
+
+# Day Planner 화면이 제시하는 12개 지역(lib/models/travel_state.dart의
+# kRegionLabels와 동일한 키·순서). geo.SEOUL_AREA_CENTERS는 33개 키를 갖고
+# 있어 앱이 절대 주지 않는 21개(nowon, dobong, gwanak, dmc, ...)까지 통과
+# 시킨다 — 코스 풀이 1~3개뿐인 지역이 그대로 새면 그날 앵커가 거의 없다.
+# DAY_PLAN_REGION_ORDER와 같은 객체를 그대로 쓰므로 둘이 어긋날 수 없다.
+DAY_PLAN_REGIONS = DAY_PLAN_REGION_ORDER
 
 
 def _extract_field(field: str, text: str) -> str:
@@ -147,31 +166,6 @@ def _extract_field(field: str, text: str) -> str:
     return str(data.get(field, "MISSING")).strip()
 
 
-_CATEGORY_REGIONS: dict[str, str] = {
-    "beauty":   "Hongdae or Gangnam",
-    "history":  "Jongno or Bukchon",
-    "food":     "Gwangjang Market or Myeongdong",
-    "shopping": "Myeongdong or Gangnam",
-    "activity": "Hongdae or Mapo",
-}
-
-
-def _recommend_region(category: str | None) -> str:
-    if not category:
-        return "Hongdae or Myeongdong"
-    cat = category.lower()
-    for key, region in _CATEGORY_REGIONS.items():
-        if key in cat:
-            return region
-    return "Hongdae or Myeongdong"
-
-
-def _parse_regions(raw: str) -> str:
-    parts = re.split(r'\s+and\s+|\s*&\s*|\s*,\s*', raw.strip(), flags=re.IGNORECASE)
-    cleaned = [p.strip().title() for p in parts if p.strip()]
-    return ", ".join(cleaned) if cleaned else raw.strip()
-
-
 def build_summary(state: TravelState) -> str:
     lines = "\n".join(
         f"{FIELD_LABELS[f]}: {state.get(f) or '--'}" for f in ALL_FIELDS
@@ -179,7 +173,7 @@ def build_summary(state: TravelState) -> str:
     return (
         f"Here's your Seoul trip summary:\n\n{lines}\n\n"
         "Ready to generate your itinerary? Type 'confirm'.\n"
-        "Want to change something? Just tell me (e.g. 'change region', 'edit dates')."
+        "Want to change something? Just tell me (e.g. 'change purpose', 'edit dates')."
     )
 
 
@@ -249,23 +243,93 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     """Turn one extracted value into the state update for its slot."""
     value = (raw or "").strip()
 
-    if field == "region":
-        # "NONE" (asked us to recommend) and "MISSING" (didn't answer) both land
-        # on the category-based suggestion — same as the old collecting_region.
-        if not value or value.upper() in ("MISSING", "NONE"):
-            return {"region": f"{_recommend_region(state.get('category'))} (recommended)"}
-        return {"region": _parse_regions(value)}
+    if field == "purpose":
+        # collect_node re-asks before a MISSING purpose ever reaches here (see
+        # the purpose branch there), so this only fires for a direct _store
+        # call. Keep the same "empty means skipped" contract for callers that
+        # bypass the chat flow entirely (tests, scripts).
+        return {"purpose": "" if not value or value.upper() == "MISSING" else value}
 
     if not value or value.upper() == "MISSING":
         return {}
 
+    if field == "category" and value not in INTEREST_LABELS:
+        # The question is plural ("What are your main interests?"), so the
+        # LLM extraction sometimes returns more than one label
+        # ("Shopping, Food & Cafes") even though every downstream consumer
+        # (the day_specs interest dropdown, retrieval.select_anchors' filter)
+        # expects exactly one of INTEREST_LABELS. An off-vocabulary value
+        # would otherwise reach the Flutter dropdown (assertion failure) or
+        # silently relax select_anchors to interest-free for every day.
+        # Taking a valid first element beats discarding the whole answer;
+        # anything else off-vocabulary falls back to the same default
+        # default_day_specs already uses for a blank interest.
+        first = value.split(",")[0].strip()
+        value = first if first in INTEREST_LABELS else DEFAULT_INTEREST
+
     return {field: value}
 
 
+DEFAULT_INTEREST = "Culture & History"
+
+
+def default_day_specs(state: TravelState) -> list[dict[str, Any]]:
+    """day_plan 단계에 들어가는 순간 채워 넣는 날짜별 기본값.
+
+    화면은 이 값을 GET /state 로 읽어 보여주기만 한다. 기본값 로직을 서버와
+    화면 양쪽에 두면 반드시 어긋나므로 여기 한 곳에만 둔다. 그리고 day_specs 가
+    항상 존재하므로 "비어 있을 때" 라는 분기가 생기지 않는다.
+
+    지역은 코스 풀이 넓은 곳부터 서로 다르게 배분한다 — 그대로 두어도 권역이
+    다양한 무난한 여행이 된다. 관심사는 채팅에서 답한 값을 모든 날에 깐다.
+    """
+    from rag import _parse_num_days
+
+    days = _parse_num_days(state.get("travel_dates"))
+    interest = (state.get("category") or "").strip() or DEFAULT_INTEREST
+    order = DAY_PLAN_REGION_ORDER
+    return [
+        {"day": i + 1, "region": order[i % len(order)], "interest": interest}
+        for i in range(days)
+    ]
+
+
 def _ask(state: TravelState, updates: dict, field: str | None) -> TravelState:
-    """Apply `updates`, then either ask `field` or fall through to the summary."""
+    """Apply `updates`, then either ask `field` or fall through.
+
+    `field is None` fires in two different situations, and they must not be
+    treated the same:
+    - Intake just finished for the first time (no day_specs yet) -> fill in
+      the day-plan defaults and send the traveller there.
+    - The traveller edited one field from the confirm screen (`asked` stays
+      full across that re-ask, so this reads as "no more fields" again) ->
+      day_specs already holds their own picks, so land back on confirm
+      without recomputing anything. Recomputing here would silently wipe a
+      custom day plan on every unrelated field edit.
+
+    The second case has its own edge: if the edited field was travel_dates
+    and the trip is now a different length, the existing day_specs no longer
+    covers the trip (Task 6's retrieve_node walks day_specs to decide how
+    many days to build). So "keep it" only holds while the length still
+    matches -- otherwise this collapses back into the first case.
+    """
+    from rag import _parse_num_days
+
     if field is None:
-        return {**state, **updates, "pending": None, "current_step": "confirm"}
+        merged = {**state, **updates}
+        specs = merged.get("day_specs")
+        if specs and len(specs) == _parse_num_days(merged.get("travel_dates")):
+            return {**merged, "pending": None, "current_step": "confirm"}
+        return {
+            **merged,
+            "pending": None,
+            "current_step": "day_plan",
+            "day_specs": default_day_specs(merged),
+            "messages": [AIMessage(content=(
+                "Got it. Now pick an area and a focus for each day -- "
+                "I've filled in a starting point you can change."
+            ))],
+        }
     return {
         **state, **updates,
         "pending": field,
@@ -301,7 +365,12 @@ def collect_node(state: TravelState) -> TravelState:
     # job, reached only from current_step == "confirm".
     field = state.get("pending") or _next_field(state)
     if field is None:
-        return {**state, "pending": None, "current_step": "confirm"}
+        # Route through _ask instead of jumping to confirm directly: this
+        # was the one path that could reach confirm without day_specs ever
+        # existing (unreachable today only by luck of the current routing),
+        # while every downstream consumer of day_specs assumes it's always
+        # there once current_step reaches confirm.
+        return _ask(state, {}, None)
 
     if field == "travel_dates":
         # Picker-only: no extraction, no LLM. Both rejections leave `pending`
@@ -331,6 +400,17 @@ def collect_node(state: TravelState) -> TravelState:
         return {**state, "messages": [AIMessage(
             content=f"Sorry, I had trouble understanding that. Could you try again? ({e})"
         )]}
+
+    if field == "purpose" and (not raw.strip() or raw.strip().upper() == "MISSING"):
+        # Every other field tolerates MISSING and moves on -- purpose used to
+        # as well ("Or tap skip"), but it's the one slot planner.py has no
+        # good default for: a blank purpose meant guessing a sentence out of
+        # pace/companion/category instead of what the traveller actually
+        # wants. `pending` stays put, same as the travel_dates retry above.
+        return {**state, "messages": [AIMessage(content=(
+            "I'd like an actual answer here -- even a few words ('birthday trip', "
+            "'layover, killing time') is enough. What's this trip for?"
+        ))]}
 
     updates = _store(field, raw, state)
 
@@ -409,6 +489,10 @@ def route_entry(state: TravelState) -> str:
     if step == "critic":
         return "critic_repair"
 
+    if step == "day_plan":
+        # 화면이 POST /day-plan 으로 넘어가기 전까지는 그래프가 할 일이 없다.
+        return END
+
     if step == "confirm":
         messages = state.get("messages", [])
         if messages and isinstance(messages[-1], HumanMessage):
@@ -419,11 +503,9 @@ def route_entry(state: TravelState) -> str:
 
 
 def _after_collect(state: TravelState) -> str:
-    # Collecting only reaches "confirm" once every field has had its question,
-    # and the traveller has never seen the summary at that point -- so always
-    # show it. Routing straight to handle_confirm here used to hijack a plain
-    # answer like "ok" into generating the itinerary.
-    return "confirm" if state.get("current_step") == "confirm" else END
+    # 마지막 질문에 답하면 day_plan 으로 넘어간다. 그래프는 여기서 멈추고,
+    # 다음 진입은 POST /day-plan 이 current_step 을 confirm 으로 옮긴 뒤다.
+    return END
 
 
 def _after_handle_confirm(state: TravelState) -> str:
@@ -467,11 +549,7 @@ def build_graph(api_key: str):
         END:              END,
     })
 
-    builder.add_conditional_edges(
-        "collect",
-        _after_collect,
-        {"confirm": "confirm", END: END},
-    )
+    builder.add_conditional_edges("collect", _after_collect, {END: END})
 
     builder.add_edge("confirm", END)
 
@@ -504,9 +582,14 @@ _memory: MemorySaver | None = None
 
 
 def clear_thread(thread_id: str) -> None:
-    """Delete one thread's checkpoints from the in-memory store."""
+    """Delete one thread's checkpoints from the in-memory store.
+
+    `MemorySaver.storage` is keyed by plain thread-id strings, not the
+    tuples an earlier version of this function filtered for, so that
+    filter never matched anything and /reset was a silent no-op. Use the
+    checkpointer's own `delete_thread`, which also clears `writes` and
+    `blobs` for the thread.
+    """
     if _memory is None:
         return
-    to_del = [k for k in list(_memory.storage) if isinstance(k, tuple) and k[0] == thread_id]
-    for k in to_del:
-        del _memory.storage[k]
+    _memory.delete_thread(thread_id)

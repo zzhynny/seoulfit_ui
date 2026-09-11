@@ -37,18 +37,13 @@ from geo import (
     SEOUL_AREA_CENTERS,
     area_label as _area_label,
     area_matches_requested as _area_matches_requested,
-    extract_requested_areas as _extract_requested_areas,
     get_area_center as _get_area_center,
     haversine_km as _haversine_km,
     infer_area_from_fields as _infer_area_from_text_or_coords,
 )
 # lm_context removed — DSPy replaced with direct Gemini calls
-from rag import (
-    _parse_num_days,
-    build_query,
-    parse_day_segments,
-    retrieve_for_segments,
-)
+from rag import _parse_num_days
+from retrieval import base_id, load_vectors, select_anchors
 from state import TravelState
 
 load_dotenv()
@@ -686,7 +681,6 @@ def _format_requested_area_rules(
         return ""
 
     labels = [_area_label(a) for a in requested_areas]
-    num_days = _parse_num_days(duration, override=num_days)
 
     lines = [
         "",
@@ -697,23 +691,12 @@ def _format_requested_area_rules(
         "If candidate course data is weak for an area, use REAL-TIME GOOGLE PLACES DATA for that area.",
     ]
 
-    if len(requested_areas) >= 2:
-        # Distribute areas evenly across the actual number of days.
-        days_per_area = max(1, num_days // len(requested_areas))
-        area_assignments = []
-        for i, label in enumerate(labels):
-            start_day = i * days_per_area + 1
-            end_day = start_day + days_per_area - 1
-            if i == len(labels) - 1:
-                end_day = num_days  # last area gets any remainder days
-            if start_day == end_day:
-                area_assignments.append(f"Day {start_day} = {label}")
-            else:
-                area_assignments.append(f"Days {start_day}–{end_day} = {label}")
-        lines.append(
-            f"This is a {num_days}-day trip with {len(requested_areas)} requested areas. "
-            f"Distribute them across the days as follows: {', '.join(area_assignments)}."
-        )
+    # No day->area distribution paragraph here any more: every day's area is
+    # already stated in its own "=== DAY N CANDIDATES: <area> ===" header
+    # (see _format_segment_block), and day_specs lets the traveller repeat a
+    # region across days (e.g. Day 1 & 2 = Hongdae, Day 3 = Gangnam) -- a
+    # paragraph re-deriving "Day 1 = X, Days 2-3 = Y" from the deduplicated
+    # requested_areas list would only contradict those headers.
 
     lines.append(
         "If you cannot find enough sightseeing POIs for an area, use cafes, restaurants, shops, or cultural spaces from Google Places."
@@ -1281,6 +1264,7 @@ def _validate_and_repair_itinerary(
     courses: list[dict[str, Any]],
     google_supplement: list[dict[str, Any]],
     requested_areas: list[str],
+    day_segments: list[dict[str, Any]] | None = None,
     duration: str = "",
     num_days: int | None = None,
     pace: str | None = None,
@@ -1434,7 +1418,7 @@ def _validate_and_repair_itinerary(
             if any(_normalize_text(p.get("name")) == meal_name_key for p in pois):
                 continue  # LLM already included this exact locked restaurant
 
-            day_area = _primary_area_for_day(day, requested_areas) or meal.get("area")
+            day_area = _primary_area_for_day(day, day_segments) or meal.get("area")
             out = {
                 "name": meal.get("name"),
                 "type": meal.get("type", "restaurant"),
@@ -1468,16 +1452,13 @@ def _validate_and_repair_itinerary(
     # count is non-meal POIs only -- the guaranteed meal slot from step 3 is
     # a bonus on top of the sightseeing target, not part of it, so it can't
     # let this step under-fill a day by one.
-    for idx, day in enumerate(days):
+    for day in days:
         pois = day.setdefault("pois", [])
         non_meal_count = sum(1 for p in pois if not _is_meal_poi(p))
         if non_meal_count >= poi_min:
             continue
 
-        target_area = None
-        if requested_areas:
-            target_area = requested_areas[min(idx, len(requested_areas) - 1)]
-        target_area = target_area or _primary_area_for_day(day, requested_areas)
+        target_area = _primary_area_for_day(day, day_segments)
 
         candidates = []
         if target_area:
@@ -1577,10 +1558,7 @@ def _validate_and_repair_itinerary(
         day_num = int(day.get("day") or idx + 1)
         # Only replace bare "Day N" placeholders — never overwrite LLM-generated titles.
         if current_theme in ("", f"Day {day_num}"):
-            area = None
-            if requested_areas:
-                area = requested_areas[min(idx, len(requested_areas) - 1)]
-            area = area or _primary_area_for_day(day, requested_areas)
+            area = _primary_area_for_day(day, day_segments)
             day["theme"] = _generate_day_theme(day, area, purpose=purpose)
 
     # 6. Attach transit legs (Haversine distance + walk/car ETA + Kakao deep links).
@@ -1604,11 +1582,24 @@ def _area_coverage(days: list[dict[str, Any]], requested_areas: list[str]) -> di
     return coverage
 
 
-def _primary_area_for_day(day: dict[str, Any], requested_areas: list[str]) -> str | None:
-    if requested_areas:
-        day_num = int(day.get("day") or 1)
-        idx = min(max(day_num - 1, 0), len(requested_areas) - 1)
-        return requested_areas[idx]
+def _primary_area_for_day(
+    day: dict[str, Any], day_segments: list[dict[str, Any]] | None,
+) -> str | None:
+    """The area the traveller actually picked for this day.
+
+    `day_segments` (one entry per day: `{"day_numbers": [n], "area": ...}`,
+    built by retrieve_node from the per-day `day_specs`) is the authoritative
+    day->area map. It must be looked up by day number, never by position in
+    a deduplicated area list -- a repeated region (Day 1 & 2 = Hongdae, Day
+    3 = Gangnam) collapses `requested_areas` to `["hongdae", "gangnam"]`,
+    and indexing that by day would hand day 2 Gangnam's meals/theme/fill.
+    """
+    day_num = int(day.get("day") or 0)
+    for seg in day_segments or []:
+        if day_num in (seg.get("day_numbers") or []):
+            area = seg.get("area")
+            if area:
+                return area
 
     counts: dict[str, int] = {}
     for poi in day.get("pois", []) or []:
@@ -1797,7 +1788,7 @@ def _pace_target_line(state: TravelState) -> str:
 
 def _resolve_locked_meals(
     trip_start_date: str | None,
-    requested_areas: list[str],
+    day_segments: list[dict[str, Any]] | None,
     expected_days: int,
     meal_type: str = "dinner",
     exclude_by_day: dict[int, tuple[str, ...]] | None = None,
@@ -1830,7 +1821,7 @@ def _resolve_locked_meals(
 
     slot_start, slot_end = meal_slots.MEAL_SLOTS[meal_type]
     for day_num in range(1, expected_days + 1):
-        day_area = _primary_area_for_day({"day": day_num}, requested_areas)
+        day_area = _primary_area_for_day({"day": day_num}, day_segments)
         if not day_area:
             continue
         try:
@@ -1870,39 +1861,100 @@ def _locked_meals_prompt_lines(locked_meals: dict[int, dict[str, Any]]) -> str:
 # Graph nodes
 # ---------------------------------------------------------------------------
 
+def _synth_purpose(state: TravelState) -> str:
+    """사용자가 목적을 적었으면 그 문장, 아니면 다른 슬롯으로 한 문장을 만든다.
+
+    목적을 적는 사람은 소수라 이쪽이 다수 경로다. 그리고 이 합성이 companion 과
+    pace 를 검색에 처음 쓰이게 한다 — 지금까지 두 슬롯은 수집만 되고 순위에는
+    한 번도 영향을 주지 않았다.
+    """
+    written = (state.get("purpose") or "").strip()
+    if written:
+        return written[:300]
+
+    days = _parse_num_days(state.get("travel_dates"))
+    pace = (state.get("pace") or "").strip().lower()
+    companion = (state.get("companion") or "").strip().lower()
+    interest = (state.get("category") or "").strip()
+
+    pace_word = {"packed": "packed", "relaxed": "relaxed"}.get(pace, "")
+    who = {
+        "solo": "a solo traveller", "couple": "a couple",
+        "friends": "a group of friends", "family": "a family with children",
+    }.get(companion, "a traveller")
+
+    parts = ["A"]
+    if pace_word:
+        parts.append(pace_word)
+    parts.append(f"{days}-day trip for {who}")
+    if interest:
+        parts.append(f"focused on {interest}")
+    return " ".join(parts) + "."
+
+
 def make_retrieve_node(api_key: str):
     set_planner_api_key(api_key)
 
     def retrieve_node(state: TravelState) -> TravelState:
-        segments = parse_day_segments(
-            location=state.get("region") or "",
-            purpose=state.get("category") or "",
-            duration=state.get("travel_dates") or "",
-            num_days=_resolve_num_days(state),
-        )
-
-        try:
-            segments_with_data, all_courses = retrieve_for_segments(
-                api_key=api_key,
-                segments=segments,
-                purpose=state.get("category") or "",
-            )
-        except Exception as e:
-            # ponytail: no **state spread — returning a replacement messages list
-            # (not just the new message) would overwrite the checkpoint history.
+        day_specs = state.get("day_specs") or []
+        if not day_specs:
             return {
                 "current_step": "confirm",
-                "messages": [AIMessage(content=f"⚠️ Failed to retrieve courses: {e}")],
+                "messages": [AIMessage(content="⚠️ No day plan found. Please set each day's area first.")],
             }
+
+        vectors = load_vectors()
+        query_vec = _embed_purpose(_synth_purpose(state)) if vectors else None
+
+        segments, all_courses, used = [], [], set()
+        seen_ids: set[str] = set()
+        for spec in day_specs:
+            sel = select_anchors(
+                {**spec, "purpose_vec": query_vec}, exclude=used, vectors=vectors
+            )
+            if sel.relaxed:
+                print(f"[retrieval] day {spec['day']} {spec['region']}/{spec['interest']}: {sel.relaxed}")
+            used |= {base_id(c["course_id"]) for c in sel.courses}
+            segments.append({
+                "day_numbers": [spec["day"]],
+                "area": spec["region"],
+                "purpose_hint": spec["interest"],
+                "anchor_courses": sel.courses,
+            })
+            for c in sel.courses:
+                if c["course_id"] not in seen_ids:
+                    seen_ids.add(c["course_id"])
+                    all_courses.append(c)
 
         return {
             **state,
             "retrieved_courses": all_courses,
-            "day_segments": segments_with_data,
+            "day_segments": segments,
             "current_step": "planning",
         }
 
     return retrieve_node
+
+
+def _embed_purpose(text: str):
+    """질의 임베딩. 일정 생성당 1회 — 모든 날이 같은 목적을 쓴다.
+
+    실패하면 None 을 돌려 유사도 정렬만 건너뛴다. 예전에는 여기서 예외가 나면
+    retrieve_node 가 통째로 죽어 대화가 멈췄다.
+    """
+    from build_vectors import EMBEDDING_MODEL, normalize
+    import numpy as np
+
+    try:
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        client = GoogleGenerativeAIEmbeddings(
+            model=EMBEDDING_MODEL, google_api_key=_PLANNER_GEMINI_KEY
+        )
+        vec = np.asarray(client.embed_query(text), dtype="float32")
+        return normalize(vec.reshape(1, -1))[0]
+    except Exception as e:
+        print(f"[retrieval] query embedding failed ({type(e).__name__}) — filter-only")
+        return None
 
 
 def plan_node(state: TravelState) -> TravelState:
@@ -1915,7 +1967,6 @@ def plan_node(state: TravelState) -> TravelState:
             "messages": [AIMessage(content="⚠️ No candidate courses found. Try different details.")],
         }
 
-    location = state.get("region") or ""
     purpose = state.get("category") or ""
     duration = state.get("travel_dates") or ""
     num_days = _resolve_num_days(state)
@@ -1931,12 +1982,16 @@ def plan_node(state: TravelState) -> TravelState:
     # common path.
     duration_text = duration or (f"{num_days} days" if num_days else "")
 
-    requested_areas = _extract_requested_areas(location, purpose)
+    # 날짜별 지역의 합집합. 예전에는 region 문자열에서 추출했는데, 이제 사용자가
+    # 날마다 지정하므로 추측이 없다.
+    requested_areas = list(dict.fromkeys(s["region"] for s in (state.get("day_specs") or [])))
     print(f"[planner] requested_areas = {requested_areas}")
+
+    location = ", ".join(_area_label(a) for a in requested_areas)
 
     expected_days = _parse_num_days(duration, override=num_days) if (duration or num_days) else 0
     locked_meals = _resolve_locked_meals(
-        state.get("trip_start_date"), requested_areas, expected_days, meal_type="dinner",
+        state.get("trip_start_date"), day_segments, expected_days, meal_type="dinner",
     )
     # Lunch excludes each day's already-locked dinner pick, so the same
     # restaurant never gets locked into both meals on one day -- reuses
@@ -1945,7 +2000,7 @@ def plan_node(state: TravelState) -> TravelState:
         day_num: (meal["name"],) for day_num, meal in locked_meals.items() if meal.get("name")
     }
     locked_lunch_meals = _resolve_locked_meals(
-        state.get("trip_start_date"), requested_areas, expected_days, meal_type="lunch",
+        state.get("trip_start_date"), day_segments, expected_days, meal_type="lunch",
         exclude_by_day=dinner_names_by_day,
     )
 
@@ -1996,6 +2051,7 @@ def plan_node(state: TravelState) -> TravelState:
             courses=courses,
             google_supplement=google_supplement,
             requested_areas=requested_areas,
+            day_segments=day_segments,
             duration=duration,
             num_days=num_days,
             pace=pace,
