@@ -36,7 +36,7 @@ class CheckinStore {
   /// Writes locally, then mirrors to the backend. The local write is awaited;
   /// the upload is not — a slow or dead network must never make the check-in
   /// button feel broken.
-  static Future<void> save(TripCheckin trip) async {
+  static Future<void> save(TripCheckin trip, {bool generateStamp = false}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       '$_tripPrefix${trip.tripId}',
@@ -46,12 +46,16 @@ class CheckinStore {
     // persisted, so remembering the most recently saved trip id here is what
     // lets a restarted app find yesterday's record again (see loadActive).
     await prefs.setString(_activeKey, trip.tripId);
-    unawaited(_sync(trip));
+    unawaited(_sync(trip, generateStamp));
   }
 
-  static Future<void> _sync(TripCheckin trip) async {
+  static Future<void> _sync(TripCheckin trip, bool generateStamp) async {
     try {
-      await ApiService().postCheckin(deviceId: await deviceId(), trip: trip);
+      await ApiService().postCheckin(
+        deviceId: await deviceId(),
+        trip: trip,
+        generateStamp: generateStamp,
+      );
     } catch (_) {
       // Best-effort: the local copy is the source of truth for the recap.
     }

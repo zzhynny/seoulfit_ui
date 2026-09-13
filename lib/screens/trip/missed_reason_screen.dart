@@ -25,14 +25,16 @@ class MissedReasonScreen extends StatefulWidget {
 }
 
 class _MissedReasonScreenState extends State<MissedReasonScreen> {
-  MissedReason _reason = MissedReason.notEnoughTime;
+  late MissedReason _reason;
 
-  static const _options = [
-    (MissedReason.notEnoughTime, '⏰ Not enough time'),
-    (MissedReason.tooTired, '🏃 Too tired'),
-    (MissedReason.didntFeelLikeIt, "💭 Didn't feel like it"),
-    (MissedReason.other, '✏️ Other'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Reopening a stop that already has a reason starts on that reason, so
+    // changing it doesn't silently reset it to the first option.
+    _reason = context.read<TripProvider>().reasonFor(widget.activityId) ??
+        MissedReason.notEnoughTime;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,11 +76,11 @@ class _MissedReasonScreenState extends State<MissedReasonScreen> {
                 const SizedBox(height: 16),
                 Opacity(opacity: 0.65, child: ActivityCard(activity: activity)),
                 const SizedBox(height: 16),
-                for (final option in _options) ...[
+                for (final reason in MissedReason.values) ...[
                   _ReasonOption(
-                    label: option.$2,
-                    selected: _reason == option.$1,
-                    onTap: () => setState(() => _reason = option.$1),
+                    label: '${reason.emoji} ${reason.label}',
+                    selected: _reason == reason,
+                    onTap: () => setState(() => _reason = reason),
                   ),
                   const SizedBox(height: 10),
                 ],

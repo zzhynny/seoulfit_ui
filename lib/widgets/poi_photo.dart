@@ -43,7 +43,15 @@ class _PoiPhotoState extends State<PoiPhoto> {
   @override
   void initState() {
     super.initState();
-    if (widget.asset == null && widget.name.isNotEmpty) _resolve();
+    if (widget.asset != null || widget.name.isEmpty) return;
+    // Same as PoiSummary: a photo this session already resolved paints on the
+    // first frame, instead of a placeholder that swaps on every screen.
+    final saved = context.read<ApiService?>()?.cachedPoiImage(widget.name);
+    if (saved != null) {
+      if (saved.isNotEmpty) _url = saved;
+      return;
+    }
+    _resolve();
   }
 
   Future<void> _resolve() async {

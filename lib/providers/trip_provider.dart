@@ -141,6 +141,8 @@ class TripProvider extends ChangeNotifier {
   /// Reversible on purpose: this is the only control on the check-in screen,
   /// so a mis-tap with no way back would strand a wrong stamp in the record.
   void setVisited(String activityId, bool visited) {
+    // A stop can't be both visited and skipped; checking it in drops the reason.
+    if (visited) _missedReasons.remove(activityId);
     _mutateActivity(activityId, (a) => a.copyWith(visited: visited));
     unawaited(_persistCheckins());
   }
@@ -150,6 +152,25 @@ class TripProvider extends ChangeNotifier {
     notifyListeners();
     unawaited(_persistCheckins());
   }
+
+  /// Stops neither checked in nor given a reason, per day, for the days that
+  /// have any. Complete Check-in unlocks once this is empty: the trip gets one
+  /// stamp covering every day, so every day has to be settled first.
+  Map<int, int> get openStopsByDay {
+    final open = <int, int>{};
+    for (final day in _itinerary?.days ?? const <TripDay>[]) {
+      final count = day.activities
+          .where((a) => !a.visited && !_missedReasons.containsKey(a.id))
+          .length;
+      if (count > 0) open[day.dayNumber] = count;
+    }
+    return open;
+  }
+
+  /// Closes out the trip's check-in: saves it and asks the backend for the one
+  /// journey stamp. Only here, not on every tap — each generation is a paid
+  /// image edit.
+  void completeCheckin() => unawaited(_persistCheckins(generateStamp: true));
 
   /// Writes the trip's check-in record to local storage (and, best-effort,
   /// to the backend's research table).
@@ -162,13 +183,14 @@ class TripProvider extends ChangeNotifier {
   /// Fire-and-forget by design — a slow write must never make the check-in
   /// button feel stuck, and the in-memory itinerary is what the screen is
   /// already rendering.
-  Future<void> _persistCheckins() async {
+  Future<void> _persistCheckins({bool generateStamp = false}) async {
     final itinerary = _itinerary;
     if (itinerary == null) return;
 
     final tripId = _tripId ??= 'trip-${DateTime.now().millisecondsSinceEpoch}';
     final planned = <int, List<String>>{};
     final coords = <String, List<double>>{};
+    final types = <String, String>{};
     final checkins = <int, DayCheckin>{};
 
     for (final day in itinerary.days) {
@@ -180,6 +202,7 @@ class TripProvider extends ChangeNotifier {
         final lat = activity.lat;
         final lng = activity.lng;
         if (lat != null && lng != null) coords[activity.id] = [lat, lng];
+        if (activity.poiType.isNotEmpty) types[activity.id] = activity.poiType;
         if (activity.visited) visited.add(activity.id);
         final reason = _missedReasons[activity.id];
         if (reason != null) misses[activity.id] = _missReasonOf(reason);
@@ -191,12 +214,16 @@ class TripProvider extends ChangeNotifier {
       }
     }
 
-    await CheckinStore.save(TripCheckin(
-      tripId: tripId,
-      planned: planned,
-      checkins: checkins,
-      coords: coords,
-    ));
+    await CheckinStore.save(
+      TripCheckin(
+        tripId: tripId,
+        planned: planned,
+        checkins: checkins,
+        coords: coords,
+        types: types,
+      ),
+      generateStamp: generateStamp,
+    );
   }
 
   /// The id this trip's record is stored under. Generated on first check-in

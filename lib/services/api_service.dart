@@ -7,6 +7,10 @@ import '../config/api_base.dart';
 import '../models/travel_state.dart';
 import '../models/trip_checkin.dart';
 
+/// A trip's journey stamp as GET /trip/stamp reports it: 'generating', 'ready'
+/// (with [version] for cache-busting), 'failed' or 'none'.
+typedef StampStatus = ({String status, int? version});
+
 class ApiService {
   static final Map<String, String> _poiCache = {};
 
@@ -121,7 +125,7 @@ class ApiService {
   }
 
   /// POSTs `{name, type}` to a `/poi-*` endpoint and returns `json[field]`,
-  /// caching by endpoint+name. Empty string on any non-200. Shared by the four
+  /// caching by endpoint+name. Empty string on any non-200. Shared by the three
   /// single-field POI lookups below.
   Future<String> _fetchPoiField(
       String endpoint, String field, String name, String type) async {
@@ -141,22 +145,28 @@ class ApiService {
     return result;
   }
 
-  /// 1–2 sentence Gemini summary for a Seoul POI.
+  /// What [_fetchPoiField] already holds for a stop, or null if it hasn't been
+  /// fetched this session. Lets a screen paint saved text on its first frame
+  /// instead of a placeholder that swaps once an await resolves.
+  String? _cachedPoiField(String endpoint, String name) => _poiCache['$endpoint|$name'];
+
+  String? cachedPoiSummary(String name) => _cachedPoiField('poi-summary', name);
+  String? cachedPoiDetail(String name) => _cachedPoiField('poi-detail', name);
+  String? cachedPoiImage(String name) => _cachedPoiField('poi-image', name);
+
+  /// 1–2 sentence description of a Seoul POI, from a web search (the backend
+  /// caches it per place, so it reads the same on every screen and launch).
   Future<String> fetchPoiSummary(String name, {String type = ''}) =>
       _fetchPoiField('poi-summary', 'summary', name, type);
 
-  /// Best-matching thumbnail for a Seoul POI via SerpApi + Gemini.
+  /// Thumbnail for a Seoul POI: the course's own photo, else its Google Maps
+  /// photo through the backend's /place-photo proxy.
   Future<String> fetchPoiImage(String name, {String type = ''}) =>
       _fetchPoiField('poi-image', 'image_url', name, type);
 
   /// Structured Tavily visitor info for a Seoul POI (stop selection screen).
   Future<String> fetchPoiDetail(String name, {String type = ''}) =>
       _fetchPoiField('poi-detail', 'detail', name, type);
-
-  /// Short "you've arrived" confirmation tip — a visible landmark to recognise
-  /// plus what's at the entrance.
-  Future<String> fetchPoiArrivalTip(String name, {String type = ''}) =>
-      _fetchPoiField('poi-arrival-tip', 'arrival_tip', name, type);
 
   /// Recomputes transit (distance / walk / car / Kakao / ODsay) for an
   /// arbitrary ordered list of [stops]. Returns one leg per consecutive pair.
@@ -282,12 +292,25 @@ class ApiService {
     ];
   }
 
+  /// The trip's journey stamp status. Cheap — never starts a generation.
+  Future<StampStatus> fetchStampStatus(String tripId) async {
+    final response = await http
+        .get(Uri.parse('$_base/trip/stamp/${Uri.encodeComponent(tripId)}'))
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      throw Exception('Stamp status ${response.statusCode}');
+    }
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return (status: json['status'] as String? ?? 'none', version: json['version'] as int?);
+  }
+
   /// Sends one trip's check-in snapshot to the backend. Write-only and
   /// best-effort: the client renders its recap from local storage, so a false
   /// here costs nothing but a missing row in the research table.
   Future<bool> postCheckin({
     required String deviceId,
     required TripCheckin trip,
+    bool generateStamp = false,
   }) async {
     try {
       final response = await http
@@ -303,10 +326,13 @@ class ApiService {
                 // Carried so offline analysis can place a trip on a map
                 // without re-resolving POI names to coordinates.
                 'coords': trip.coords,
+                // What each place is, so the journey stamp can draw it.
+                'types': trip.types,
                 'areas': trip.areas.toList(),
               },
               'days': trip.checkins
                   .map((k, v) => MapEntry(k.toString(), v.toJson())),
+              'generate_stamp': generateStamp,
             }),
           )
           .timeout(const Duration(seconds: 8));

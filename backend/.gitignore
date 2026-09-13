@@ -4,6 +4,9 @@ __pycache__/
 *.pyc
 .DS_Store
 planner_last_failed.txt
+stamps/
+_odsay_cache.json
+_poi_text_cache.json
 .env
 *.env
 *.bak

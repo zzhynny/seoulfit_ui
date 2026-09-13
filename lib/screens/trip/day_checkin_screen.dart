@@ -34,6 +34,7 @@ class DayCheckInScreen extends StatelessWidget {
     final itinerary = trip.itinerary!;
     final day = itinerary.days.firstWhere((d) => d.dayNumber == dayNumber);
     final stampedDays = itinerary.stampedDays;
+    final open = trip.openStopsByDay;
 
     return Column(
       children: [
@@ -114,6 +115,7 @@ class DayCheckInScreen extends StatelessWidget {
               for (final activity in day.activities) ...[
                 CheckInActivityCard(
                   activity: activity,
+                  missedReason: trip.reasonFor(activity.id),
                   onToggleVisited: () =>
                       trip.setVisited(activity.id, !activity.visited),
                   onMissed: () => onMissedPlace(activity.id),
@@ -158,7 +160,30 @@ class DayCheckInScreen extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-          child: PrimaryButton(label: 'Complete Check-in', onPressed: onComplete),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (open.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    // Covers every day, not just this tab: the one stamp is
+                    // painted from the whole trip.
+                    'Still open — ${open.entries.map((e) => 'Day ${e.key}: ${e.value}').join(' · ')}',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                  ),
+                ),
+              PrimaryButton(
+                label: 'Complete Check-in',
+                enabled: open.isEmpty,
+                onPressed: () {
+                  trip.completeCheckin();
+                  onComplete();
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );

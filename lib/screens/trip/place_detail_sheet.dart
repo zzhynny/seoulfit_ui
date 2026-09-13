@@ -19,14 +19,14 @@ Future<void> showPlaceDetailSheet(BuildContext context, TripActivity activity) {
   );
 }
 
-/// What a traveller needs standing in front of a stop: how to recognise it,
-/// when it's open, and how to get there.
+/// What a traveller needs standing in front of a stop: when it's open, what it
+/// costs, and how to get there.
 ///
-/// Both text fields are fetched on open rather than with the itinerary —
-/// `/poi-detail` runs a Tavily lookup and `/poi-arrival-tip` a Gemini call,
-/// so resolving them for every stop up front would add dozens of seconds to
-/// itinerary generation for text most stops never get read. [ApiService]
-/// memoises by name, so reopening a sheet is instant.
+/// The visitor info is fetched on open rather than with the itinerary — it's a
+/// Tavily web search the backend rewrites, so resolving it for every stop up
+/// front would add dozens of seconds to itinerary generation for text most
+/// stops never get read. [ApiService] memoises by name, so reopening a sheet
+/// paints the saved text on its first frame.
 class PlaceDetailSheet extends StatefulWidget {
   const PlaceDetailSheet({super.key, required this.activity});
 
@@ -37,13 +37,19 @@ class PlaceDetailSheet extends StatefulWidget {
 }
 
 class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
-  String? _arrivalTip;
   String? _detail;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    final saved = context.read<ApiService?>()?.cachedPoiDetail(widget.activity.title);
+    if (saved != null) {
+      // Opened before this session: no spinner flash, no second lookup.
+      _detail = saved;
+      _loading = false;
+      return;
+    }
     _load();
   }
 
@@ -54,19 +60,14 @@ class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
       return;
     }
 
-    final name = widget.activity.title;
-    final type = widget.activity.poiType;
     try {
-      // Two independent lookups — fire them together rather than making the
-      // traveller wait for the sum.
-      final results = await Future.wait([
-        api.fetchPoiArrivalTip(name, type: type),
-        api.fetchPoiDetail(name, type: type),
-      ]);
+      final detail = await api.fetchPoiDetail(
+        widget.activity.title,
+        type: widget.activity.poiType,
+      );
       if (!mounted) return;
       setState(() {
-        _arrivalTip = results[0];
-        _detail = results[1];
+        _detail = detail;
         _loading = false;
       });
     } catch (_) {
@@ -182,12 +183,6 @@ class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
                 ),
               )
             else ...[
-              _Section(
-                icon: Icons.explore_outlined,
-                title: "You've arrived when",
-                body: _arrivalTip,
-                emptyNote: 'No arrival tip for this stop yet.',
-              ),
               _Section(
                 icon: Icons.info_outline,
                 title: 'Before you go',

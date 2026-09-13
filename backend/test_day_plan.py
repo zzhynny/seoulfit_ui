@@ -15,33 +15,44 @@ THREAD = "test-day-plan-0123456789"
 
 
 def test_defaults_give_each_day_a_different_region():
-    specs = graph.default_day_specs({"travel_dates": "June 1, 2026 to June 3, 2026 (3 days)",
-                                     "category": "Shopping"})
+    specs = graph.default_day_specs({"travel_dates": "June 1, 2026 to June 3, 2026 (3 days)"})
     assert [s["day"] for s in specs] == [1, 2, 3]
     assert len({s["region"] for s in specs}) == 3
-    assert all(s["interest"] == "Shopping" for s in specs)
 
 
 def test_defaults_cover_a_seven_day_trip():
-    specs = graph.default_day_specs({"travel_dates": "June 1, 2026 to June 7, 2026 (7 days)",
-                                     "category": "Culture & History"})
+    specs = graph.default_day_specs({"travel_dates": "June 1, 2026 to June 7, 2026 (7 days)"})
     assert len(specs) == 7
     assert len({s["region"] for s in specs}) == 7
 
 
-def test_defaults_fall_back_to_culture_when_no_interest_was_given():
-    specs = graph.default_day_specs({"travel_dates": "June 1, 2026 (1 day)", "category": None})
-    assert specs[0]["interest"] == "Culture & History"
+def test_defaults_open_every_day_on_the_default_interest():
+    # The chat no longer collects a trip-wide interest -- the traveller picks
+    # one per day right here -- so nothing else may seed the rows.
+    specs = graph.default_day_specs({"travel_dates": "June 1, 2026 to June 3, 2026 (3 days)",
+                                     "category": "Shopping"})
+    assert all(s["interest"] == graph.DEFAULT_INTEREST for s in specs)
 
 
-def _seed(days=3, interest="Shopping"):
+def test_planner_purpose_comes_from_the_day_plan_interests():
+    from planner import _trip_interests
+    state = {"day_specs": [
+        {"day": 1, "region": "hongdae", "interest": "Food & Cafes"},
+        {"day": 2, "region": "seongsu", "interest": "Shopping"},
+        {"day": 3, "region": "jongno", "interest": "Food & Cafes"},
+    ]}
+    assert _trip_interests(state) == "Food & Cafes, Shopping"
+    assert _trip_interests({}) == ""
+
+
+def _seed(days=3):
     """day_plan 단계의 스레드를 만든다."""
     client.post("/reset", params={"thread_id": THREAD})
     from api import _config, _graph
     label = f"June 1, 2026 to June {days}, 2026 ({days} days)"
     _graph.update_state(_config(THREAD), {
-        "travel_dates": label, "category": interest, "current_step": "day_plan",
-        "day_specs": graph.default_day_specs({"travel_dates": label, "category": interest}),
+        "travel_dates": label, "current_step": "day_plan",
+        "day_specs": graph.default_day_specs({"travel_dates": label}),
     })
 
 

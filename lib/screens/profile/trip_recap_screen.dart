@@ -1,11 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/profile.dart';
 import '../../models/trip.dart';
+import '../../config/api_base.dart';
 import '../../providers/trip_provider.dart';
+import '../../services/api_service.dart';
+import '../../services/stamp_saver.dart';
 import '../../theme/theme.dart';
+import '../../widgets/journey_stamp.dart';
 import '../../widgets/primary_button.dart';
-import 'trip_story_screen.dart';
 
 /// Minimum number of days with at least one check-in for the full
 /// railway-map recap (17_Trip-Recap-Main) to show; below this, the
@@ -30,12 +34,14 @@ StampState _stateFor(TripDay day) {
   return StampState.empty;
 }
 
-class TripRecapScreen extends StatelessWidget {
+class TripRecapScreen extends StatefulWidget {
   const TripRecapScreen({
     super.key,
     required this.onDone,
     required this.onBack,
     this.requireCompletedForFullRecap = false,
+    this.fetchStampStatus,
+    this.saveStamp = saveStampImage,
   });
 
   final VoidCallback onDone;
@@ -50,6 +56,40 @@ class TripRecapScreen extends StatelessWidget {
   /// leaves this false and keeps deciding on stamped-day count alone.
   final bool requireCompletedForFullRecap;
 
+  /// Defaults to [ApiService.fetchStampStatus]; injectable for tests.
+  final Future<StampStatus> Function(String tripId)? fetchStampStatus;
+
+  /// Saves the ready stamp: to Photos on a phone, a browser download on web.
+  final Future<void> Function(String url) saveStamp;
+
+  @override
+  State<TripRecapScreen> createState() => _TripRecapScreenState();
+}
+
+class _TripRecapScreenState extends State<TripRecapScreen> {
+  /// The stamp's image link, once JourneyStamp reports it ready.
+  String? _stampUrl;
+  bool _saving = false;
+
+  Future<void> _download() async {
+    final url = _stampUrl;
+    if (url == null || _saving) return;
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await widget.saveStamp(url);
+      messenger.showSnackBar(
+        SnackBar(content: Text(kIsWeb ? 'Downloaded' : 'Saved to Photos')),
+      );
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text("Couldn't save your stamp. Check photo access in Settings and try again."),
+      ));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final trip = context.watch<TripProvider>();
@@ -57,7 +97,7 @@ class TripRecapScreen extends StatelessWidget {
     final days = itinerary?.days ?? const <TripDay>[];
     final stampedDays = itinerary?.stampedDays ?? 0;
     final hasEnoughStamps = stampedDays >= kFullRecapStampThreshold;
-    final fullRecap = requireCompletedForFullRecap ? (trip.isTripCompleted && hasEnoughStamps) : hasEnoughStamps;
+    final fullRecap = widget.requireCompletedForFullRecap ? (trip.isTripCompleted && hasEnoughStamps) : hasEnoughStamps;
 
     return Column(
       children: [
@@ -66,7 +106,7 @@ class TripRecapScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Row(
             children: [
-              GestureDetector(onTap: onBack, child: const Icon(Icons.chevron_left, size: 20)),
+              GestureDetector(onTap: widget.onBack, child: const Icon(Icons.chevron_left, size: 20)),
               Expanded(
                 child: Text('SeoulFit', textAlign: TextAlign.center, style: AppTextStyles.headingSmall.copyWith(fontSize: 20)),
               ),
@@ -75,26 +115,29 @@ class TripRecapScreen extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: fullRecap ? _FullRecapBody(days: days) : _LowDataRecapBody(days: days),
+          child: fullRecap
+              ? _FullRecapBody(
+                  days: days,
+                  tripId: trip.tripId ?? '',
+                  fetchStampStatus: widget.fetchStampStatus,
+                  onStampReady: (url) {
+                    if (url != _stampUrl) setState(() => _stampUrl = url);
+                  },
+                )
+              : _LowDataRecapBody(days: days),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: PrimaryButton(label: 'Done', onPressed: onDone),
+          child: PrimaryButton(label: 'Done', onPressed: widget.onDone),
         ),
-        // Only offered on the full recap: the low-data variant exists
-        // precisely because there aren't enough stamps to make a card worth
-        // sharing.
-        if (fullRecap)
+        // Only once the trip's stamp exists — there's nothing to save before.
+        if (fullRecap && _stampUrl != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TextButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const TripStoryScreen(),
-                ),
-              ),
-              icon: const Icon(Icons.ios_share_rounded, size: 16),
-              label: const Text('View as a story card'),
+              onPressed: _saving ? null : _download,
+              icon: const Icon(Icons.download_rounded, size: 16),
+              label: const Text('Download'),
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.textSecondary,
                 textStyle: AppTextStyles.bodyMedium
@@ -151,9 +194,17 @@ class _StopLayout {
 }
 
 class _FullRecapBody extends StatefulWidget {
-  const _FullRecapBody({required this.days});
+  const _FullRecapBody({
+    required this.days,
+    required this.tripId,
+    required this.onStampReady,
+    this.fetchStampStatus,
+  });
 
   final List<TripDay> days;
+  final String tripId;
+  final ValueChanged<String> onStampReady;
+  final Future<StampStatus> Function(String tripId)? fetchStampStatus;
 
   @override
   State<_FullRecapBody> createState() => _FullRecapBodyState();
@@ -237,13 +288,10 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
       );
     });
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Your Trip Recap', style: AppTextStyles.headingMedium.copyWith(fontSize: 26)),
-          const SizedBox(height: 10),
+    final trip = context.watch<TripProvider>();
+    final nativeCard = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: AspectRatio(
@@ -271,7 +319,7 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
                         Positioned.fill(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: Image.asset('assets/images/recap-railway-bg.png', fit: BoxFit.cover),
+                            child: Image.asset(kJourneyBackgroundAsset, fit: BoxFit.cover),
                           ),
                         ),
                         Positioned(
@@ -350,6 +398,38 @@ class _FullRecapBodyState extends State<_FullRecapBody> with SingleTickerProvide
               ],
             ),
           ),
+      ],
+    );
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Your Trip Recap', style: AppTextStyles.headingMedium.copyWith(fontSize: 26)),
+          const SizedBox(height: 10),
+          if (widget.tripId.isEmpty)
+            nativeCard
+          else
+            // A ready stamp replaces the railway card outright: its route is
+            // the traveller's own, so the fixed five-stop paw stamps would only
+            // cover it. The list underneath is the exact record the image's
+            // own labels can't guarantee.
+            JourneyStamp(
+              tripId: widget.tripId,
+              apiBase: apiBase,
+              fetchStatus: widget.fetchStampStatus,
+              onReady: widget.onStampReady,
+              placeholder: nativeCard,
+              readyBuilder: (context, stamp) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(borderRadius: BorderRadius.circular(16), child: stamp),
+                  const SizedBox(height: 16),
+                  RecapRouteList(days: widget.days, reasonFor: trip.reasonFor),
+                ],
+              ),
+            ),
           const SizedBox(height: 16),
           Center(
             child: Text(
@@ -429,6 +509,64 @@ class _StopLabel extends StatelessWidget {
         children: [
           Text(stop.name, style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFF2D2A26))),
           Text(stop.dayLabel, style: AppTextStyles.caption.copyWith(fontSize: 9, color: const Color(0xFF5E836A))),
+        ],
+      ),
+    );
+  }
+}
+
+/// Every stop of the trip, by day and in visit order, under the journey stamp.
+/// The stamp labels visited places too, but image models misspell text and
+/// skipped places aren't drawn at all, so this is the exact record — visited,
+/// or skipped with its reason.
+class RecapRouteList extends StatelessWidget {
+  const RecapRouteList({super.key, required this.days, required this.reasonFor});
+
+  final List<TripDay> days;
+  final MissedReason? Function(String activityId) reasonFor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final day in days) ...[
+          Text(
+            'Day ${day.dayNumber} · ${day.visitedCount} of ${day.activities.length} visited',
+            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          for (var i = 0; i < day.activities.length; i++) _row(i, day.activities[i]),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+
+  Widget _row(int index, TripActivity activity) {
+    final reason = activity.visited ? null : reasonFor(activity.id);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(
+            activity.visited ? Icons.check_circle : Icons.remove_circle_outline,
+            size: 16,
+            color: activity.visited ? AppColors.primary : AppColors.textSecondary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${index + 1}. ${activity.title}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: activity.visited ? AppColors.textPrimary : AppColors.textSecondary,
+              ),
+            ),
+          ),
+          if (reason != null) ...[
+            const SizedBox(width: 8),
+            Text(reason.label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+          ],
         ],
       ),
     );

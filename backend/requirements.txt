@@ -32,9 +32,9 @@ numpy>=1.26
 # Lens - Gemini Vision + Seoul Open Data RAG
 google-genai>=0.3.0
 
-# POI image search — dataset/poi_images.json 에 없는 POI 만 여기로 간다
-# (플래너가 끼워 넣은 식사 슬롯, 교체 후보 등). 정거장 사진은 미리 긁어둔다.
-serpapi
+# SerpApi 는 scripts/backfill_missing_images.py 전용이다. 서버의 /poi-image 는
+# Google Places 사진을 쓰므로 import 하지 않는다. 그 스크립트를 다시 돌릴 때만:
+#   uv pip install serpapi
 
 # scripts/scrape_poi_images.py 전용. 서버는 import 하지 않으므로 여기 넣지 않는다
 # (patchright 브라우저까지 40MB 딸려온다). 다시 긁을 때만 깔면 된다:
@@ -52,3 +52,6 @@ psycopg[binary]>=3.1
 # /poi-detail — live visitor info (hours, fees, tips) for a stop the dataset
 # has no blurb for. Gemini only reformats what Tavily returns.
 tavily-python
+
+# stamp.py — AI-illustrated journey stamp (images.edit on checkin change).
+openai

@@ -25,7 +25,11 @@ class LensResultScreen extends StatelessWidget {
               SizedBox(
                 height: 320,
                 width: double.infinity,
-                child: Image.asset('assets/images/lens-result-hero.png', fit: BoxFit.cover),
+                // The traveller's own shot, so the hero matches the place
+                // described below. The asset only backs the mock build.
+                child: result.photo != null
+                    ? Image.memory(result.photo!, fit: BoxFit.cover)
+                    : Image.asset('assets/images/lens-result-hero.png', fit: BoxFit.cover),
               ),
               Container(height: 320, color: Colors.black.withValues(alpha: 0.15)),
               // Over the hero, where a full-bleed image otherwise leaves no

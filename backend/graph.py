@@ -61,7 +61,7 @@ def _classify_intent(user_message: str) -> SimpleNamespace:
         f'Message: "{user_message}"\n\n'
         "Return JSON with exactly this field:\n"
         '- intent: "CONFIRM" if user confirms/agrees/wants to proceed. '
-        "Otherwise return exactly one of: travel_dates, category, restrictions, companion, pace, purpose "
+        "Otherwise return exactly one of: travel_dates, restrictions, companion, pace, purpose "
         "(the field they want to change)."
     )
     data = _gemini_json(prompt)
@@ -74,7 +74,6 @@ def _classify_intent(user_message: str) -> SimpleNamespace:
 
 FIELD_LABELS = {
     "travel_dates": "Travel Dates",
-    "category":     "Interests",
     "restrictions": "Restrictions",
     "companion":    "Traveling With",
     "pace":         "Trip Style",
@@ -88,13 +87,6 @@ FIELD_QUESTIONS = {
     # rule rejects, so the question must not invite one.
     "travel_dates": "When are you travelling? Tap the calendar to pick your dates "
                     "(up to 7 days).",
-    # The five values are the app's whole interest vocabulary. They are also
-    # what each course carries in its `interests` field, so the answer joins to
-    # course data by exact string match rather than by embedding luck. The old
-    # seven (K-POP/Cafe/Beauty/Food/Shopping/History/Activity) could not:
-    # Cafe, Beauty and Activity matched zero courses.
-    "category":     "What are your main interests? (Culture & History, Food & Cafes, "
-                    "Shopping, K-POP & Hallyu, Nature & Relaxation)",
     "restrictions": "Any dietary or physical restrictions? (or 'none')",
     "companion":    "Who are you traveling with? (solo/couple/friends/family)",
     "pace":         "Packed schedule or relaxed pace?",
@@ -104,22 +96,16 @@ FIELD_QUESTIONS = {
                     "parents', 'a free afternoon on a work trip')",
 }
 
-# 한 턴에 한 필드씩 묻는 순서. purpose 가 마지막인 이유는 앞의 다섯 답으로
+# 한 턴에 한 필드씩 묻는 순서. purpose 가 마지막인 이유는 앞의 답들로
 # 여행 성격이 이미 잡힌 다음에 물어야 "뭐 얘기하지" 없이 답하기 쉽기 때문이다.
-# region 은 여기 없다 — 날짜마다 다른 게 정상이라 Day Planner 화면이 받는다.
-FIELD_ORDER = ["travel_dates", "category", "companion", "pace", "restrictions", "purpose"]
+# region 과 관심사(category)는 여기 없다 — 날짜마다 다른 게 정상이라 Day Planner
+# 화면이 날마다 받는다. 채팅에서 먼저 물으면 같은 질문을 두 번 하게 된다.
+FIELD_ORDER = ["travel_dates", "companion", "pace", "restrictions", "purpose"]
 
 # One JSON instruction line per field, fed to _extract_field. Lifted verbatim
 # from the old combined extraction prompt so behaviour per field is unchanged.
 FIELD_EXTRACT = {
     "travel_dates": 'travel_dates: dates or duration like "June 15-17", "3 days". '
-                    '"MISSING" if the reply does not answer the question.',
-    "category":     'category: interests normalized to EXACTLY these labels, copied '
-                    'verbatim: "Culture & History", "Food & Cafes", "Shopping", '
-                    '"K-POP & Hallyu", "Nature & Relaxation". Map anything the user '
-                    'says onto the closest label (e.g. beauty/spa/healing -> '
-                    '"Nature & Relaxation"; museums/palaces/hanok -> '
-                    '"Culture & History"; BTS/drama locations -> "K-POP & Hallyu"). '
                     '"MISSING" if the reply does not answer the question.',
     "companion":    'companion: solo/couple/friends/family. "MISSING" if the reply does '
                     'not answer the question.',
@@ -135,7 +121,7 @@ FIELD_EXTRACT = {
 }
 
 
-# 앱의 관심사 어휘. FIELD_EXTRACT["category"], Flutter 칩,
+# 앱의 관심사 어휘. Day Planner 드롭다운(Flutter kInterestLabels),
 # course_descriptions.json 의 interests 가 전부 이 문자열을 그대로 쓴다.
 INTEREST_LABELS = [
     "Culture & History", "Food & Cafes", "Shopping",
@@ -253,20 +239,6 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     if not value or value.upper() == "MISSING":
         return {}
 
-    if field == "category" and value not in INTEREST_LABELS:
-        # The question is plural ("What are your main interests?"), so the
-        # LLM extraction sometimes returns more than one label
-        # ("Shopping, Food & Cafes") even though every downstream consumer
-        # (the day_specs interest dropdown, retrieval.select_anchors' filter)
-        # expects exactly one of INTEREST_LABELS. An off-vocabulary value
-        # would otherwise reach the Flutter dropdown (assertion failure) or
-        # silently relax select_anchors to interest-free for every day.
-        # Taking a valid first element beats discarding the whole answer;
-        # anything else off-vocabulary falls back to the same default
-        # default_day_specs already uses for a blank interest.
-        first = value.split(",")[0].strip()
-        value = first if first in INTEREST_LABELS else DEFAULT_INTEREST
-
     return {field: value}
 
 
@@ -281,15 +253,14 @@ def default_day_specs(state: TravelState) -> list[dict[str, Any]]:
     항상 존재하므로 "비어 있을 때" 라는 분기가 생기지 않는다.
 
     지역은 코스 풀이 넓은 곳부터 서로 다르게 배분한다 — 그대로 두어도 권역이
-    다양한 무난한 여행이 된다. 관심사는 채팅에서 답한 값을 모든 날에 깐다.
+    다양한 무난한 여행이 된다. 관심사는 기본값으로 시작하고 여행자가 날마다 고른다.
     """
     from rag import _parse_num_days
 
     days = _parse_num_days(state.get("travel_dates"))
-    interest = (state.get("category") or "").strip() or DEFAULT_INTEREST
     order = DAY_PLAN_REGION_ORDER
     return [
-        {"day": i + 1, "region": order[i % len(order)], "interest": interest}
+        {"day": i + 1, "region": order[i % len(order)], "interest": DEFAULT_INTEREST}
         for i in range(days)
     ]
 
@@ -405,7 +376,7 @@ def collect_node(state: TravelState) -> TravelState:
         # Every other field tolerates MISSING and moves on -- purpose used to
         # as well ("Or tap skip"), but it's the one slot planner.py has no
         # good default for: a blank purpose meant guessing a sentence out of
-        # pace/companion/category instead of what the traveller actually
+        # pace/companion/interests instead of what the traveller actually
         # wants. `pending` stays put, same as the travel_dates retry above.
         return {**state, "messages": [AIMessage(content=(
             "I'd like an actual answer here -- even a few words ('birthday trip', "

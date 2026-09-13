@@ -137,9 +137,9 @@ def compute_transit_legs(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
         dist = _haversine_km(lat1, lng1, lat2, lng2)
 
         transit_options: list[dict[str, Any]] = []
-        if odsay_enabled:
+        # A hop this short is a walk; asking ODsay about it only spends quota.
+        if odsay_enabled and dist >= odsay.WALKABLE_KM:
             transit_options = odsay.fetch_odsay_options(lat1, lng1, lat2, lng2)
-            time.sleep(0.2)  # rate-limit 안전 (호출자 책임)
 
         legs.append({
             "from_idx": i,
@@ -368,6 +368,34 @@ def find_place_id(
     if not candidates:
         return None
     return candidates[0].get("place_id")
+
+
+# Seoul City Hall, 25 km: covers the whole city, so a same-named place
+# elsewhere can't win the match.
+_SEOUL_BIAS = "circle:25000@37.5665,126.9780"
+
+
+def find_place_photo_ref(*, name: str, api_key: str) -> str | None:
+    """Legacy Find Place — the first Google Maps photo (owner or reviewer
+    upload) of a Seoul place, as a photo_reference for the /place-photo proxy.
+    None when Google has no match or the match has no photo (never raises)."""
+    if not api_key or not name:
+        return None
+
+    data = _google_get(
+        "https://maps.googleapis.com/maps/api/place/findplacefromtext/json",
+        {
+            "input": name,
+            "inputtype": "textquery",
+            "fields": "photos,place_id",
+            "locationbias": _SEOUL_BIAS,
+            "language": "en",
+            "key": api_key,
+        },
+    )
+    candidates = data.get("candidates") or []
+    photos = (candidates[0].get("photos") or []) if candidates else []
+    return (photos[0].get("photo_reference") or None) if photos else None
 
 
 def fetch_weekly_closure(*, place_id: str, api_key: str) -> dict[str, Any] | None:
@@ -1861,6 +1889,12 @@ def _locked_meals_prompt_lines(locked_meals: dict[int, dict[str, Any]]) -> str:
 # Graph nodes
 # ---------------------------------------------------------------------------
 
+def _trip_interests(state: TravelState) -> str:
+    """The Day Planner's per-day interests, distinct and in day order."""
+    specs = state.get("day_specs") or []
+    return ", ".join(dict.fromkeys(s["interest"] for s in specs if s.get("interest")))
+
+
 def _synth_purpose(state: TravelState) -> str:
     """사용자가 목적을 적었으면 그 문장, 아니면 다른 슬롯으로 한 문장을 만든다.
 
@@ -1875,7 +1909,7 @@ def _synth_purpose(state: TravelState) -> str:
     days = _parse_num_days(state.get("travel_dates"))
     pace = (state.get("pace") or "").strip().lower()
     companion = (state.get("companion") or "").strip().lower()
-    interest = (state.get("category") or "").strip()
+    interest = _trip_interests(state)
 
     pace_word = {"packed": "packed", "relaxed": "relaxed"}.get(pace, "")
     who = {
@@ -1967,7 +2001,7 @@ def plan_node(state: TravelState) -> TravelState:
             "messages": [AIMessage(content="⚠️ No candidate courses found. Try different details.")],
         }
 
-    purpose = state.get("category") or ""
+    purpose = _trip_interests(state)
     duration = state.get("travel_dates") or ""
     num_days = _resolve_num_days(state)
     pace = state.get("pace")

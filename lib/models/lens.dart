@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 /// Where the photo Seoul Lens analyses comes from.
 enum LensPhotoSource { camera, gallery }
 
@@ -14,6 +16,7 @@ class LensPlaceResult {
     required this.audioGuideCategory,
     required this.audioGuideTitle,
     required this.audioGuideExcerpt,
+    this.photo,
   });
 
   final String name;
@@ -27,4 +30,7 @@ class LensPlaceResult {
   final String audioGuideCategory;
   final String audioGuideTitle;
   final String audioGuideExcerpt;
+
+  /// The photo the traveller took or picked. Null in the mock build.
+  final Uint8List? photo;
 }

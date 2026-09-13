@@ -52,8 +52,8 @@ class TripActivity {
   final double? lng;
 
   /// The planner's raw `poi_type` (`restaurant`, `cafe`, `history`, …), kept
-  /// alongside the coarser [category] because /poi-detail and
-  /// /poi-arrival-tip take it to disambiguate a bare name. Empty for mocks.
+  /// alongside the coarser [category] because /poi-detail takes it to
+  /// disambiguate a bare name. Empty for mocks.
   final String poiType;
 
   TripActivity copyWith({bool? included, bool? visited}) => TripActivity(
@@ -72,7 +72,17 @@ class TripActivity {
       );
 }
 
-enum MissedReason { notEnoughTime, tooTired, didntFeelLikeIt, other }
+enum MissedReason {
+  notEnoughTime('⏰', 'Not enough time'),
+  tooTired('🏃', 'Too tired'),
+  didntFeelLikeIt('💭', "Didn't feel like it"),
+  other('✏️', 'Other');
+
+  const MissedReason(this.emoji, this.label);
+
+  final String emoji;
+  final String label;
+}
 
 class TripDay {
   const TripDay({

@@ -347,8 +347,8 @@ class _PlanView extends StatelessWidget {
         if (messages.isNotEmpty && messages.last.quickReplies.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            // Wrap, not Row: 'category' offers five chips and 'region' four,
-            // which overflow a phone width on one line. Wrapping keeps every
+            // Wrap, not Row: 'companion' offers four chips, which can
+            // overflow a phone width on one line. Wrapping keeps every
             // option reachable — a horizontal scroller would hide some of
             // them off the right edge with no affordance saying so.
             child: Wrap(
