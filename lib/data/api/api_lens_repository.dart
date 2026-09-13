@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/landmark_analysis.dart';
@@ -27,13 +29,12 @@ class ApiLensRepository implements LensRepository {
     );
     if (file == null) return null;
 
-    return _toPlaceResult(
-      await _service.analyze(await file.readAsBytes(), file.name),
-    );
+    final bytes = await file.readAsBytes();
+    return _toPlaceResult(await _service.analyze(bytes, file.name), bytes);
   }
 }
 
-LensPlaceResult _toPlaceResult(LandmarkAnalysis analysis) {
+LensPlaceResult _toPlaceResult(LandmarkAnalysis analysis, Uint8List photo) {
   // `public_info_en` is the translated copy of `public_info` and is empty when
   // the photo matched no row in seoul.json. Falling back to the Korean keeps
   // the fields populated rather than blanking the card.
@@ -57,6 +58,7 @@ LensPlaceResult _toPlaceResult(LandmarkAnalysis analysis) {
     audioGuideCategory: analysis.category,
     audioGuideTitle: analysis.nameEnglish,
     audioGuideExcerpt: analysis.description,
+    photo: photo,
   );
 }
 

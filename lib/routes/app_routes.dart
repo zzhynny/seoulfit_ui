@@ -313,14 +313,10 @@ GoRouter buildAppRouter() {
                 ),
                 GoRoute(
                   path: 'day-complete/:day',
-                  builder: (context, state) {
-                    final day = int.parse(state.pathParameters['day']!);
-                    return DayCompleteScreen(
-                      dayNumber: day,
-                      onContinue: () => context.push('${AppRoutes.trip}/trip-finish-confirm'),
-                      onBack: () => context.pop(),
-                    );
-                  },
+                  builder: (context, state) => DayCompleteScreen(
+                    onContinue: () => context.push('${AppRoutes.trip}/trip-finish-confirm'),
+                    onBack: () => context.pop(),
+                  ),
                 ),
                 GoRoute(
                   path: 'trip-finish-confirm',

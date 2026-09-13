@@ -66,24 +66,14 @@ class ApiChatRepository implements ChatRepository {
 /// that slot needs a date picker, which this screen does not yet have.
 List<String> _quickRepliesFor(String? field) {
   switch (field) {
-    case 'category':
-      // Must match graph.py's FIELD_EXTRACT["category"] and each course's
-      // `interests` field exactly -- the match is a string compare, not a
-      // similarity score, so a chip that reads "Culture" instead of
-      // "Culture & History" silently stops matching. kInterestLabels is the
-      // single shared copy of that vocabulary (day_planner_screen.dart's
-      // dropdown uses the same constant).
-      return kInterestLabels;
     case 'companion':
       return const ['Solo', 'Couple', 'Friends', 'Family'];
     case 'pace':
       return const ['Packed', 'Relaxed'];
     case 'restrictions':
       return const ['None'];
-    case 'purpose':
-      // Free text is the point — a chip would collapse it back into a label.
-      // Only the skip is offered.
-      return const ['Skip'];
+    // 'purpose' gets none: free text is the point, and the backend re-asks
+    // rather than accept a skip, so a Skip chip only looped back to itself.
     default:
       return const [];
   }

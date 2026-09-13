@@ -55,7 +55,7 @@ const Map<String, String> kRegionLabels = {
   'apgujeong': 'Apgujeong',
 };
 
-/// The five interest labels, verbatim. Shared with graph.FIELD_EXTRACT and
+/// The five interest labels, verbatim. Shared with graph.INTEREST_LABELS and
 /// each course's `interests` — the match is a string compare, not a score.
 const List<String> kInterestLabels = [
   'Culture & History',
@@ -74,7 +74,7 @@ class TravelState {
   final String? pace;
   final String currentStep;
 
-  /// The slot the backend is waiting on right now ('travel_dates', 'category',
+  /// The slot the backend is waiting on right now ('travel_dates', 'companion',
   /// …), or null outside the collecting step. Drives the per-question quick
   /// replies, the date picker and the progress line on the chat screen.
   final String? currentField;
@@ -82,8 +82,8 @@ class TravelState {
   final String? reply;
   final Itinerary? itinerary;
 
-  /// Free-text trip purpose, the sixth and last collecting question. May be
-  /// empty — it's skippable.
+  /// Free-text trip purpose, the last collecting question. Never skipped —
+  /// the backend re-asks until it gets an answer.
   final String? purpose;
 
   /// One row per trip day, already filled in by the backend the moment

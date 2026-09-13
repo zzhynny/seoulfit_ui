@@ -11,6 +11,7 @@ Production (Render binds $PORT):
 import json
 import os
 import sys
+from urllib.parse import quote
 
 # On Windows, a Python process's stdout/stderr default to the OS locale codec
 # (cp949 on a Korean-locale machine) unless PYTHONUTF8=1 is set before the
@@ -42,11 +43,13 @@ set_verbose(False)
 # ──────────────────────────────────────────────────────────────────────────────
 
 from dotenv import load_dotenv
+from pathlib import Path
 import threading as _threading
 import time as _time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse as _JSONResponse
 from typing import Optional
 from pydantic import BaseModel
@@ -76,6 +79,7 @@ from lens import router as lens_router
 from live_help import router as live_help_router
 from guardrail_gate import is_blocked
 from checkin_store import save_checkin
+from stamp import generate_stamp, request_stamp, stamp_status, valid_trip_id
 
 # Canned reply when the input gatekeeper blocks an off-topic / injection /
 # jailbreak message. Kept friendly and on-brand with collect_node's greeting.
@@ -86,7 +90,40 @@ _BLOCKED_REPLY = (
 
 _graph = build_graph(GEMINI_API_KEY)
 
+# 코스 원본 페이지(visitseoul / visitkorea)에서 한 번 긁어둔 정거장 사진, 그리고
+# 그 페이지에도 없어서 사람이 직접 찍어 넣은 사진(dataset/missing_poi_images/).
+# {poi_name: image_url}. /poi-image 가 SerpApi 를 치기 전에 여기부터 뒤진다 —
+# 아래 엔드포인트 주석 참고. 만드는 건 scripts/scrape_poi_images.py 와
+# scripts/backfill_missing_images.py.
+# 값이 "local:파일명" 이면 로컬 파일이다 — 아래 StaticFiles 마운트로 서빙하고,
+# poi_image() 가 요청 시점의 호스트를 붙여 완전한 URL로 바꿔 돌려준다(로컬 개발/
+# Render 배포 어느 쪽이든 호스트를 하드코딩하지 않아도 되게). 그 외 값은 이미
+# 완전한 https:// URL이라 그대로 돌려준다.
+# 파일이 없어도 동작한다. 그냥 전부 SerpApi 로 간다.
+try:
+    _POI_IMAGES = json.loads(
+        (Path(_here) / "dataset" / "poi_images.json").read_text(encoding="utf-8")
+    )
+except FileNotFoundError:
+    _POI_IMAGES = {}
+    print("[poi-image] dataset/poi_images.json 없음 — 전량 SerpApi 로 처리")
+
+_LOCAL_POI_IMAGES_DIR = Path(_here) / "dataset" / "missing_poi_images"
+
 app = FastAPI(title="Seoul Travel Buddy API")
+
+if _LOCAL_POI_IMAGES_DIR.is_dir():
+    app.mount(
+        "/static/poi_images",
+        StaticFiles(directory=str(_LOCAL_POI_IMAGES_DIR)),
+        name="poi_images_static",
+    )
+
+# Journey stamps (stamp.py) are written here after each checkin; create it up
+# front so the mount succeeds even before the first stamp is generated.
+_STAMPS_DIR = Path(_here) / "stamps"
+_STAMPS_DIR.mkdir(exist_ok=True)
+app.mount("/static/stamps", StaticFiles(directory=str(_STAMPS_DIR)), name="stamps_static")
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +149,9 @@ _METERED_PATHS = {
     # by an unguessable thread id (there's no login), so an unmetered loop
     # can churn either one indefinitely.
     "/reset", "/day-plan",
+    # Can fire a paid OpenAI images.edit (stamp.py) when generate_stamp is set —
+    # an unmetered loop would spend real money per hit, not just DB I/O.
+    "/trip/checkin",
 }
 # 120/min, not 30: user_selection_screen renders one card per candidate stop
 # and each fires fetchPoiDetail on build, and final_itinerary_map_screen
@@ -287,6 +327,9 @@ class CheckinRequest(BaseModel):
     trip_id: str
     device_id: str
     itinerary: dict     # snapshot: planned stops per day + feasibility_score
+    # Set only by Complete Check-in. Every checkbox tap also saves, and a paid
+    # stamp generation per tap is what this flag exists to stop.
+    generate_stamp: bool = False
     days: dict          # day number (as str) → {visited: [...], misses: {...}}
 
 
@@ -475,191 +518,73 @@ class PoiSummaryRequest(BaseModel):
     type: str = ""
 
 
+def _grounded_poi_text(kind: str, req: PoiSummaryRequest) -> str:
+    """poi_text.py's web-grounded, cached text; 503 without a Tavily key."""
+    import poi_text
+
+    try:
+        return poi_text.poi_text(kind, req.name, req.type)
+    except poi_text.NotConfigured:
+        raise HTTPException(status_code=503, detail="TAVILY_API_KEY not configured")
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
+
+
 @app.post("/poi-summary")
 def poi_summary(req: PoiSummaryRequest):
-    """Return a 1-2 sentence Gemini summary for a Seoul POI."""
-    try:
-        from google import genai as _genai
-        client = _genai.Client(api_key=GEMINI_API_KEY)
-        prompt = (
-            f"In 1-2 sentences, describe {req.name} in Seoul, South Korea "
-            "and what visitors can experience there. Be specific and engaging. "
-            "Do not include any markdown formatting."
-        )
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        return {"summary": (response.text or "").strip()}
-    except Exception:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
-
-
-@app.post("/poi-arrival-tip")
-def poi_arrival_tip(req: PoiSummaryRequest):
-    """Return a short "you've arrived" confirmation tip for a foreign visitor.
-
-    Unlike /poi-summary (what the place is), this answers "how do I know I'm in
-    the right spot?" — a visible landmark / storefront to recognise, plus what's
-    notable right at the entrance. One short callout the user can glance at on
-    arrival so they aren't left wondering whether they came to the right place.
-    """
-    try:
-        from google import genai as _genai
-        client = _genai.Client(api_key=GEMINI_API_KEY)
-        type_hint = f" ({req.type})" if req.type else ""
-        prompt = (
-            f"A foreign tourist is arriving at '{req.name}'{type_hint} in Seoul, "
-            "South Korea and wants to confirm they're in the right place. "
-            "In 1-2 short sentences, plain English, no markdown: "
-            "(1) describe a clearly visible landmark, sign, or storefront they "
-            "can look for to know they've arrived, and "
-            "(2) mention one notable thing right at the entrance or just inside. "
-            "Be concrete and visual. If you are not sure about the specific place, "
-            "give a brief, safe orientation tip instead of inventing details."
-        )
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        return {"arrival_tip": (response.text or "").strip()}
-    except Exception:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
+    """1-2 sentence description of a Seoul POI, from a Tavily web search
+    rewritten by Gemini (poi_text.py). Empty when the web has nothing on it."""
+    return {"summary": _grounded_poi_text("summary", req)}
 
 
 @app.post("/poi-image")
-def poi_image(req: PoiSummaryRequest):
+def poi_image(req: PoiSummaryRequest, request: Request):
     """Return the best-matching thumbnail for a Seoul POI.
 
-    Steps:
-    1. Ask Gemini to write a Seoul-specific image search query from the POI name/type.
-    2. Fetch the top 10 results from SerpApi.
-    3. Ask Gemini to pick the thumbnail that actually shows the place, or 'none'.
+    0. Look the name up in _POI_IMAGES — 코스 원본 페이지에서 미리 긁어둔 공식
+       사진, 또는 그것도 없어서 사람이 직접 찍어 넣은 사진이다. 대부분의 정거장이
+       여기서 끝난다. 공짜에 즉시 응답이고, 무엇보다 실제 그 장소의 사진이라 아래
+       검색보다 정확하다.
+
+    Miss 면(플래너가 끼워 넣은 식사 슬롯, 교체 후보, Google Places 로 들어온
+    정거장) 그 장소의 Google Maps 사진(업주·리뷰어가 올린 사진)을 쓴다. Find Place 로
+    첫 사진의 photo_reference 를 찾아 /place-photo 프록시 URL 로 돌려준다 — 키는
+    서버 밖으로 나가지 않는다. 웹 이미지 검색과 달리 동명의 엉뚱한 장소 사진이
+    섞이지 않고, Gemini 호출도 들지 않는다.
     """
-    serpapi_key = os.getenv("SERPAPI_KEY", "")
-    if not serpapi_key:
-        raise HTTPException(status_code=503, detail="SERPAPI_KEY not configured")
-    try:
-        from google import genai as _genai
-        import serpapi
+    cached = _POI_IMAGES.get(req.name)
+    if cached:
+        if cached.startswith("local:"):
+            filename = cached.removeprefix("local:")
+            base = str(request.base_url).rstrip("/")
+            cached = f"{base}/static/poi_images/{quote(filename)}"
+        return {"image_url": cached}
 
-        gemini = _genai.Client(api_key=GEMINI_API_KEY)
+    # 키 확인은 여기서 한다. 미리 긁어둔 사진만으로도 화면이 서므로, Places 키
+    # 없이 띄운 백엔드가 알려진 POI 에서까지 503 을 뱉으면 안 된다.
+    places_key = os.getenv("GOOGLE_PLACES_API_KEY", "")
+    if not places_key:
+        raise HTTPException(status_code=503, detail="GOOGLE_PLACES_API_KEY not configured")
 
-        # Step 1 — generate a disambiguation-safe search query.
-        type_hint = f" ({req.type})" if req.type else ""
-        query_prompt = (
-            f"Generate a concise Google Images search query (max 8 words) to find a "
-            f"photo of '{req.name}'{type_hint} in Seoul, South Korea. "
-            "Make it specific enough to avoid confusion with similarly named places "
-            "or people elsewhere in the world. Return only the search query string, "
-            "nothing else."
-        )
-        query_resp = gemini.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=query_prompt,
-        )
-        search_query = (query_resp.text or req.name).strip().strip('"')
+    import planner
 
-        # Step 2 — fetch images from SerpApi (no aspect-ratio/size filter so we
-        # don't exclude valid shots; SerpApi's thumbnail field is already a
-        # pre-scaled CDN image for every result).
-        serp_client = serpapi.Client(api_key=serpapi_key)
-        results = serp_client.search({
-            "engine": "google_images_light",
-            "google_domain": "google.co.kr",
-            "q": search_query,
-            "hl": "en",
-            "gl": "kr",
-            "location": "Seoul, Seoul, South Korea",
-            "safe": "active",
-            "image_type": "photo",
-        })
-        images = (results.get("images_results") or [])[:5]
-        if not images:
-            return {"image_url": ""}
-
-        # Step 3 — let Gemini pick the best match (or reject all).
-        candidates = "\n".join(
-            f"{i+1}. title={img.get('title','')!r} url={img.get('thumbnail','')}"
-            for i, img in enumerate(images)
-        )
-        pick_prompt = (
-            f"I need a photo of '{req.name}'{type_hint} in Seoul, South Korea.\n"
-            f"Here are 5 image search results:\n{candidates}\n\n"
-            "Return ONLY the thumbnail URL of the image that best shows the actual "
-            "Seoul location. If none of them clearly show the correct place, "
-            "return exactly: none"
-        )
-        pick_resp = gemini.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=pick_prompt,
-        )
-        chosen = (pick_resp.text or "").strip()
-        if not chosen or chosen.lower() == "none":
-            return {"image_url": ""}
-        return {"image_url": chosen}
-    except Exception:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
+    ref = planner.find_place_photo_ref(name=req.name, api_key=places_key)
+    if not ref:
+        return {"image_url": ""}
+    base = str(request.base_url).rstrip("/")
+    return {"image_url": f"{base}/place-photo?ref={quote(ref, safe='')}&w=400"}
 
 
 @app.post("/poi-detail")
 def poi_detail(req: PoiSummaryRequest):
     """Return structured visitor bullet points for a Seoul POI (stop selection screen).
 
-    Tavily fetches live web data (hours, fees, tips); Gemini formats it into
-    labeled bullet lines so the info is distinct from the Gemini prose summary.
+    Tavily fetches live web data (hours, fees, tips); Gemini rewrites only that
+    into labeled bullet lines (poi_text.py), cached per place.
     """
-    tavily_key = os.getenv("TAVILY_API_KEY", "")
-    if not tavily_key:
-        raise HTTPException(status_code=503, detail="TAVILY_API_KEY not configured")
-    try:
-        from tavily import TavilyClient
-        from google import genai as _genai
-
-        # Step 1 — Tavily web search for practical visitor info.
-        tavily = TavilyClient(api_key=tavily_key)
-        response = tavily.search(
-            query=(
-                f"{req.name} Seoul opening hours admission fee visitor tips highlights"
-            ),
-            search_depth="basic",
-            max_results=3,
-            include_answer=True,
-        )
-        raw = response.get("answer") or ""
-        if not raw:
-            return {"detail": ""}
-
-        # Step 2 — Gemini reformats the raw web answer into 3-4 labeled bullets.
-        type_hint = f" ({req.type})" if req.type else ""
-        format_prompt = (
-            f"Here is live web information about '{req.name}'{type_hint} in Seoul:\n\n"
-            f"{raw}\n\n"
-            "Reformat this into exactly 3-4 short bullet lines using these labels "
-            "(skip a label if the info isn't available):\n"
-            "• Hours: ...\n"
-            "• Entry: ...\n"
-            "• Highlight: ...\n"
-            "• Tip: ...\n\n"
-            "Keep each line to one sentence or less. Return only the bullet lines, "
-            "no intro or extra text."
-        )
-        gemini = _genai.Client(api_key=GEMINI_API_KEY)
-        fmt_resp = gemini.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=format_prompt,
-        )
-        return {"detail": (fmt_resp.text or "").strip()}
-    except Exception:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
+    return {"detail": _grounded_poi_text("detail", req)}
 
 
 class EventsRequest(BaseModel):
@@ -844,13 +769,14 @@ def poi_closure_check(req: ClosureCheckRequest):
 
 
 @app.post("/trip/checkin")
-def trip_checkin(req: CheckinRequest):
+def trip_checkin(req: CheckinRequest, background_tasks: BackgroundTasks):
     """Store one trip's check-in snapshot. Write-only: the client renders its
     recap from its own local copy, so there is no read path here. Returns
     stored=false rather than an error when persistence is unavailable."""
     # Trust-boundary validation: ids are used as a primary key, and the two
     # JSON blobs come straight off the wire.
-    if not req.trip_id or len(req.trip_id) > 128:
+    # trip_id also becomes the stamp's file name, so [A-Za-z0-9_-] only.
+    if not valid_trip_id(req.trip_id):
         raise HTTPException(status_code=422, detail="invalid trip_id")
     if not req.device_id or len(req.device_id) > 128:
         raise HTTPException(status_code=422, detail="invalid device_id")
@@ -858,7 +784,22 @@ def trip_checkin(req: CheckinRequest):
     if payload_bytes > 256_000:
         raise HTTPException(status_code=413, detail="payload too large")
 
-    return {"stored": save_checkin(req.trip_id, req.device_id, req.itinerary, req.days)}
+    stored = save_checkin(req.trip_id, req.device_id, req.itinerary, req.days)
+    # `stored` is False when this trip_id belongs to another device, and that
+    # device's stamp must not be repainted with someone else's visits.
+    if stored and req.generate_stamp and request_stamp(req.trip_id, req.itinerary, req.days):
+        # Fire-and-forget: a ~60s image edit must never make the save hang.
+        background_tasks.add_task(generate_stamp, req.trip_id, req.itinerary, req.days)
+    return {"stored": stored}
+
+
+@app.get("/trip/stamp/{trip_id}")
+def trip_stamp(trip_id: str):
+    """The trip's journey stamp: generating | ready (+version, for
+    cache-busting) | failed | none. Polled by the recap while it's painted."""
+    if not valid_trip_id(trip_id):
+        raise HTTPException(status_code=422, detail="invalid trip_id")
+    return stamp_status(trip_id)
 
 
 @app.post("/revalidate")
@@ -979,6 +920,16 @@ def swap_candidates(req: SwapCandidatesRequest):
                     lat=fallback_lat, lng=fallback_lng, place_type=type_hint,
                     exclude=exclude, api_key=GOOGLE_PLACES_API_KEY,
                 )
+                if filtered:
+                    # /revalidate only swaps in names it finds in
+                    # build_candidate_pool(state). Google-only candidates have
+                    # to be on the thread, or picking one silently keeps the
+                    # original stop.
+                    ctx = state.get("planning_context") or {}
+                    _graph.update_state(_config(thread_id), {"planning_context": {
+                        **ctx,
+                        "google_supplement": [*(ctx.get("google_supplement") or []), *filtered],
+                    }})
 
         rated = sorted(
             (i for i in filtered if i.get("rating") is not None),

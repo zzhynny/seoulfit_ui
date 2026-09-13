@@ -12,7 +12,7 @@ class ActivityCard extends StatelessWidget {
   final TripActivity activity;
 
   /// Opens the stop's detail sheet. Optional so the mock build, which has no
-  /// backend to ask for arrival tips, can leave the card inert.
+  /// backend to ask for visitor info, can leave the card inert.
   final VoidCallback? onTap;
 
   @override
@@ -197,9 +197,14 @@ class CheckInActivityCard extends StatelessWidget {
     required this.activity,
     required this.onToggleVisited,
     required this.onMissed,
+    this.missedReason,
   });
 
   final TripActivity activity;
+
+  /// Why the stop was skipped, once the traveller has said. A skipped stop
+  /// counts as resolved for Complete Check-in, so the card has to show it.
+  final MissedReason? missedReason;
 
   /// Stamps the stop, or un-stamps it. The whole card is the target.
   final VoidCallback onToggleVisited;
@@ -212,6 +217,7 @@ class CheckInActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reason = missedReason;
     return GestureDetector(
       onTap: onToggleVisited,
       child: Container(
@@ -270,7 +276,7 @@ class CheckInActivityCard extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.only(top: 2, bottom: 2),
                         child: Text(
-                          "Couldn't make it?",
+                          reason == null ? "Couldn't make it?" : 'Skipped · ${reason.label}',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textSecondary,
                             decoration: TextDecoration.underline,
@@ -286,17 +292,22 @@ class CheckInActivityCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: activity.visited ? AppColors.chipBackground : Colors.transparent,
+                color: activity.visited
+                    ? AppColors.chipBackground
+                    : reason != null
+                        ? AppColors.border
+                        : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: activity.visited ? AppColors.primary : AppColors.border,
-                  width: activity.visited ? 1.5 : 1.5,
-                  style: activity.visited ? BorderStyle.solid : BorderStyle.solid,
+                  width: 1.5,
                 ),
               ),
               child: activity.visited
                   ? const Icon(Icons.check_circle, color: AppColors.primary, size: 18)
-                  : null,
+                  : reason != null
+                      ? const Icon(Icons.remove, color: AppColors.textSecondary, size: 18)
+                      : null,
             ),
           ],
         ),

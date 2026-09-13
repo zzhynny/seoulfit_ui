@@ -56,7 +56,7 @@ class ApiProfileRepository implements ProfileRepository {
     try {
       final state = await _api.getState();
       return [
-        for (final value in [state.category, state.pace, state.restrictions])
+        for (final value in [state.pace, state.restrictions])
           if (value != null && value.trim().isNotEmpty) value.trim(),
       ];
     } catch (_) {

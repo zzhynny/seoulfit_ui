@@ -44,7 +44,16 @@ class _PoiSummaryState extends State<PoiSummary> {
   @override
   void initState() {
     super.initState();
-    if (widget.name.isNotEmpty) _resolve();
+    if (widget.name.isEmpty) return;
+    // Every screen builds its own card. Text this session already fetched
+    // paints on the first frame; a note-then-swap on each screen read as the
+    // description regenerating.
+    final saved = context.read<ApiService?>()?.cachedPoiSummary(widget.name);
+    if (saved != null) {
+      if (saved.trim().isNotEmpty) _summary = saved.trim();
+      return;
+    }
+    _resolve();
   }
 
   Future<void> _resolve() async {

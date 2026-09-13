@@ -117,6 +117,20 @@ void main() {
     expect(prefs.pace, '—');
   });
 
+  test('Travel Style sums up the interests picked per day', () {
+    // The chat no longer asks a trip-wide interest, so the Day Planner's
+    // per-day picks are the only source left -- same as the Region row.
+    final prefs = toUiPreferences(const api.TravelState(
+      daySpecs: [
+        api.DaySpec(day: 1, region: 'hongdae', interest: 'Food & Cafes'),
+        api.DaySpec(day: 2, region: 'seongsu', interest: 'Shopping'),
+        api.DaySpec(day: 3, region: 'jongno', interest: 'Food & Cafes'),
+      ],
+    ));
+
+    expect(prefs.travelStyle, 'Food & Cafes, Shopping');
+  });
+
   test('parses a real /chat itinerary payload end to end', () {
     // Trimmed verbatim from a live generation against the FastAPI backend —
     // same keys, same value shapes, real coordinates and legs.

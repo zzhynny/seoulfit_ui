@@ -11,7 +11,61 @@ Widget host(Widget child, {ApiService? api}) => MaterialApp(
       ),
     );
 
+/// Stands in for ApiService's name-keyed memo: [saved] is what it already
+/// holds, and every real lookup is counted.
+class _FakeApi extends ApiService {
+  _FakeApi(this.saved);
+
+  final Map<String, String> saved;
+  int lookups = 0;
+
+  @override
+  String? cachedPoiSummary(String name) => saved[name];
+
+  @override
+  Future<String> fetchPoiSummary(String name, {String type = ''}) async {
+    lookups++;
+    return saved[name] = 'Fetched description';
+  }
+}
+
 void main() {
+  testWidgets('a description already fetched shows on the first frame',
+      (tester) async {
+    // Every screen builds its own card. Showing the planner note first and
+    // then swapping the description in read as "regenerating" on each screen.
+    final api = _FakeApi({'Gyeongbokgung Palace': 'The main royal palace of Joseon.'});
+    await tester.pumpWidget(host(
+      const PoiSummary(name: 'Gyeongbokgung Palace', fallback: 'planner note'),
+      api: api,
+    ));
+
+    expect(find.text('The main royal palace of Joseon.'), findsOneWidget);
+    expect(find.text('planner note'), findsNothing);
+    expect(api.lookups, 0);
+  });
+
+  testWidgets('a new description is fetched once, then kept on every screen',
+      (tester) async {
+    final api = _FakeApi({});
+    await tester.pumpWidget(host(
+      const PoiSummary(name: 'Bukchon Hanok Village', fallback: 'planner note'),
+      api: api,
+    ));
+    expect(find.text('planner note'), findsOneWidget);
+
+    await tester.pump();
+    expect(find.text('Fetched description'), findsOneWidget);
+
+    // Another screen builds a brand-new card for the same stop.
+    await tester.pumpWidget(host(
+      const PoiSummary(key: ValueKey('other screen'), name: 'Bukchon Hanok Village', fallback: 'planner note'),
+      api: api,
+    ));
+    expect(find.text('Fetched description'), findsOneWidget);
+    expect(api.lookups, 1);
+  });
+
   testWidgets('shows the planner note immediately, not a spinner',
       (tester) async {
     // The lookup is a Gemini call. Leaving the line blank or spinning while

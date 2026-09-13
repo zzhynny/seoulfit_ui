@@ -7,22 +7,24 @@ import '../../widgets/primary_button.dart';
 class DayCompleteScreen extends StatelessWidget {
   const DayCompleteScreen({
     super.key,
-    required this.dayNumber,
     required this.onContinue,
     required this.onBack,
   });
 
-  final int dayNumber;
   final VoidCallback onContinue;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    final trip = context.watch<TripProvider>();
-    final day = trip.itinerary!.days.firstWhere((d) => d.dayNumber == dayNumber);
-    final total = day.activities.length;
-    final visited = day.visitedCount;
+    final days = context.watch<TripProvider>().itinerary!.days;
+    // Complete Check-in only unlocks once every day is settled, so this closes
+    // out the whole trip: totals across all days, not whichever tab it was
+    // tapped from.
+    final total = days.fold(0, (sum, d) => sum + d.activities.length);
+    final visited = days.fold(0, (sum, d) => sum + d.visitedCount);
     final progress = total == 0 ? 0.0 : visited / total;
+    final dates = days.length == 1 ? days.first.date : '${days.first.date} – ${days.last.date}';
+    final areas = {for (final d in days) d.areaName}.join(', ');
 
     return Column(
       children: [
@@ -33,7 +35,7 @@ class DayCompleteScreen extends StatelessWidget {
             children: [
               GestureDetector(onTap: onBack, child: const Icon(Icons.chevron_left, size: 20)),
               Expanded(
-                child: Text('Day $dayNumber Complete', textAlign: TextAlign.center, style: AppTextStyles.headingSmall.copyWith(fontSize: 20)),
+                child: Text('Check-in Complete', textAlign: TextAlign.center, style: AppTextStyles.headingSmall.copyWith(fontSize: 20)),
               ),
               const SizedBox(width: 20),
             ],
@@ -53,7 +55,7 @@ class DayCompleteScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${day.date.toUpperCase()} · ${day.areaName.toUpperCase()}',
+                        '${dates.toUpperCase()} · ${areas.toUpperCase()}',
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.accent, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                       ),
                       const SizedBox(height: 24),

@@ -35,28 +35,6 @@ class DayCheckin {
       );
 }
 
-/// One visited stop with a place on the map, in plan order.
-class VisitedPoint {
-  final String name;
-  final double lat;
-  final double lng;
-
-  const VisitedPoint(this.name, this.lat, this.lng);
-
-  @override
-  bool operator ==(Object other) =>
-      other is VisitedPoint &&
-      other.name == name &&
-      other.lat == lat &&
-      other.lng == lng;
-
-  @override
-  int get hashCode => Object.hash(name, lat, lng);
-
-  @override
-  String toString() => 'VisitedPoint($name, $lat, $lng)';
-}
-
 /// One trip's check-in record. [planned] is snapshotted from the confirmed
 /// selection at creation time — `TravelProvider.selectedStops` lives in memory
 /// only and would be gone by the second evening.
@@ -80,6 +58,11 @@ class TripCheckin {
   /// without a location are simply absent here.
   final Map<String, List<double>> coords;
 
+  /// POI name → its type ("restaurant", "cafe", "market"…), snapshotted with
+  /// [planned]. The journey stamp's prompt needs it: a bare name like "ANAM"
+  /// tells an image model nothing about what to draw.
+  final Map<String, String> types;
+
   /// Districts ("종로구", "성북구") seen across the snapshotted stops. Used to
   /// title the recap; empty when no address carried one.
   final Set<String> areas;
@@ -90,6 +73,7 @@ class TripCheckin {
     this.checkins = const {},
     this.feasibilityScore,
     this.coords = const {},
+    this.types = const {},
     this.areas = const {},
   });
 
@@ -102,12 +86,14 @@ class TripCheckin {
   ) {
     final planned = <int, List<String>>{};
     final coords = <String, List<double>>{};
+    final types = <String, String>{};
     final areas = <String>{};
     for (final s in stops) {
       (planned[s.day == 0 ? 1 : s.day] ??= <String>[]).add(s.name);
       final lat = s.lat;
       final lng = s.lng;
       if (lat != null && lng != null) coords[s.name] = [lat, lng];
+      if (s.type.isNotEmpty) types[s.name] = s.type;
       final area = _districtOf(s.address);
       if (area != null) areas.add(area);
     }
@@ -116,6 +102,7 @@ class TripCheckin {
       planned: planned,
       feasibilityScore: feasibilityScore,
       coords: coords,
+      types: types,
       areas: areas,
     );
   }
@@ -169,31 +156,13 @@ class TripCheckin {
   bool get hasEnoughData =>
       planned.isNotEmpty && checkedDays.length / planned.length >= 0.5;
 
-  /// The stops actually visited on [day] that have a location, in plan order.
-  ///
-  /// Plan order, not the order [DayCheckin.visited] happens to iterate: the map
-  /// draws these as a path, so the sequence is the whole point. Empty for an
-  /// unrecorded day, and for records written before coordinates were stored.
-  List<VisitedPoint> visitedPointsFor(int day) {
-    final entry = checkins[day];
-    final stops = planned[day];
-    if (entry == null || stops == null) return const [];
-    final points = <VisitedPoint>[];
-    for (final name in stops) {
-      if (!entry.visited.contains(name)) continue;
-      final c = coords[name];
-      if (c == null || c.length < 2) continue;
-      points.add(VisitedPoint(name, c[0], c[1]));
-    }
-    return points;
-  }
-
   TripCheckin withDay(int day, DayCheckin entry) => TripCheckin(
         tripId: tripId,
         planned: planned,
         checkins: {...checkins, day: entry},
         feasibilityScore: feasibilityScore,
         coords: coords,
+        types: types,
         areas: areas,
       );
 
@@ -203,6 +172,7 @@ class TripCheckin {
         'checkins': checkins.map((k, v) => MapEntry(k.toString(), v.toJson())),
         'feasibility_score': feasibilityScore,
         'coords': coords,
+        'types': types,
         'areas': areas.toList(),
       };
 
@@ -227,6 +197,10 @@ class TripCheckin {
             k as String,
             (v as List).map((n) => (n as num).toDouble()).toList(),
           ),
+        ),
+        // Absent in records written before the journey stamp needed types.
+        types: ((json['types'] as Map?) ?? const {}).map(
+          (k, v) => MapEntry(k as String, v as String),
         ),
         areas: ((json['areas'] as List?) ?? const []).cast<String>().toSet(),
       );

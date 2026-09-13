@@ -257,7 +257,40 @@ def test_place_photo_rejects_a_missing_or_oversized_reference():
             raise AssertionError(f"{bad[:12]!r} should have been refused")
 
 
+def test_to_english_leaves_no_korean_and_translates_once():
+    # language=en 인데도 구글이 한글로 준 실측값(홍대, 2026-09).
+    live_help._EN_CACHE.clear()
+    calls = []
+
+    def fake(texts):
+        calls.append(texts)
+        return {"프랭키스": "Frankie's"}
+
+    places = [
+        {"name": "프랭키스", "address": "399-24 Seogyo-dong, Mapo-gu"},
+        {"name": "Thedam", "address": "344-6 서교동, Mapo-gu"},
+    ]
+    live_help.to_english(places, fake)
+    assert calls == [["344-6 서교동, Mapo-gu", "프랭키스"]], calls
+    assert places[0] == {"name": "Frankie's", "address": "399-24 Seogyo-dong, Mapo-gu"}
+    # 번역이 안 온 건 로마자로 — 한글은 절대 남기지 않는다.
+    assert places[1]["address"] == "344-6 Seogyodong, Mapo-gu", places[1]
+
+    again = [{"name": "프랭키스", "address": ""}]
+    live_help.to_english(again, fake)
+    assert again[0]["name"] == "Frankie's" and len(calls) == 1, calls
+
+    def boom(texts):
+        raise RuntimeError("gemini down")
+
+    failed = [{"name": "마가리타", "address": ""}]
+    live_help.to_english(failed, boom)
+    assert failed[0]["name"] == "Magarita", failed
+    assert "마가리타" not in live_help._EN_CACHE  # 실패는 기억하지 않는다
+
+
 if __name__ == "__main__":
+    test_to_english_leaves_no_korean_and_translates_once()
     test_haversine()
     test_filter_places_keeps_low_review_counts()
     test_filter_places_treats_missing_review_key_as_zero()

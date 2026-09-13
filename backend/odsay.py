@@ -5,7 +5,10 @@
 설계 원칙:
 - 키 없거나 호출 실패 → 빈 리스트 반환 (graceful, 예외 안 던짐)
 - timeout 짧게, 실패는 로그만 남기고 진행
-- 호출자가 leg 사이 sleep 처리 (rate limit 보호)
+- 결과는 좌표쌍별로 디스크에 캐시한다. 같은 구간은 일정을 새로 짜거나 다시
+  검증할 때마다 또 조회되는데, ODsay 는 일일 한도가 있다. 오류(한도 초과,
+  네트워크)는 경로에 대한 답이 아니므로 캐시하지 않는다.
+- 실제로 ODsay 를 부를 때만 호출 간격(CALL_GAP_SECONDS)을 둔다.
 
 환경변수:
 - ODSAY_API_KEY        : 발급된 apiKey
@@ -14,7 +17,11 @@
 
 from __future__ import annotations
 
+import json
 import os
+import threading
+import time
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
@@ -26,6 +33,19 @@ ODSAY_API_KEY     = os.getenv("ODSAY_API_KEY", "")
 ODSAY_SERVICE_URI = os.getenv("ODSAY_SERVICE_URI", "http://localhost:8888")
 
 ODSAY_ENDPOINT = "https://api.odsay.com/v1/api/searchPubTransPathT"
+
+# Hops shorter than this are shown as a walk; compute_transit_legs doesn't ask.
+WALKABLE_KM = 0.7
+
+# Lines and fares change rarely; a month keeps the cache from going stale.
+CACHE_TTL = 30 * 24 * 3600
+CACHE_PATH = Path(__file__).resolve().parent / "_odsay_cache.json"
+CALL_GAP_SECONDS = 0.2
+
+# ponytail: one JSON file rewritten on every new route. Fine for a few thousand
+# hops on one worker; move to SQLite/Redis if it grows or runs multi-worker.
+_CACHE: dict[str, list] = {}   # key -> [expires_at, options]
+_lock = threading.Lock()
 
 
 _PATH_TYPE_LABEL = {
@@ -40,12 +60,40 @@ def is_enabled() -> bool:
     return bool(ODSAY_API_KEY)
 
 
+def _load_cache_from_disk() -> None:
+    try:
+        raw = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        # 파일 없음/손상 — 빈 캐시로 시작. 캐시가 기능을 막아선 안 된다.
+        raw = {}
+    with _lock:
+        _CACHE.clear()
+        _CACHE.update({k: [float(v[0]), v[1]] for k, v in raw.items()})
+
+
+def _flush_cache_to_disk() -> None:
+    try:
+        with _lock:
+            text = json.dumps(_CACHE, ensure_ascii=False)
+        tmp = CACHE_PATH.with_suffix(".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(CACHE_PATH)  # atomic rename — 쓰는 도중 죽어도 파일이 안 깨짐
+    except Exception as e:
+        print(f"[ODsay] cache write failed: {e}")
+
+
+def _cache_key(start_lat: float, start_lng: float, end_lat: float, end_lng: float) -> str:
+    # 4 decimals ≈ 11 m: the same stop always lands on the same key.
+    return f"{start_lat:.4f},{start_lng:.4f}>{end_lat:.4f},{end_lng:.4f}"
+
+
 def _fetch_all_paths(start_lat: float, start_lng: float,
                      end_lat: float, end_lng: float,
-                     *, opt: int = 1, timeout: int = 5) -> list[dict[str, Any]]:
-    """ODsay 호출 — 모든 후보 path 리스트 반환. 실패시 []."""
+                     *, opt: int = 1, timeout: int = 5) -> list[dict[str, Any]] | None:
+    """ODsay 호출 — 모든 후보 path 리스트. 호출 실패/오류 응답이면 None
+    (경로가 없다는 답과 구분해야 오류를 캐시하지 않는다)."""
     if not ODSAY_API_KEY:
-        return []
+        return None
 
     encoded_key = quote(ODSAY_API_KEY, safe="")
     # lang=1 → English station/line names (default 0 = Korean). The structural
@@ -67,11 +115,11 @@ def _fetch_all_paths(start_lat: float, start_lng: float,
         data = r.json()
     except Exception as e:
         print(f"[ODsay] request error: {e}")
-        return []
+        return None
 
     if "error" in data:
         print(f"[ODsay] error: {data['error']}")
-        return []
+        return None
 
     return (data.get("result") or {}).get("path") or []
 
@@ -143,9 +191,18 @@ def fetch_odsay_options(start_lat: float, start_lng: float,
         "segments": list[str],     # 구간별 사람 읽기 좋은 라인
       }
     """
-    paths = _fetch_all_paths(start_lat, start_lng, end_lat, end_lng)
-    options: list[dict[str, Any]] = []
+    key = _cache_key(start_lat, start_lng, end_lat, end_lng)
+    with _lock:
+        entry = _CACHE.get(key)
+    if entry and time.time() < entry[0]:
+        return [dict(o) for o in entry[1]]
 
+    paths = _fetch_all_paths(start_lat, start_lng, end_lat, end_lng)
+    time.sleep(CALL_GAP_SECONDS)  # rate-limit 안전 — 실제 호출일 때만
+    if paths is None:
+        return []
+
+    options: list[dict[str, Any]] = []
     for path in _best_per_path_type(paths):
         info = path.get("info") or {}
         ptype = path.get("pathType")
@@ -166,4 +223,10 @@ def fetch_odsay_options(start_lat: float, start_lng: float,
             "segments":      _format_subpath(path.get("subPath")),
         })
 
-    return options
+    with _lock:
+        _CACHE[key] = [time.time() + CACHE_TTL, options]
+    _flush_cache_to_disk()
+    return [dict(o) for o in options]
+
+
+_load_cache_from_disk()

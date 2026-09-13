@@ -17,6 +17,9 @@ import httpx
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
+import stamp
+from stamp import _HANGUL_RE, _romanize
+
 router = APIRouter(tags=["live-help"])
 
 _PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
@@ -109,7 +112,41 @@ def nearby(req: NearbyRequest):
 
     found = filter_places(data.get("results", []), req.lat, req.lng)
     places = sorted(found.values(), key=lambda x: x["distance_m"])[: req.want]
+    to_english(places, stamp._translate)
     return {"radius_used": _RADIUS, "places": places}
+
+
+# language=en 이어도 구글에 영문 표기가 없는 업소("프랭키스")와 주소 일부("2층",
+# "서교동")는 한글로 온다. 번역에 성공한 것만 기억한다 — 실패는 이번 응답만
+# 로마자로 때우고 다음 요청에서 다시 번역한다.
+# ponytail: 프로세스 메모리, 무제한. 서울 업소명 규모라 문제없다; 커지면 LRU.
+_EN_CACHE: dict[str, str] = {}
+
+
+def to_english(places: list[dict], translate) -> None:
+    """places 의 name/address 에 남은 한글을 제자리에서 영어로 바꾼다 (Gemini 1회)."""
+    fields = ("name", "address")
+    pending = sorted({
+        p[k] for p in places for k in fields
+        if _HANGUL_RE.search(p[k]) and p[k] not in _EN_CACHE
+    })
+    got: dict = {}
+    if pending:
+        try:
+            got = translate(pending) or {}
+        except Exception as e:
+            print(f"[nearby] translation failed, romanizing: {e}")
+    for p in places:
+        for k in fields:
+            ko = p[k]
+            if not _HANGUL_RE.search(ko):
+                continue
+            en = _EN_CACHE.get(ko) or str(got.get(ko) or "").strip()
+            if en and not _HANGUL_RE.search(en):
+                _EN_CACHE[ko] = en
+                p[k] = en
+            else:
+                p[k] = _romanize(ko)
 
 
 # ---------------------------------------------------------------------------

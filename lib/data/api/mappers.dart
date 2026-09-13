@@ -206,6 +206,13 @@ String _regionSummary(List<api.DaySpec> daySpecs) {
   return labels.join(', ');
 }
 
+/// The "Travel Style" row, from the same per-day picks: the chat no longer
+/// asks a trip-wide interest, so the Day Planner is its only source.
+String _interestSummary(List<api.DaySpec> daySpecs) => <String>{
+      for (final d in daySpecs)
+        if (d.interest.trim().isNotEmpty) d.interest.trim(),
+    }.join(', ');
+
 /// Shown as-is on Confirm Slots. A slot the traveller never answered comes
 /// back null; the em dash keeps the row's shape rather than collapsing it.
 TripPreferences toUiPreferences(api.TravelState state) {
@@ -215,7 +222,7 @@ TripPreferences toUiPreferences(api.TravelState state) {
   return TripPreferences(
     dateRange: slot(state.travelDates),
     region: slot(_regionSummary(state.daySpecs)),
-    travelStyle: slot(state.category),
+    travelStyle: slot(_interestSummary(state.daySpecs)),
     groupSize: slot(state.companion),
     dietaryNotes: slot(state.restrictions),
     pace: slot(state.pace),

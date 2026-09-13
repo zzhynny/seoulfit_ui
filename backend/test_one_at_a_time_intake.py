@@ -71,10 +71,12 @@ def main():
         if nxt:
             assert _last_ai(s) == graph.FIELD_QUESTIONS[nxt]
 
-    # 3. Every field asked -> hand off to the summary, once.
-    assert s["current_step"] == "confirm", s["current_step"]
+    # 3. Every field asked -> hand off to the Day Planner, once. POST /day-plan
+    #    is what moves the thread on to the summary, so mimic that for 6 and 7.
+    assert s["current_step"] == "day_plan", s["current_step"]
     assert s["asked"] == graph.FIELD_ORDER
-    assert graph._after_collect(s) == "confirm"
+    assert graph._after_collect(s) == graph.END
+    summary = {**s, "current_step": "confirm"}
 
     # 4. "ok" as an ANSWER must not hijack the flow into generating.
     #    (The old shortcut treated it as a confirm and skipped the rest.)
@@ -83,12 +85,12 @@ def main():
     s2 = _turn(s2, PICKED)
     s2 = _turn(s2, "ok")
     assert s2["current_step"] == "collecting", s2["current_step"]
-    assert s2["pending"] == "companion", s2["pending"]
+    assert s2["pending"] == "pace", s2["pending"]
 
     # 5. A field answered unintelligibly is never re-asked — it just stays empty.
     #    Without this the loop spins on the same question forever.
-    assert not s2.get("category")
-    assert "category" in s2["asked"]
+    assert not s2.get("companion")
+    assert "companion" in s2["asked"]
     for field in graph.FIELD_ORDER[2:]:
         if field == "purpose":
             break
@@ -96,9 +98,9 @@ def main():
     assert s2["pending"] == "purpose", s2["pending"]
 
     # purpose is the one field that does NOT tolerate "???"/MISSING: the
-    # planner has no good default for it (unlike the others, which fall back
-    # to graph.DEFAULT_INTEREST or an empty slot), so an unintelligible reply
-    # re-asks instead of banking an empty string and moving on.
+    # planner has no good default for it (the others just stay empty), so an
+    # unintelligible reply re-asks instead of banking an empty string and
+    # moving on.
     s2 = _turn(s2, "???")
     assert s2["pending"] == "purpose", s2["pending"]
     assert s2["current_step"] == "collecting", s2["current_step"]
@@ -107,13 +109,13 @@ def main():
     graph._gemini_raw = _answer_with("a birthday trip with my sister")
     s2 = _turn(s2, "a birthday trip with my sister")
     assert s2["purpose"] == "a birthday trip with my sister", s2.get("purpose")
-    assert s2["current_step"] == "confirm", s2["current_step"]
+    assert s2["current_step"] == "day_plan", s2["current_step"]
     assert s2["asked"] == graph.FIELD_ORDER
 
     # 6. Editing one field from the summary re-asks THAT field only, then goes
     #    straight back to the summary instead of restarting the questionnaire.
     graph._gemini_raw = lambda prompt: json.dumps({"intent": "pace"})
-    s3 = graph.handle_confirm_node({**s, "messages": [*s["messages"], HumanMessage(content="change pace")]})
+    s3 = graph.handle_confirm_node({**summary, "messages": [*s["messages"], HumanMessage(content="change pace")]})
     assert s3["current_step"] == "collecting" and s3["pending"] == "pace", s3
     assert s3["pace"] is None
     s3 = {**s3, "messages": [*s["messages"], AIMessage(content=s3["messages"][0].content)]}
@@ -125,7 +127,7 @@ def main():
 
     # 7. Confirming from the summary still reaches generation. _after_collect no
     #    longer routes to handle_confirm, so route_entry is now the ONLY way in.
-    s4 = {**s, "messages": [*s["messages"], HumanMessage(content="confirm")]}
+    s4 = {**summary, "messages": [*s["messages"], HumanMessage(content="confirm")]}
     assert graph.route_entry(s4) == "handle_confirm", graph.route_entry(s4)
     graph._gemini_raw = lambda prompt: json.dumps({"intent": "CONFIRM"})
     s4 = graph.handle_confirm_node(s4)
@@ -164,7 +166,7 @@ def main():
     assert f"up to {graph.MAX_TRIP_DAYS}" in _last_ai(over)
 
     at_cap = _turn(s5, "September 6, 2026 to September 12, 2026")  # 7 days
-    assert at_cap["pending"] == "category", at_cap["pending"]
+    assert at_cap["pending"] == "companion", at_cap["pending"]
     assert at_cap["trip_start_date"] == "2026-09-06", at_cap["trip_start_date"]
     assert rag._parse_num_days(at_cap["travel_dates"]) == graph.MAX_TRIP_DAYS
 
