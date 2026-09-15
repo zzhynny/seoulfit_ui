@@ -16,8 +16,8 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import stamp  # noqa: E402
 from stamp import (  # noqa: E402
-    build_prompt, english_labels, generate_stamp, request_stamp, stamp_status, valid_trip_id,
-    visited_by_day,
+    build_prompt, english_labels, generate_stamp, request_stamp, stamp_status, track_rows,
+    valid_trip_id, visited_by_day,
 )
 
 _HANGUL = re.compile(r"[ᄀ-ᇿ㄰-㆏가-힣]")
@@ -114,6 +114,17 @@ def test_prompt_pins_exactly_one_label_per_number():
     prompt = build_prompt([(1, ["A", "B"]), (2, ["C"])])
     assert "exactly 3 labels" in prompt, prompt
     assert "each number appears exactly once" in prompt.lower(), prompt
+
+
+def test_track_rows_follow_the_snaking_rail():
+    # Real renders numbered every row left to right, so rows the rail runs
+    # right to left came out backwards. Even rows are listed reversed.
+    assert track_rows(14) == [[1, 2, 3], [6, 5, 4], [7, 8], [10, 9], [11, 12], [14, 13]]
+    assert track_rows(3) == [[1], [2], [3]]
+    rows = track_rows(23)
+    assert sorted(n for row in rows for n in row) == list(range(1, 24)), rows
+    prompt = build_prompt([(1, [str(i) for i in range(14)])])
+    assert "Row 2: 6, 5, 4\n" in prompt, prompt
 
 
 def test_english_names_pass_through_without_a_translation_call():
@@ -322,6 +333,7 @@ if __name__ == "__main__":
     test_prompt_counts_every_place_and_says_what_kind_it_is()
     test_prompt_asks_for_a_number_and_name_label_by_each_place()
     test_prompt_pins_exactly_one_label_per_number()
+    test_track_rows_follow_the_snaking_rail()
     test_english_names_pass_through_without_a_translation_call()
     test_korean_only_names_are_translated_in_one_call()
     test_a_failed_or_korean_translation_falls_back_to_romanization()

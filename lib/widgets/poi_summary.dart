@@ -44,6 +44,18 @@ class _PoiSummaryState extends State<PoiSummary> {
   @override
   void initState() {
     super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(PoiSummary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Same position-reuse as PoiPhoto: a new stop in this slot needs its own text.
+    if (oldWidget.name != widget.name) _load();
+  }
+
+  void _load() {
+    _summary = null;
     if (widget.name.isEmpty) return;
     // Every screen builds its own card. Text this session already fetched
     // paints on the first frame; a note-then-swap on each screen read as the
@@ -61,9 +73,10 @@ class _PoiSummaryState extends State<PoiSummary> {
     final api = context.read<ApiService?>();
     if (api == null) return;
 
+    final name = widget.name;
     try {
-      final summary = await api.fetchPoiSummary(widget.name, type: widget.type);
-      if (mounted && summary.trim().isNotEmpty) {
+      final summary = await api.fetchPoiSummary(name, type: widget.type);
+      if (mounted && name == widget.name && summary.trim().isNotEmpty) {
         setState(() => _summary = summary.trim());
       }
     } catch (_) {

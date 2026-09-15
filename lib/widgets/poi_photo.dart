@@ -43,6 +43,19 @@ class _PoiPhotoState extends State<PoiPhoto> {
   @override
   void initState() {
     super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(PoiPhoto oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Lists reuse this State by position, so switching day tabs hands it a
+    // different stop — without this it keeps showing the previous stop's photo.
+    if (oldWidget.name != widget.name) _load();
+  }
+
+  void _load() {
+    _url = null;
     if (widget.asset != null || widget.name.isEmpty) return;
     // Same as PoiSummary: a photo this session already resolved paints on the
     // first frame, instead of a placeholder that swaps on every screen.
@@ -59,9 +72,10 @@ class _PoiPhotoState extends State<PoiPhoto> {
     final api = context.read<ApiService?>();
     if (api == null) return;
 
+    final name = widget.name;
     try {
-      final url = await api.fetchPoiImage(widget.name, type: widget.type);
-      if (mounted && url.isNotEmpty) setState(() => _url = url);
+      final url = await api.fetchPoiImage(name, type: widget.type);
+      if (mounted && name == widget.name && url.isNotEmpty) setState(() => _url = url);
     } catch (_) {
       // A missing photo is not worth surfacing — the placeholder is the
       // designed empty state, and the card's text carries the meaning.

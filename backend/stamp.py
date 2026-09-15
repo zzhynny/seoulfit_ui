@@ -150,6 +150,30 @@ def _translate_with_gemini(names: list[str]) -> dict:
 _translate = _translate_with_gemini
 
 
+_TRACK_ROWS = 6  # horizontal runs of track in journey_template.png
+
+
+def track_rows(total: int) -> list[list[int]]:
+    """Stop numbers per track row, top to bottom, each row as it reads on the
+    page from left to right.
+
+    The track snakes: row 1 runs left to right from the flag, row 2 back right
+    to left, and so on down to the tram. Image models lay numbers out in
+    reading order, so every right-to-left row is listed reversed — then reading
+    order and track order agree. Stops spread evenly over the template's rows.
+    """
+    base, extra = divmod(total, _TRACK_ROWS)
+    rows, n = [], 1
+    for r in range(_TRACK_ROWS):
+        size = base + (r < extra)
+        if not size:
+            break
+        row = list(range(n, n + size))
+        rows.append(row if r % 2 == 0 else row[::-1])
+        n += size
+    return rows
+
+
 def build_prompt(
     route: list[tuple[int, list[str]]],
     types: dict | None = None,
@@ -176,6 +200,9 @@ def build_prompt(
             label = labels.get(name) or _label_name(name)
             lines.append(f"{n}. {label}" + (f" [{kind}]" if kind else ""))
     listing = "\n".join(lines)
+    layout = "\n".join(
+        f"Row {r}: " + ", ".join(map(str, row)) for r, row in enumerate(track_rows(total), 1)
+    )
     return (
         "Using the reference image as the base, keep its watercolor illustration "
         "style, color palette, the railway track, the green flag at the start "
@@ -190,7 +217,15 @@ def build_prompt(
         f"labels in all, numbered 1 to {total}, where each number appears exactly "
         "once. Label nothing else, never write the square-bracketed type, and add "
         "no other text:\n"
-        f"{listing}"
+        f"{listing}\n\n"
+        "The track snakes down the page in horizontal rows joined by curves at "
+        "alternating ends: row 1 runs left to right from the flag, row 2 runs "
+        "back right to left, row 3 left to right again, and so on down to the "
+        "tram. So the numbers must follow the track, not normal reading order: "
+        "on right-to-left rows the lowest number sits at the right end. Place "
+        "the places on these rows, top to bottom; each row lists its numbers "
+        "exactly as they appear on the page from left to right:\n"
+        f"{layout}"
     )
 
 

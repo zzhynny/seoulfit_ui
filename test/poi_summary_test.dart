@@ -66,6 +66,24 @@ void main() {
     expect(api.lookups, 1);
   });
 
+  testWidgets('switching day tabs shows the new stop, not the old one',
+      (tester) async {
+    // Day tabs rebuild the list with unkeyed cards, so the same State gets a
+    // different stop. It used to keep the previous day's text (and photo).
+    final api = _FakeApi({'Gyeongbokgung Palace': 'Palace text', 'N Seoul Tower': 'Tower text'});
+    await tester.pumpWidget(host(
+      const PoiSummary(name: 'Gyeongbokgung Palace', fallback: ''),
+      api: api,
+    ));
+    expect(find.text('Palace text'), findsOneWidget);
+
+    await tester.pumpWidget(host(
+      const PoiSummary(name: 'N Seoul Tower', fallback: ''),
+      api: api,
+    ));
+    expect(find.text('Tower text'), findsOneWidget);
+  });
+
   testWidgets('shows the planner note immediately, not a spinner',
       (tester) async {
     // The lookup is a Gemini call. Leaving the line blank or spinning while
