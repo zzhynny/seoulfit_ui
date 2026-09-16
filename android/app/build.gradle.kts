@@ -15,8 +15,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.seoulfit_ui"
+        // Must match the applicationId already registered on ONE store
+        // (com.seoulfit.app) — a mismatch here means a rebuilt APK can't
+        // update the existing listing.
+        applicationId = "com.seoulfit.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
