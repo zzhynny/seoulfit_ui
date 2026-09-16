@@ -48,11 +48,16 @@ def _load_cache_from_disk() -> None:
 
 def _flush_cache_to_disk() -> None:
     try:
+        # 직렬화만 락 안에서 하고 쓰기를 밖에서 하면, 동시 호출 둘이 같은 tmp
+        # 경로를 각자 truncate 해서 열고 내용이 섞인다. rename 은 원자적이어도
+        # 그 앞의 write 가 아니라서, 반쯤 쓰인 파일이 캐시 자리에 들어앉는다.
+        # 다음 기동에 JSON 파싱이 깨져 {} 로 시작하고, 이미 값을 치른 Tavily/
+        # Gemini 결과를 전부 다시 사기 시작한다. 쓰기까지 락 안에 둔다.
         with _lock:
             text = json.dumps(_CACHE, ensure_ascii=False)
-        tmp = CACHE_PATH.with_suffix(".tmp")
-        tmp.write_text(text, encoding="utf-8")
-        tmp.replace(CACHE_PATH)  # atomic rename — 쓰는 도중 죽어도 파일이 안 깨짐
+            tmp = CACHE_PATH.with_suffix(".tmp")
+            tmp.write_text(text, encoding="utf-8")
+            tmp.replace(CACHE_PATH)  # atomic rename — 쓰는 도중 죽어도 파일이 안 깨짐
     except Exception as e:
         print(f"[poi_text] cache write failed: {e}")
 

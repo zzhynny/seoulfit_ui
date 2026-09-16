@@ -71,7 +71,11 @@ def _connect(db_path: str | None):
     if not _backend_logged:
         logger.info("checkin_store: using SQLite at %s", path)
         _backend_logged = True
-    return sqlite3.connect(path), "?"
+    # timeout 기본값은 5초다. 두 명이 같은 순간에 체크인을 끝내면 뒤엣놈이
+    # "database is locked" 로 떨어지고, save_checkin 의 포괄 except 가 그걸
+    # False 로 삼킨다 — /trip/checkin 이 stored:false 를 주고 스탬프 생성이
+    # 조용히 건너뛰어진다. 사용자는 완료를 눌렀는데 아무 일도 안 일어난다.
+    return sqlite3.connect(path, timeout=30), "?"
 
 
 def save_checkin(

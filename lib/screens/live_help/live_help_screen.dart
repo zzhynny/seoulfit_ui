@@ -9,6 +9,7 @@ import '../../services/kakao_links.dart';
 import '../../services/live_help_service.dart';
 import '../../theme/theme.dart';
 import '../../widgets/animations.dart';
+import '../../widgets/data_source_note.dart';
 
 /// Explore 칩. `null` 은 전체이고, 나머지는 한국관광공사 대분류 코드다.
 /// 단일선택이라 항상 정확히 하나가 켜져 있다 — 다중선택이면 'All' 이
@@ -1556,6 +1557,7 @@ class _TourPoiSheet extends StatelessWidget {
                     ),
                 ],
               ),
+              const DataSourceNote(),
             ],
           ),
         ),
@@ -1953,6 +1955,7 @@ void _showShoppingSheet(BuildContext context, ShoppingPoi p, LatLng? from) {
                       style: AppTextStyles.sans(
                           fontSize: 13, height: 1.55, color: AppColors.textPrimary)),
                 ],
+                const DataSourceNote(source: DataSource.seoulTourism),
               ],
             ),
           ),

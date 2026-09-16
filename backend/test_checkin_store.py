@@ -17,6 +17,17 @@ ITIN = {"planned": {"1": ["Gyeongbokgung", "Tosokchon"]}, "feasibility_score": 0
 DAYS = {"1": {"visited": ["Gyeongbokgung"], "misses": {"Tosokchon": "time"}}}
 
 
+# 이 파일은 원래 `python test_checkin_store.py` 로만 돌았고, db 경로를 손으로
+# 넘겼다. pytest 로 돌면 그 db 가 이름 없는 픽스처라 5건이 전부 에러가 난다.
+# 아래 픽스처가 그 자리를 채운다 — __main__ 경로는 지역변수가 가리므로 그대로다.
+import pytest  # noqa: E402
+
+
+@pytest.fixture
+def db(tmp_path):
+    return str(tmp_path / "test.db")
+
+
 def test_round_trip(db):
     assert save_checkin("trip-a", "dev-1", ITIN, DAYS, db_path=db) is True
     row = load_checkin("trip-a", db_path=db)

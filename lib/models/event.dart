@@ -33,24 +33,21 @@ class SeoulEvent {
   final String? landingUrl;
 }
 
-/// The tab EventsScreen opens on. Musical rather than the first chip: it is
-/// the deepest catalogue NOL has, so the grid is never empty on arrival.
-const String kDefaultEventCategory = 'Musical';
+/// The tab EventsScreen opens on. 'All' rather than a genre: the backend
+/// fetches every Seoul event in one pass, so the full grid is the cheap case
+/// and each chip is a filter over it, not another round trip.
+const String kDefaultEventCategory = 'All';
 
-/// The genre tabs world.nol.com/en/ticket actually has, in its own order and
-/// under its own labels — POST /events maps each one to that genre's page.
+/// Chips over 한국관광공사 TourAPI's `lclsSystm2` classification, which is what
+/// EngService2 actually returns (`cat1`~`cat3` come back empty). The backend
+/// owns the label→code map — see `_EV_CHIP` in backend/api.py, and
+/// test_events_tourapi.py keeps the two lists from drifting apart.
 ///
-/// This list used to hold six entries, two of them ('Exhibition', 'Theater')
-/// names NOL does not use, which left Play&Stay, Sports and Dance with no way
-/// into the app at all.
+/// These replaced nine ticket-site genre tabs. Seoul has ~79 events across all
+/// three chips, so more chips than this leaves most of them nearly empty.
 const List<String> kEventCategories = [
-  'Play&Stay',
-  'Concert',
-  'Musical',
-  'Play',
+  'All',
+  'Festivals',
+  'Performances',
   'Exhibitions',
-  'Sports',
-  'Dance',
-  'Classic',
-  'Family',
 ];
