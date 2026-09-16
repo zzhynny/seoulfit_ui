@@ -76,7 +76,7 @@ class LiveHelpService {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(body),
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 30));
     if (res.statusCode != 200) {
       throw Exception('Backend error ${res.statusCode}: ${res.body}');
     }

@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 /// the download fails or photo access is refused, so the caller can say so.
 Future<void> saveStampImage(String url) async {
   final response =
-      await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
+      await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
   if (response.statusCode != 200) {
     throw Exception('Stamp download failed (${response.statusCode})');
   }

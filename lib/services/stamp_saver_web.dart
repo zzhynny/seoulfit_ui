@@ -10,7 +10,7 @@ import 'package:web/web.dart' as web;
 /// open the image in a tab).
 Future<void> saveStampImage(String url) async {
   final response =
-      await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
+      await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
   if (response.statusCode != 200) {
     throw Exception('Stamp download failed (${response.statusCode})');
   }
