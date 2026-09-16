@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
 import stamp
+import tourapi
 from stamp import _HANGUL_RE, _romanize
 
 router = APIRouter(tags=["live-help"])
@@ -333,11 +334,18 @@ def emergency_rooms(req: ErRequest):
 
 
 # ---------------------------------------------------------------------------
-# 주변 관광 POI — 한국관광공사 TourAPI 사전 수집분 (dataset/tour_poi.json)
+# 주변 관광 POI — 한국관광공사 TourAPI(EngService2) locationBasedList2 실시간 조회
 #
-# 런타임에 TourAPI 를 부르지 않는다. 서울 431건 전량이 메모리에 올라가고
-# 데이터는 하루 1회만 바뀌므로, 오프라인 배치(scripts/build_tour_poi.py)로
-# 만든 산출물을 읽는 편이 빠르고 일 1,000회 쿼터도 쓰지 않는다.
+# 목록은 매번 공사 API 에서 받는다. 사전 수집분(431건)은 서울 전역을 미리 훑은
+# 스냅샷이라 그 이후에 등록된 곳이 빠지고, locationBasedList2 는 거리(dist)까지
+# 계산해서 준다.
+#
+# 다만 목록 응답에는 소개글·영업시간이 없다. POI 당 detailCommon2 를 부르면
+# 20건짜리 화면 한 장이 21회 호출이 되어 일 1,000회 쿼터를 못 버틴다. 그래서
+# 상세는 contentid 로 사전 수집분에서 채운다 — 목록은 최신, 상세는 스냅샷.
+#
+# dataset/tour_poi.json 은 그래서 남는다. 상세 보강용이자, 공사 API 가 죽었을
+# 때의 폴백이다. 심사 중에 쿼터가 끊겨도 화면은 서야 한다.
 # ---------------------------------------------------------------------------
 
 # /nearby-poi · /nearby-shopping 공통 반경. 도보권 밖을 '주변' 이라고 부르지
@@ -413,28 +421,86 @@ class NearbyPoiRequest(BaseModel):
     want: int = 20
 
 
-@router.post("/nearby-poi")
-def nearby_poi(req: NearbyPoiRequest):
-    """현재 위치에서 가까운 관광 POI 를 거리순으로 돌려준다.
+# 좌표 캐시 키는 소수 3자리 — 약 110m. 걸어가며 화면을 다시 열 때마다 공사
+# API 를 치지 않도록 접고, 그보다 멀리 가면 새로 받는다.
+_POI_CACHE: dict[tuple, tuple[float, list]] = {}
+_POI_TTL = 600  # seconds
 
-    _RADIUS_M 안쪽만 준다. POI 밀도가 지역마다 10배 넘게 차이나서(종로 1km
-    71건 vs 여의도 6건) 한산한 지역에서는 빈 리스트가 나온다 — 걸어서 못 가는
-    6km 짜리를 '주변' 이라고 내미는 쪽이 더 나쁘다. 앱은 빈 상태를 그린다.
-    상세 정보까지 한 응답에 담는다. 431건이 이미 메모리에 있어 2차 호출을
-    만들 이유가 없고, 20건이면 25KB 남짓이다.
-    """
-    rows = _TOUR_POIS
-    if req.category:
-        rows = [p for p in rows if p["category"] == req.category]
-    ranked = sorted(
+# contentid → 사전 수집분 한 줄. 목록 응답에 없는 상세를 여기서 채운다.
+_POI_BY_ID: dict[str, dict] = {p["id"]: p for p in _TOUR_POIS}
+
+# 목록 응답이 주는 것 말고, 상세 시트가 쓰는 필드들.
+_DETAIL_FIELDS = ("overview", "hours", "closed", "fee", "parking", "tel", "homepage")
+
+
+def _live_pois(lat: float, lng: float) -> list[dict]:
+    """locationBasedList2 로 반경 안의 POI 를 받아 앱 스키마로 바꾼다."""
+    rows, _ = tourapi.items(
+        "locationBasedList2",
+        mapX=lng,          # 공사 API 는 X 가 경도다. 뒤집으면 조용히 엉뚱한 곳이 나온다.
+        mapY=lat,
+        radius=_RADIUS_M,
+        arrange="S",       # 거리순
+    )
+    out = []
+    for r in rows:
+        cid = r.get("contentid", "")
+        cached = _POI_BY_ID.get(cid, {})
+        out.append({
+            "id": cid,
+            "title": r.get("title", ""),
+            "category": r.get("lclsSystm1", ""),
+            "address": r.get("addr1", ""),
+            "lat": float(r.get("mapy") or 0),
+            "lng": float(r.get("mapx") or 0),
+            "distance_m": round(float(r.get("dist") or 0)),
+            # firstimage 가 비면 스냅샷에 남은 것이라도 쓴다.
+            "image": r.get("firstimage") or cached.get("image", ""),
+            # 결측이면 빈 문자열. 앱이 빈 줄을 통째로 숨긴다.
+            **{f: cached.get(f, "") for f in _DETAIL_FIELDS},
+        })
+    return out
+
+
+def _snapshot_pois(lat: float, lng: float) -> list[dict]:
+    """폴백 — 사전 수집분 431건에서 직접 거리를 재 정렬한다."""
+    return sorted(
         (
             d
             for d in (
-                dict(p, distance_m=round(haversine_m(req.lat, req.lng, p["lat"], p["lng"])))
-                for p in rows
+                dict(p, distance_m=round(haversine_m(lat, lng, p["lat"], p["lng"])))
+                for p in _TOUR_POIS
             )
             if d["distance_m"] <= _RADIUS_M
         ),
         key=lambda p: p["distance_m"],
     )
-    return {"pois": ranked[: req.want]}
+
+
+@router.post("/nearby-poi")
+def nearby_poi(req: NearbyPoiRequest):
+    """현재 위치에서 가까운 관광 POI 를 거리순으로 돌려준다.
+
+    _RADIUS_M 안쪽만 준다. POI 밀도가 지역마다 10배 넘게 차이나서(경복궁 1km
+    62건 vs 여의도 한 자릿수) 한산한 지역에서는 빈 리스트가 나온다 — 걸어서 못
+    가는 6km 짜리를 '주변' 이라고 내미는 쪽이 더 나쁘다. 앱은 빈 상태를 그린다.
+
+    상세 정보까지 한 응답에 담는다. 카드를 열 때 2차 호출이 없고, 20건이면
+    25KB 남짓이다.
+    """
+    key = (round(req.lat, 3), round(req.lng, 3))
+    hit = _POI_CACHE.get(key)
+    if not (hit and (time.time() - hit[0]) < _POI_TTL):
+        try:
+            rows = _live_pois(req.lat, req.lng)
+        except Exception as e:
+            # 쿼터 소진·키 오류·공사 API 장애. 스냅샷으로 화면은 세운다.
+            print(f"[live-help] locationBasedList2 failed, using snapshot: "
+                  f"{type(e).__name__}: {tourapi.redact(e)}")
+            rows = _snapshot_pois(req.lat, req.lng)
+        _POI_CACHE[key] = hit = (time.time(), rows)
+
+    rows = hit[1]
+    if req.category:
+        rows = [p for p in rows if p["category"] == req.category]
+    return {"pois": rows[: req.want]}

@@ -44,6 +44,8 @@ set_verbose(False)
 
 from dotenv import load_dotenv
 from pathlib import Path
+import datetime as _dt
+import re as _re
 import threading as _threading
 import time as _time
 
@@ -58,6 +60,9 @@ from langchain_core.messages import HumanMessage, AIMessage
 # In dev we load .env from disk; in prod (Render) env vars are injected
 # directly into the process so load_dotenv is a no-op.
 load_dotenv(os.path.join(_here, ".env"))
+
+import tourapi  # 한국관광공사 TourAPI 런타임 클라이언트
+from stamp import _HANGUL_RE  # 로마자 변환기가 쓰는 것과 같은 판정
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if not GEMINI_API_KEY:
@@ -518,6 +523,74 @@ class PoiSummaryRequest(BaseModel):
     type: str = ""
 
 
+def _norm_poi_name(title: str) -> str:
+    """이름 대조용 정규화. 공사 제목과 앱이 보내는 정거장 이름을 같은 자로 만든다.
+
+    공사 제목은 `English (한글)` 이고 앱은 영문만 보낸다. 거기에 대소문자와
+    `&`/`-` 같은 기호, 공백이 흔들려서 그대로 비교하면 거의 안 붙는다.
+    """
+    return _re.sub(r"[^a-z0-9]", "", tourapi.name_of(title).lower())
+
+
+# ── 한국관광공사 TourAPI 로 채우는 POI 텍스트·사진 ─────────────────────────────
+#
+# /poi-summary · /poi-detail · /poi-image 는 이름으로만 조회된다(앱이 코스의
+# 정거장 이름을 그대로 보낸다). 공사 API 는 contentid 로 움직이므로 그 사이를
+# 이어줄 이름 색인이 필요하다.
+#
+# 색인은 사전 수집분 431건에서 만든다. 여기에 걸리면 소개글은 detailCommon2 로
+# 실시간으로 받고(공사 공식 영문), 사진도 공사 CDN 것을 쓴다. 안 걸리면 기존
+# Tavily + Gemini 경로가 그대로 받는다 — 코스 정거장 중에는 공사 DB 에 없는
+# 골목·카페가 많아서 그 경로를 없앨 수는 없다.
+_POI_SNAP: dict[str, dict] = {}
+try:
+    for _p in json.loads(
+        (Path(_here) / "dataset" / "tour_poi.json").read_text(encoding="utf-8")
+    ):
+        _POI_SNAP.setdefault(_norm_poi_name(_p["title"]), _p)
+except Exception as _e:  # 파일이 없어도 서버는 떠야 한다 — 폴백 경로가 있다.
+    print(f"[poi] tour_poi.json index skipped: {_e}")
+print(f"[poi] TourAPI name index: {len(_POI_SNAP)} entries")
+
+# ponytail: in-memory dict, 24시간 TTL. 공사 데이터는 하루 1회 갱신이라 그 이상
+# 잡아둘 이유가 없다. 재시작하면 비지만, 한 번 받는 비용이 1회 호출이라 괜찮다.
+_COMMON_CACHE: dict[str, tuple[float, dict]] = {}
+_COMMON_TTL = 24 * 3600
+
+
+def _tour_common(name: str) -> Optional[dict]:
+    """이름이 공사 DB 에 있으면 detailCommon2 한 줄을 돌려준다. 없으면 None.
+
+    실패는 삼킨다 — 부르는 쪽마다 Tavily/Places 폴백이 있어서, 여기서 예외를
+    올리면 공사 API 장애가 곧 화면 장애가 된다.
+    """
+    snap = _POI_SNAP.get(_norm_poi_name(name))
+    if not snap:
+        return None
+    cid = snap["id"]
+
+    hit = _COMMON_CACHE.get(cid)
+    if hit and (_time.time() - hit[0]) < _COMMON_TTL:
+        return hit[1]
+
+    try:
+        rows, _ = tourapi.items("detailCommon2", contentId=cid)
+    except Exception as e:
+        print(f"[poi] detailCommon2({cid}) failed: {type(e).__name__}: {tourapi.redact(e)}")
+        return None
+    if not rows:
+        return None
+
+    _COMMON_CACHE[cid] = (_time.time(), rows[0])
+    return rows[0]
+
+
+def _first_sentences(text: str, n: int = 2) -> str:
+    """소개글 앞 n 문장. overview 는 평균 600자라 카드에 그대로 못 넣는다."""
+    parts = _re.split(r"(?<=[.!?])\s+", " ".join(text.split()))
+    return " ".join(parts[:n]).strip()
+
+
 def _grounded_poi_text(kind: str, req: PoiSummaryRequest) -> str:
     """poi_text.py's web-grounded, cached text; 503 without a Tavily key."""
     import poi_text
@@ -534,8 +607,13 @@ def _grounded_poi_text(kind: str, req: PoiSummaryRequest) -> str:
 
 @app.post("/poi-summary")
 def poi_summary(req: PoiSummaryRequest):
-    """1-2 sentence description of a Seoul POI, from a Tavily web search
-    rewritten by Gemini (poi_text.py). Empty when the web has nothing on it."""
+    """1-2 sentence description of a Seoul POI.
+
+    한국관광공사 TourAPI 에 있는 곳이면 공사의 공식 영문 소개글(detailCommon2)
+    앞 두 문장을 쓴다. 없는 곳만 Tavily 웹 검색 + Gemini 로 넘긴다."""
+    common = _tour_common(req.name)
+    if common and (common.get("overview") or "").strip():
+        return {"summary": _first_sentences(common["overview"])}
     return {"summary": _grounded_poi_text("summary", req)}
 
 
@@ -554,6 +632,22 @@ def poi_image(req: PoiSummaryRequest, request: Request):
     서버 밖으로 나가지 않는다. 웹 이미지 검색과 달리 동명의 엉뚱한 장소 사진이
     섞이지 않고, Gemini 호출도 들지 않는다.
     """
+    # 공사 DB 에 있는 곳이면 공사 CDN 사진을 먼저 쓴다. 출처가 분명하고,
+    # 아래 스크래핑 캐시나 Places 사진과 달리 저작권 표기가 가능한 이미지다.
+    common = _tour_common(req.name)
+    if common:
+        official = (common.get("firstimage") or "").strip()
+        if not official:
+            # 대표 이미지가 비어 있을 때만 사진 목록을 따로 부른다.
+            try:
+                shots, _ = tourapi.items(
+                    "detailImage2", contentId=common["contentid"], imageYN="Y")
+                official = (shots[0].get("originimgurl") or "").strip() if shots else ""
+            except Exception as e:
+                print(f"[poi] detailImage2 failed: {type(e).__name__}: {tourapi.redact(e)}")
+        if official:
+            return {"image_url": official}
+
     cached = _POI_IMAGES.get(req.name)
     if cached:
         if cached.startswith("local:"):
@@ -577,13 +671,40 @@ def poi_image(req: PoiSummaryRequest, request: Request):
     return {"image_url": f"{base}/place-photo?ref={quote(ref, safe='')}&w=400"}
 
 
+# 'Before you go' 한 줄씩. 결측이 흔해서 있는 것만 쓴다.
+#
+# 영업시간·휴무일·요금은 detailCommon2 응답에 없다 — detailIntro2 소관이고, 그건
+# 관광타입마다 필드명이 다르다(restdate / restdateculture / restdatefood ...).
+# 배치(fetch_tourapi.py --detail)가 이미 그 정규화를 해서 tour_poi.json 에 넣어
+# 두었으므로 POI 당 호출을 하나 더 만들지 않고 그 값을 쓴다.
+_DETAIL_LINES = (
+    ("Hours", "hours"),
+    ("Closed", "closed"),
+    ("Entry", "fee"),
+    ("Parking", "parking"),
+)
+
+
 @app.post("/poi-detail")
 def poi_detail(req: PoiSummaryRequest):
     """Return structured visitor bullet points for a Seoul POI (stop selection screen).
 
-    Tavily fetches live web data (hours, fees, tips); Gemini rewrites only that
-    into labeled bullet lines (poi_text.py), cached per place.
+    한국관광공사 TourAPI 에 있는 곳이면 공사 데이터(detailCommon2)로 줄을 세운다 —
+    영업시간·휴무일·요금이 공식 값이고 LLM 이 끼지 않는다. 공사 DB 에 없는 골목
+    가게 같은 곳만 Tavily + Gemini 경로로 간다.
     """
+    snap = _POI_SNAP.get(_norm_poi_name(req.name))
+    common = _tour_common(req.name)
+    if common and snap:
+        lines = [f"• {label}: {' '.join(str(snap.get(field) or '').split())}"
+                 for label, field in _DETAIL_LINES
+                 if str(snap.get(field) or "").strip()]
+        overview = (common.get("overview") or "").strip()
+        if overview:
+            lines.append(f"• Highlight: {_first_sentences(overview, 1)}")
+        # 한 줄짜리는 화면이 허전하다. 그럴 바엔 기존 경로가 낫다.
+        if len(lines) >= 2:
+            return {"detail": "\n".join(lines)}
     return {"detail": _grounded_poi_text("detail", req)}
 
 
@@ -592,137 +713,127 @@ class EventsRequest(BaseModel):
     travel_dates: Optional[str] = None
 
 
-# ── world.nol.com/en live scraping for /events ─────────────────────────────────
-# NOL's English storefront. Card markup is in the initial HTML (Next.js, but
-# server-rendered), it sits on CloudFront with no bot challenge, and the titles /
-# dates / venues are already in English — so plain httpx + regex is enough.
-# (The Korean nol.yanolja.com is behind a Cloudflare TLS challenge that 403s
-# every plain HTTP client; that's why we don't scrape it.)
-import re as _re
-import time as _time
-import html as _html
-
-# The nine genres in world.nol.com/en/ticket's own nav, in its own order,
-# keyed on the label the app puts on the chip. Slugs are read off the nav's
-# hrefs (/en/ticket/genre/<slug>/products) -- note they are upper-case except
-# play-stay, and that NOL's label and its slug disagree more often than not
-# ("Play" is DRAMA, "Exhibitions" is EXHIBIT, "Family" is KIDS).
+# ── /events — 한국관광공사 TourAPI(EngService2) 실시간 조회 ────────────────────
+# 두 오퍼레이션을 합친다. 어느 한쪽만으로는 화면이 안 선다.
 #
-# The list used to be six entries with two labels NOL does not use, so Sports,
-# Dance and Play&Stay were unreachable from the app.
-_NOL_GENRE = {
-    "play&stay": "play-stay",
-    "concert": "CONCERT",
-    "musical": "MUSICAL",
-    "play": "DRAMA",
-    "exhibitions": "EXHIBIT",
-    "sports": "SPORTS",
-    "dance": "DANCE",
-    "classic": "CLASSIC",
-    "family": "KIDS",
-    # Labels older builds send. Kept so an app that has not been updated
-    # still resolves rather than silently landing on Musical.
-    "theater": "DRAMA",
-    "exhibition": "EXHIBIT",
-    "classical": "CLASSIC",
-    "kids": "KIDS",
-}
-_NOL_UA = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-)
+#   searchFestival2   기간이 박힌 축제. 날짜가 정확한 대신 서울에 14건뿐이다.
+#   areaBasedList2    lclsSystm1=EV 전량 79건. 수문장 교대의식처럼 상시로 하는
+#                     공연이 여기 있고, 그게 방한 여행자가 실제로 보러 가는 것이다.
+#
+# contentid 로 겹치는 것을 접고 나면 85건 남짓. 칩은 이 통합본을 메모리에서
+# 거르므로, 칩을 몇 번 누르든 공사 API 호출은 10분에 두 번이다.
 
-# ponytail: module-level dict cache (~10 min TTL). Pages are ~270KB so we don't
-# refetch per tab; if this ever runs multi-process, swap to Redis.
+# lclsSystm2 → 앱 칩. cat1~3 은 EngService2 응답에서 전부 빈 문자열이라 못 쓴다.
+_EV_CHIP = {
+    "Festivals": "EV01",
+    "Performances": "EV02",
+    "Exhibitions": "EV03",
+}
+
+# ponytail: module-level dict cache (10분 TTL). 공사 데이터는 하루 1회 갱신이라
+# 더 길게 잡아도 되지만, 심사 기간에 호출 이력이 남아야 해서 10분으로 둔다.
 _EVENTS_CACHE: dict[str, tuple[float, list]] = {}
 _EVENTS_TTL = 600  # seconds
 
-# Card shape:
-#   <a href="/en/ticket/places/26001042/products/26012554">
-#     <img src="https://ticketimage.interpark.com/..." alt="TITLE">
-#     <h2 ...>TITLE</h2>
-#     <span ...>Oct 31, 2026 - Nov 02, 2026</span>
-#     <span ...>S Factory</span>
-#   </a>
-_NOL_CARD_RE = _re.compile(
-    r'<a\b[^>]*?href="(?P<href>/en/ticket/places/\d+/products/\d+)"', _re.S
+_EVENT_LANDING = (
+    "https://english.visitkorea.or.kr/svc/contents/contentsView.do?vcontsId={cid}"
 )
-_NOL_IMG_RE = _re.compile(r'<img\b[^>]*?\bsrc="(?P<src>https?://[^"]+)"', _re.S)
-_NOL_H2_RE = _re.compile(r"<h2\b[^>]*>(?P<t>.*?)</h2>", _re.S)
-_NOL_SPAN_RE = _re.compile(r"<span\b[^>]*>(?P<t>[^<]+)</span>", _re.S)
-_NOL_DATE_RE = _re.compile(r"[A-Z][a-z]{2}\s+\d{1,2},\s*\d{4}")
 
 
-def _nol_text(s: str) -> str:
-    return _html.unescape(_re.sub(r"<[^>]+>", "", s)).strip()
+def _event_date(row: dict) -> str:
+    """`20261002`/`20261004` → `Oct 02, 2026 - Oct 04, 2026`.
+
+    areaBasedList2 로 들어온 상설 항목은 날짜 필드가 없다. 그때는 빈 문자열이고,
+    Flutter 의 SeoulEvent 가 이미 빈 날짜를 처리한다.
+    """
+    def fmt(s: str) -> str:
+        try:
+            return _dt.datetime.strptime(s, "%Y%m%d").strftime("%b %d, %Y")
+        except (ValueError, TypeError):
+            return ""
+
+    start, end = fmt(row.get("eventstartdate", "")), fmt(row.get("eventenddate", ""))
+    if start and end and start != end:
+        return f"{start} - {end}"
+    return start or end
 
 
-def _parse_nol(html_text: str, cap: int = 20) -> list:
-    out, seen = [], set()
-    # Split on each <a so image / title / spans are scoped to one card.
-    for block in _re.split(r"(?=<a\b)", html_text):
-        m = _NOL_CARD_RE.match(block)
-        if not m:
-            continue
-        im = _NOL_IMG_RE.search(block)
-        h2 = _NOL_H2_RE.search(block)
-        name = _nol_text(h2.group("t")) if h2 else ""
-        if not name and im:  # promo cards carry the title only in <img alt>
-            alt = _re.search(r'\balt="([^"]+)"', im.group(0))
-            name = _html.unescape(alt.group(1)).strip() if alt else ""
-        if not name or name in seen:
-            continue
-        spans = [t for t in (_html.unescape(s).strip() for s in _NOL_SPAN_RE.findall(block)) if t]
-        date = next((s for s in spans if _NOL_DATE_RE.search(s)), "")
-        venue = next((s for s in spans if s != date), "")
-        seen.add(name)
-        out.append({
-            "name": name,
-            "date": date,
-            "venue": venue,
-            "description": "",
-            "image_url": _html.unescape(im.group("src")) if im else "",
-            "landing_url": "https://world.nol.com" + m.group("href"),
-        })
-        if len(out) >= cap:
-            break
-    return out
+def _venue_of(row: dict) -> str:
+    """카드 한 줄에 들어갈 장소. 영문 UI 라 영문인 쪽을 고른다.
+
+    영문 서비스인데도 주소가 한글로 오는 행이 섞여 있다 — addr1(도로명)은 99건
+    전부 차 있지만 41건이 한글이고, addr2(장소명)는 43건만 차 있고 그중 30건이
+    한글이다. 어느 한 필드를 고정으로 쓰면 어느 쪽을 골라도 한글이 샌다.
+    """
+    addr1, addr2 = (row.get("addr1") or "").strip(), (row.get("addr2") or "").strip()
+    for value in (addr1, addr2):
+        if value and not _HANGUL_RE.search(value):
+            return value
+    return addr1 or addr2
+
+
+def _to_event(row: dict) -> dict:
+    return {
+        "name": tourapi.name_of(row.get("title", "")),
+        "date": _event_date(row),
+        "venue": _venue_of(row),
+        "description": "",
+        "image_url": row.get("firstimage") or "",
+        "landing_url": _EVENT_LANDING.format(cid=row.get("contentid", "")),
+        "_chip": row.get("lclsSystm2", ""),
+    }
+
+
+def _fetch_events() -> list[dict]:
+    """공사 API 두 번 → contentid 로 접은 통합 목록. 실패하면 예외를 올린다."""
+    today = _dt.date.today().strftime("%Y%m%d")
+
+    # 90일 전부터 받아야 '이미 시작해서 아직 하는' 축제가 들어온다. eventStartDate
+    # 는 시작일 하한이라 오늘로 잡으면 진행 중인 것이 통째로 빠진다.
+    since = (_dt.date.today() - _dt.timedelta(days=90)).strftime("%Y%m%d")
+    festivals, _ = tourapi.items(
+        "searchFestival2", eventStartDate=since, lDongRegnCd=tourapi.SEOUL, arrange="A"
+    )
+    festivals = [r for r in festivals if (r.get("eventenddate") or "") >= today]
+
+    standing, _ = tourapi.items(
+        "areaBasedList2", lDongRegnCd=tourapi.SEOUL, lclsSystm1="EV", arrange="Q"
+    )
+
+    merged: dict[str, dict] = {}
+    for row in festivals + standing:  # 축제가 먼저다 — 날짜가 있는 쪽을 남긴다
+        cid = row.get("contentid")
+        if cid and cid not in merged:
+            merged[cid] = _to_event(row)
+    return list(merged.values())
 
 
 @app.post("/events")
 def get_events(req: EventsRequest):
-    """Live-scrape world.nol.com/en ticket genre pages for real Seoul events.
+    """한국관광공사 TourAPI 로 조회한 서울의 축제·공연·행사.
 
     Returns a list of {name, date, venue, description, image_url, landing_url}.
     On ANY failure returns [] (never 500) — Flutter's empty state handles it."""
-    cached = None
+    cached = _EVENTS_CACHE.get("all")
     try:
-        slug = _NOL_GENRE.get((req.category or "").strip().lower(), "MUSICAL")
-
-        cached = _EVENTS_CACHE.get(slug)
-        if cached and (_time.time() - cached[0]) < _EVENTS_TTL:
-            return cached[1]
-
-        import httpx as _httpx
-
-        resp = _httpx.get(
-            f"https://world.nol.com/en/ticket/genre/{slug}/products",
-            headers={"User-Agent": _NOL_UA},
-            timeout=15,
-            follow_redirects=True,
-        )
-        resp.raise_for_status()
-        events = _parse_nol(resp.text)
-        if not events:
-            # Upstream block or markup change — say so, and keep the stale grid
-            # rather than blanking it. Silence here looks like "no events today".
-            print(f"[events] {slug}: fetched {len(resp.text)}B but parsed 0 events")
-            return cached[1] if cached else []
-        _EVENTS_CACHE[slug] = (_time.time(), events)
-        return events
+        if not (cached and (_time.time() - cached[0]) < _EVENTS_TTL):
+            events = _fetch_events()
+            if not events:
+                # 공사 쪽이 0건을 준 것. 지난 목록을 지우느니 그대로 두는 편이 낫다.
+                print("[events] TourAPI returned 0 rows")
+                return _chip_filter(cached[1], req.category) if cached else []
+            _EVENTS_CACHE["all"] = cached = (_time.time(), events)
+        return _chip_filter(cached[1], req.category)
     except Exception as e:
-        print(f"[events] {req.category!r} failed: {type(e).__name__}: {e}")
-        return cached[1] if cached else []
+        print(f"[events] {req.category!r} failed: {type(e).__name__}: {tourapi.redact(e)}")
+        return _chip_filter(cached[1], req.category) if cached else []
+
+
+def _chip_filter(events: list[dict], category: str | None) -> list[dict]:
+    """칩 하나로 통합본을 거른다. 'All' 과 모르는 라벨은 전체."""
+    code = _EV_CHIP.get((category or "").strip())
+    rows = [e for e in events if e["_chip"] == code] if code else events
+    return [{k: v for k, v in e.items() if k != "_chip"} for e in rows]
 
 
 @app.post("/transit-legs")
@@ -975,29 +1086,16 @@ def swap_candidates(req: SwapCandidatesRequest):
 
 
 if __name__ == "__main__":
-    # Parser self-check: `python api.py` — prefers a saved fixture
-    # (backend/_fixtures/nol_musical.html); falls back to a live fetch.
-    import pathlib
+    # `python api.py` — 공사 API 를 실제로 쳐서 통합·칩 필터를 확인한다.
+    rows = _fetch_events()
+    assert rows, "TourAPI returned 0 events"
+    assert len({r["landing_url"] for r in rows}) == len(rows), "contentid dedupe failed"
 
-    fixture = pathlib.Path(_here) / "_fixtures" / "nol_musical.html"
-    if fixture.exists():
-        html_text = fixture.read_text(encoding="utf-8")
-        print(f"[selfcheck] using fixture {fixture}")
-    else:
-        import httpx
-        html_text = httpx.get(
-            "https://world.nol.com/en/ticket/genre/MUSICAL/products",
-            headers={"User-Agent": _NOL_UA},
-            timeout=15,
-            follow_redirects=True,
-        ).text
-        print("[selfcheck] using live fetch (no fixture found)")
+    chips = {c: len(_chip_filter(rows, c)) for c in ("All", *_EV_CHIP)}
+    assert chips["All"] == len(rows), "All chip must not filter"
+    assert sum(v for k, v in chips.items() if k != "All") == len(rows), "chips must partition"
+    assert "_chip" not in rows[0] or "_chip" not in _chip_filter(rows, "All")[0], "_chip leaked"
 
-    events = _parse_nol(html_text)
-    assert events, "parser extracted 0 events"
-    first = events[0]
-    assert first["name"], "first event has empty name"
-    assert first["image_url"], "first event has empty image_url"
-    assert first["landing_url"].startswith("https://world.nol.com/en/ticket/")
-    assert set(first) >= {"name", "date", "venue", "description", "image_url", "landing_url"}
-    print(f"[selfcheck] OK — {len(events)} events; first = {first['name']!r} / {first['date']!r}")
+    dated = [r for r in rows if r["date"]]
+    print(f"[selfcheck] OK — {len(rows)} events {chips}; dated={len(dated)}")
+    print(f"             first = {rows[0]['name']!r} / {rows[0]['date']!r}")

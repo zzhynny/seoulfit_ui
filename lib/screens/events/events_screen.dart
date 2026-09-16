@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/repositories/events_repository.dart';
 import '../../models/event.dart';
 import '../../theme/theme.dart';
+import '../../widgets/data_source_note.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key, required this.repository});
@@ -112,6 +113,10 @@ class _EventsScreenState extends State<EventsScreen> {
             itemBuilder: (context, index) => _EventCard(event: displayed[index]),
           ),
         ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: DataSourceNote(),
+        ),
       ],
     );
   }
@@ -124,13 +129,14 @@ class _CategoryChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Keyed on kEventCategories. A label with no entry just renders without an
+  /// emoji, which is how the old nine ticket-genre keys failed silently after
+  /// the chips moved to the Korea Tourism Organization's own classification.
   static const _emoji = {
-    'Musical': '🎭',
-    'Concert': '🎤',
-    'Exhibition': '🖼️',
-    'Classic': '🎹',
-    'Family': '👨‍👩‍👧',
-    'Theater': '🎬',
+    'All': '✨',
+    'Festivals': '🎪',
+    'Performances': '🎭',
+    'Exhibitions': '🖼️',
   };
 
   @override
@@ -163,8 +169,9 @@ class _EventCard extends StatelessWidget {
 
   final SeoulEvent event;
 
-  /// Opens the event's page on the ticket site. Mock data carries no URL, so
-  /// the card is inert there rather than opening nowhere.
+  /// Opens the event's page on the Korea Tourism Organization's English site.
+  /// Mock data carries no URL, so the card is inert there rather than opening
+  /// nowhere.
   Future<void> _open(BuildContext context) async {
     final uri = Uri.parse(event.landingUrl!);
     var ok = false;

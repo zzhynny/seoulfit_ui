@@ -4,6 +4,7 @@ import '../../data/repositories/profile_repository.dart';
 import '../../models/profile.dart';
 import '../../providers/companion_provider.dart';
 import '../../theme/theme.dart';
+import '../../widgets/data_source_note.dart';
 import '../../widgets/primary_button.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -175,6 +176,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+          ),
+          // 앱 전체 출처 고지. 화면마다 붙는 것과 별개로, 어느 공공데이터를
+          // 쓰는지 한 곳에서 밝힌다.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: DataSourceNote(),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: DataSourceNote(source: DataSource.seoulTourism),
           ),
         ],
       ),

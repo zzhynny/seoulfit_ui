@@ -11,6 +11,14 @@ Self-contained: all AI modules, data, and FAISS vector stores live in this folde
 - `POST /analyze-landmark` — Seoul Lens: image → Gemini Vision → seoul.json RAG → English narration
 - `POST /nearby` — on-trip help: nearby cafes/restaurants (Google Places, radius expands 500m → 1000m)
 - `POST /emergency-rooms` — on-trip help: nearest operating ERs with live bed counts (E-Gen, 60s cache)
+- `POST /nearby-poi` — on-trip help: nearby sights (한국관광공사 `locationBasedList2`, 10min cache,
+  falls back to `dataset/tour_poi.json` if the API is down)
+- `POST /nearby-shopping` — on-trip help: nearby shopping (Visit Seoul, pre-collected)
+- `POST /events` — Seoul festivals, performances and exhibitions (한국관광공사
+  `searchFestival2` + `areaBasedList2`, merged and cached 10min)
+- `POST /poi-summary`, `/poi-detail`, `/poi-image` — a stop's blurb, visitor info and photo.
+  한국관광공사 `detailCommon2`/`detailImage2` where the place is in their DB, Tavily + Gemini
+  (and Google Places) for everything else
 - `GET  /healthz`, `GET /lens/health` — health probes
 
 ## Setup
@@ -26,6 +34,12 @@ pip install -r requirements.txt
 for `/emergency-rooms` — this must be the data.go.kr **Decoding** key; the Encoding key
 double-encodes `%` and fails with `SERVICE_KEY_IS_NOT_REGISTERED_ERROR`. Without it,
 `/emergency-rooms` silently degrades to the client-side fallback list on every call.
+
+data.go.kr issues one key per account and each service is approved against it, so the
+same `EGEN_API_KEY` also authenticates 한국관광공사 TourAPI (`tourapi.py`) — no separate
+key is needed. Set `TOURAPI_KEY` only to point TourAPI at a different account; it wins
+when present. Without either, `/events` serves an empty list and `/nearby-poi` falls
+back to the pre-collected snapshot, both without erroring.
 
 ## Re-scraping embassy data
 
