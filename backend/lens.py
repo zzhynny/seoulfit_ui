@@ -31,17 +31,79 @@ _GEMINI_MODEL = "gemini-2.5-flash"
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _SEOUL_DATA_PATH = os.path.join(_HERE, "dataset", "seoul.json")
 _KOREAN_SLUG_RE = re.compile(r"^https://korean\.visitseoul\.net/attractions/([^/?]+)")
+_ANY_SLUG_RE = re.compile(r"^https://\w+\.visitseoul\.net/attractions/([^/?]+)")
 
 
 def _normalize(s: str) -> str:
     return re.sub(r"[\W_]+", "", (s or "").lower(), flags=re.UNICODE)
 
 
-def _load_seoul_dataset() -> list[dict]:
+def _join_keys(row: dict) -> list[tuple]:
+    """Language-independent keys for pairing a Korean row with its English twin.
+
+    post_sn does NOT match across languages and the slug only matches when
+    visitseoul used a numeric id (149/475); for the rest the Korean slug is
+    Hangul and the English one is romanized. The postal code plus the first
+    two street numbers recovers most of the remainder.
+    """
+    keys: list[tuple] = []
+    m = _ANY_SLUG_RE.match(row.get("post_url") or "")
+    if m:
+        keys.append(("slug", m.group(1)))
+    addr = row.get("new_address") or row.get("address") or ""
+    z = re.match(r"\s*(\d{5})", addr)
+    if z:
+        nums = re.findall(r"\d+", addr[z.end():])
+        if nums:
+            keys.append(("addr", z.group(1), tuple(nums[:2])))
+    return keys
+
+
+def _zip_of(row: dict) -> str:
+    m = re.match(r"\s*(\d{5})", row.get("new_address") or row.get("address") or "")
+    return m.group(1) if m else ""
+
+
+def _phone_of(row: dict) -> str:
+    d = re.sub(r"\D", "", row.get("cmmn_telno") or "")
+    d = d[2:] if d.startswith("82") else d   # 영문 레코드는 국가번호를 붙인다
+    d = d.lstrip("0")
+    return d if len(d) >= 8 else ""
+
+
+def _contradicts(kr: dict, en: dict) -> bool:
+    """둘이 명백히 다른 장소인가.
+
+    주소 키(우편번호+번지)는 같은 블록의 이웃 시설을 묶어버린다 — 반포대교
+    야경이 세빛섬으로, 서울올림픽기념관이 백제어린이박물관으로 붙었다.
+    양쪽에 다 있는 우편번호·전화번호가 어긋나면 그 페어는 버린다.
+    """
+    kz, ez = _zip_of(kr), _zip_of(en)
+    if kz and ez and kz != ez:
+        return True
+    kp, ep = _phone_of(kr), _phone_of(en)
+    # 한쪽이 상대의 접두사면 자릿수 잘림이지 다른 번호가 아니다.
+    if kp and ep and not (kp.startswith(ep) or ep.startswith(kp)):
+        return True
+    return False
+
+
+def _load_seoul_dataset() -> tuple[list[dict], int]:
     with open(_SEOUL_DATA_PATH, "r", encoding="utf-8") as f:
         raw = json.load(f)
     rows = raw.get("DATA", []) if isinstance(raw, dict) else (raw or [])
+
+    # Index the English rows by join key, dropping any key that is ambiguous —
+    # a wrong pairing would show the visitor another place's address.
+    en_index: dict[tuple, list[dict]] = {}
+    for r in rows:
+        if not (r.get("post_url") or "").startswith("https://english"):
+            continue
+        for k in _join_keys(r):
+            en_index.setdefault(k, []).append(r)
+
     out: list[dict] = []
+    paired = 0
     for r in rows:
         url = (r.get("post_url") or "")
         if not url.startswith("https://korean"):
@@ -54,12 +116,21 @@ def _load_seoul_dataset() -> list[dict]:
         enriched["_slug"] = slug
         enriched["_slug_norm"] = _normalize(slug)
         enriched["_post_sj_norm"] = _normalize(r.get("post_sj") or "")
+        for k in _join_keys(r):
+            twin = en_index.get(k)
+            if twin and len(twin) == 1 and not _contradicts(r, twin[0]):
+                enriched["_en"] = twin[0]
+                paired += 1
+                break
         out.append(enriched)
-    return out
+    return out, paired
 
 
-_SEOUL_ROWS: list[dict] = _load_seoul_dataset()
-print(f"[lens] seoul.json: loaded {len(_SEOUL_ROWS)} Korean entries")
+_SEOUL_ROWS, _SEOUL_EN_PAIRED = _load_seoul_dataset()
+print(
+    f"[lens] seoul.json: loaded {len(_SEOUL_ROWS)} Korean entries "
+    f"({_SEOUL_EN_PAIRED} with official English)"
+)
 
 router = APIRouter(tags=["lens"])
 
@@ -407,11 +478,19 @@ def analyze_landmark(file: UploadFile = File(...)):
     public_data = _extract_fields(matched_row) if matched_row else {}
     post_sn = matched_row.get("post_sn") if matched_row else None
 
-    public_data_en = (
-        _translate_public_data(public_data, post_sn)
-        if has_public_data
-        else {}
-    )
+    # visitseoul publishes its own English record for ~57% of these places.
+    # When we have it, use it: it is the official wording, costs no Gemini
+    # call, and cannot hallucinate an address. Translate only the rest.
+    en_row = matched_row.get("_en") if matched_row else None
+    if not has_public_data:
+        public_data_en = {}
+        en_source = "none"
+    elif en_row:
+        public_data_en = {**public_data, **_extract_fields(en_row)}
+        en_source = "visitseoul-en"
+    else:
+        public_data_en = _translate_public_data(public_data, post_sn)
+        en_source = "gemini"
     # Narrate from the English-translated facts, not the raw Korean, so no
     # Korean address/hours/station names leak into the guide text.
     description = _generate_english_guide(
@@ -426,6 +505,7 @@ def analyze_landmark(file: UploadFile = File(...)):
         "description":    description,
         "data_verified":  has_public_data,
         "data_source":    "seoul.json (korean.visitseoul.net)" if has_public_data else "none",
+        "en_source":      en_source,
         "public_info":    public_data,
         "public_info_en": public_data_en,
     }
