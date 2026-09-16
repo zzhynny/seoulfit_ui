@@ -86,7 +86,7 @@ def _resolve_content_type(file: UploadFile) -> str:
 # ══════════════════════════════════════════
 # STEP 1 — Gemini Vision identification
 # ══════════════════════════════════════════
-async def _identify_with_gemini(image_bytes: bytes, mime_type: str) -> dict:
+def _identify_with_gemini(image_bytes: bytes, mime_type: str) -> dict:
     prompt_text = (
         "You are an expert guide for tourists visiting Seoul, South Korea. "
         "Analyze this image and identify whatever is shown — statues, monuments, "
@@ -236,7 +236,7 @@ _TRANSLATION_CACHE: dict[int, dict] = {}
 _TRANSLATABLE_KEYS = ("address", "hours", "open_days", "closed_days", "subway", "tags")
 
 
-async def _translate_public_data(public_data: dict, post_sn: int | None) -> dict:
+def _translate_public_data(public_data: dict, post_sn: int | None) -> dict:
     if not public_data:
         return {}
 
@@ -303,7 +303,7 @@ async def _translate_public_data(public_data: dict, post_sn: int | None) -> dict
 # ══════════════════════════════════════════
 # STEP 3 — English narration
 # ══════════════════════════════════════════
-async def _generate_english_guide(
+def _generate_english_guide(
     landmark_info: dict,
     public_data: dict,
     has_public_data: bool,
@@ -379,19 +379,26 @@ async def _generate_english_guide(
 # Endpoint
 # ══════════════════════════════════════════
 @router.post("/analyze-landmark")
-async def analyze_landmark(file: UploadFile = File(...)):
+def analyze_landmark(file: UploadFile = File(...)):
+    """사진 한 장 → Gemini Vision → seoul.json RAG → 영문 해설.
+
+    async 가 아니다. 안에서 부르는 Gemini 호출 셋이 전부 동기라서, async def
+    로 두면 그 8~12초 동안 이벤트 루프가 잡혀 서버가 /healthz 조차 응답하지
+    못한다 — 심사위원 한 명이 렌즈를 쓰는 동안 나머지 전원이 멈춘다. 평범한
+    def 이면 FastAPI 가 threadpool 로 돌려서 겹쳐 처리된다. 되돌리지 말 것.
+    """
     content_type = _resolve_content_type(file)
     allowed = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
     if content_type not in allowed:
         raise HTTPException(400, f"Unsupported image type: {content_type}")
 
-    image_bytes = await file.read()
+    image_bytes = file.file.read()
     if len(image_bytes) == 0:
         raise HTTPException(400, "Empty file")
     if len(image_bytes) > 10 * 1024 * 1024:
         raise HTTPException(400, "Image larger than 10 MB")
 
-    landmark_info = await _identify_with_gemini(image_bytes, content_type)
+    landmark_info = _identify_with_gemini(image_bytes, content_type)
 
     candidates = [landmark_info["name_korean"]] + list(
         landmark_info.get("aliases_korean") or []
@@ -401,13 +408,13 @@ async def analyze_landmark(file: UploadFile = File(...)):
     post_sn = matched_row.get("post_sn") if matched_row else None
 
     public_data_en = (
-        await _translate_public_data(public_data, post_sn)
+        _translate_public_data(public_data, post_sn)
         if has_public_data
         else {}
     )
     # Narrate from the English-translated facts, not the raw Korean, so no
     # Korean address/hours/station names leak into the guide text.
-    description = await _generate_english_guide(
+    description = _generate_english_guide(
         landmark_info, public_data_en or public_data, has_public_data
     )
 

@@ -54,7 +54,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse as _JSONResponse
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage, AIMessage
 
 # In dev we load .env from disk; in prod (Render) env vars are injected
@@ -157,6 +157,14 @@ _METERED_PATHS = {
     # Can fire a paid OpenAI images.edit (stamp.py) when generate_stamp is set —
     # an unmetered loop would spend real money per hit, not just DB I/O.
     "/trip/checkin",
+    # 아래 넷은 리스트를 받아 항목마다 외부 호출을 한다. 한 요청이 수백 회로
+    # 불어나므로 요청 수로 재는 이 리밋만으로는 부족하고, 모델 쪽 max_length
+    # 와 같이 걸어야 의미가 있다.
+    "/transit-legs",       # 정거장 쌍마다 ODsay 1회 + 캐시 파일 재작성
+    "/poi-closure-check",  # 4건 묶음마다 Gemini 검색 그라운딩 (건당 과금)
+    "/revalidate",         # Critic → Repair → Critic, 요청당 Gemini 여러 번
+    "/swap-candidates",    # Google Places 유료 호출로 떨어질 수 있다
+    "/events",             # 공사 API 2회 (캐시 miss 시)
 }
 # 120/min, not 30: user_selection_screen renders one card per candidate stop
 # and each fires fetchPoiDetail on build, and final_itinerary_map_screen
@@ -164,18 +172,34 @@ _METERED_PATHS = {
 # 20-40 call burst. An abuse loop does thousands, so the gap is wide enough.
 _RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MIN", "120"))
 _RATE_WINDOW = 60.0
+# 프록시 뒤인가. Render/Fly 처럼 TLS 를 종단하는 앞단이 있으면 1(기본).
+# 직접 인터넷에 노출한다면 0 으로 두어야 X-Forwarded-For 를 아예 안 믿는다.
+#
+# ⚠ 이것만으로는 부족하다. uvicorn 의 ProxyHeadersMiddleware 가 기본으로 켜져
+# 있고, 그건 X-Forwarded-For 의 **첫** 값(= 클라이언트가 위조할 수 있는 값)으로
+# request.client.host 를 덮어쓴다. 그러면 TRUST_PROXY=0 이어도 아래 fallback 이
+# 이미 오염된 값을 읽는다. 반드시 `--no-proxy-headers` 로 띄울 것 — 실측으로
+# 둘 중 하나만 닫으면 헤더 한 줄에 리밋이 통째로 뚫린다.
+_TRUST_PROXY = os.getenv("TRUST_PROXY", "1") not in ("0", "false", "False")
+
 _rate_hits: dict[str, tuple[float, int]] = {}
 _rate_lock = _threading.Lock()
 
 
 def _client_ip(request) -> str:
-    # Render terminates TLS at its proxy, so request.client.host is the proxy.
-    # Trust the first X-Forwarded-For hop only because we know we sit behind
-    # exactly one. Direct-to-internet deploys must drop this branch: the header
-    # is attacker-controlled and would make the limit trivially bypassable.
+    """레이트 리밋 버킷 키. 프록시 뒤에 있을 때 진짜 클라이언트를 고른다.
+
+    X-Forwarded-For 는 왼쪽이 원본, 오른쪽이 가장 가까운 프록시다. 단 왼쪽은
+    클라이언트가 보낸 값을 그대로 이어받은 것이라 통째로 위조된다 — 첫 홉을
+    믿으면 `-H 'X-Forwarded-For: $RANDOM'` 한 줄로 매 요청이 새 버킷이 되고
+    레이트 리밋이 없는 것과 같아진다.
+
+    우리 프록시가 직접 덧붙인 마지막 홉만 믿는다. 프록시가 정확히 하나라는
+    전제이고, 그게 아니면(직접 노출, 프록시 2단) 이 분기를 지워야 한다.
+    """
     fwd = request.headers.get("x-forwarded-for", "")
-    if fwd:
-        return fwd.split(",")[0].strip()
+    if fwd and _TRUST_PROXY:
+        return fwd.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -191,8 +215,12 @@ async def _rate_limit(request, call_next):
             start, count = now, 0
         count += 1
         _rate_hits[ip] = (start, count)
-        if len(_rate_hits) > 10_000:  # bound the dict; drop stale windows
-            _rate_hits.clear()
+        if len(_rate_hits) > 10_000:
+            # 통째로 clear() 하면 한도를 채운 쪽까지 같이 풀려난다 — 위조 IP 로
+            # 딕셔너리를 불리는 것만으로 전원의 리밋을 리셋할 수 있었다.
+            # 창이 끝난 것만 버린다.
+            for k in [k for k, (t, _) in _rate_hits.items() if now - t >= _RATE_WINDOW]:
+                del _rate_hits[k]
     if count > _RATE_LIMIT:
         retry_after = max(1, int(_RATE_WINDOW - (now - start)))
         return _JSONResponse(
@@ -212,7 +240,16 @@ async def _rate_limit(request, call_next):
 # entry to a full origin or CORS will silently reject every request.
 def _normalize_origin(o: str) -> str:
     o = o.strip()
-    if not o or o == "*":
+    # "*" 를 그대로 통과시키면 아래에서 공들여 막아놓은 구멍이 환경변수 한 줄로
+    # 다시 열린다 — 인터넷의 아무 페이지나 방문자 브라우저를 통해 이 API 를
+    # 부리고 Gemini/SerpApi/Places 요금을 태울 수 있다. 설정 실수로 그렇게 되는
+    # 쪽보다 시끄럽게 죽는 쪽이 낫다.
+    if o == "*":
+        raise RuntimeError(
+            "FRONTEND_ORIGIN=* is not allowed — list the deployed frontend "
+            "origins explicitly (comma-separated)."
+        )
+    if not o:
         return o
     if "://" not in o:
         # Render production hosts are HTTPS-only; assume https for bare hosts.
@@ -236,6 +273,18 @@ _cors_kwargs = (
     if _cors_origins
     else {"allow_origin_regex": r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"}
 )
+print(f"[ratelimit] {_RATE_LIMIT}/min on {len(_METERED_PATHS)} paths · "
+      f"X-Forwarded-For {'trusted (last hop)' if _TRUST_PROXY else 'ignored'} · "
+      f"run with --no-proxy-headers or uvicorn overrides this")
+
+if _cors_origins:
+    print(f"[cors] allowing {', '.join(_cors_origins)}")
+else:
+    # 이 상태로 배포하면 브라우저가 모든 요청을 막고 앱은 빈 화면이 된다.
+    # 콘솔에 아무 말도 없으면 원인을 찾는 데만 한나절이 간다.
+    print("[cors] FRONTEND_ORIGIN unset — allowing localhost only. "
+          "A deployed web frontend WILL be blocked; set FRONTEND_ORIGIN.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_methods=["*"],
@@ -288,7 +337,10 @@ def _require_thread_id(thread_id: str) -> str:
 
 class ChatRequest(BaseModel):
     thread_id: str
-    message: Optional[str] = None  # None on first call → triggers greeting
+    # None on first call → triggers greeting. 상한은 가드레일과 플래너 양쪽
+    # Gemini 호출에 그대로 들어가는 값이라 건다 — 사람이 채팅창에 치는 한 문장은
+    # 수백 자를 넘지 않는다.
+    message: Optional[str] = Field(None, max_length=2000)
 
 
 class StateResponse(BaseModel):
@@ -315,17 +367,21 @@ class TransitStop(BaseModel):
 
 
 class TransitLegsRequest(BaseModel):
-    stops: list[TransitStop]    # ordered list of selected stops
+    # ordered list of selected stops. 쌍마다 ODsay 1회 + 캐시 파일 재작성이라
+    # 상한이 없으면 한 요청이 수백 초 동안 워커를 붙잡는다. 하루 일정이 15~25개다.
+    stops: list[TransitStop] = Field(max_length=40)
 
 
 class ClosureCheckItem(BaseModel):
-    poi_name: str
-    address: str = ""
-    visit_date: str            # "YYYY-MM-DD"
+    poi_name: str = Field(max_length=200)
+    address: str = Field("", max_length=300)
+    visit_date: str = Field(max_length=10)   # "YYYY-MM-DD"
 
 
 class ClosureCheckRequest(BaseModel):
-    items: list[ClosureCheckItem]   # 한 일정당 15~25개 예상
+    # 한 일정당 15~25개 예상. 4건 묶음마다 Gemini 검색 그라운딩(건당 과금)이라
+    # 상한 없이 받으면 한 요청으로 수십 분어치 과금이 난다.
+    items: list[ClosureCheckItem] = Field(max_length=40)
 
 
 class CheckinRequest(BaseModel):
@@ -357,8 +413,8 @@ class SwapCandidatesRequest(BaseModel):
     thread_id: str
     day: int
     slot_index: int
-    current_poi: str
-    day_area: str
+    current_poi: str = Field(max_length=200)
+    day_area: str = Field(max_length=100)
     # 프론트가 이미 들고 있는 현재 POI의 type (Poi.type). candidate pool은
     # retrieved_courses/google_supplement에서만 채워지는데, LLM이 일정에 직접
     # 써넣은 POI(예: 호텔)는 pool에 아예 없을 수 있다 — 그 경우 pool 조회로
@@ -476,7 +532,7 @@ class DaySpec(BaseModel):
 
 class DayPlanRequest(BaseModel):
     thread_id: str
-    days: list[DaySpec]
+    days: list[DaySpec] = Field(max_length=30)   # 한 달 넘는 일정은 받지 않는다
 
 
 @app.post("/day-plan", response_model=StateResponse)
@@ -519,8 +575,10 @@ def day_plan(req: DayPlanRequest):
 
 
 class PoiSummaryRequest(BaseModel):
-    name: str
-    type: str = ""
+    # name 은 Tavily 질의와 Gemini 프롬프트가 되고, _poi_text_cache.json 의
+    # 키로 영구히 남는다 — 긴 이름을 반복해 보내면 그 파일이 무한히 커진다.
+    name: str = Field(max_length=200)
+    type: str = Field("", max_length=100)
 
 
 def _norm_poi_name(title: str) -> str:
@@ -709,8 +767,9 @@ def poi_detail(req: PoiSummaryRequest):
 
 
 class EventsRequest(BaseModel):
-    category: str = "Concert"
-    travel_dates: Optional[str] = None
+    # kEventCategories 의 첫 칩. 모르는 값은 _chip_filter 가 전체로 떨어뜨린다.
+    category: str = Field("All", max_length=40)
+    travel_dates: Optional[str] = Field(None, max_length=100)
 
 
 # ── /events — 한국관광공사 TourAPI(EngService2) 실시간 조회 ────────────────────

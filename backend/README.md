@@ -55,8 +55,30 @@ uv run python backend/tools/normalize.py
 
 ```bash
 source venv/bin/activate
-uvicorn api:app --reload --port 8000
+uvicorn api:app --reload --port 8000 --no-proxy-headers
 ```
+
+`--no-proxy-headers` is not optional. uvicorn's ProxyHeadersMiddleware is on by
+default and rewrites `request.client.host` from the **first** `X-Forwarded-For`
+hop — the one the client supplies and can therefore forge. The rate limiter
+buckets on that value, so leaving it on lets `-H 'X-Forwarded-For: <random>'`
+get a fresh quota on every request. Measured: with it on, eight requests against
+a limit of five all returned 200; with it off, the sixth returned 429.
+
+Set `TRUST_PROXY=0` as well when the API is exposed directly rather than behind
+a TLS-terminating proxy. Behind exactly one proxy (Render, Fly, Cloud Run),
+leave it at the default: `_client_ip` then reads the **last** hop, which is the
+one your own proxy appended and the client cannot control.
+
+## Deploy checklist
+
+| | |
+|---|---|
+| `FRONTEND_ORIGIN` | the deployed web origin, comma-separated. Never `*` — the app refuses to start. Unset means localhost-only, and the deployed frontend is CORS-blocked. |
+| `TRUST_PROXY` | `1` behind a proxy (default), `0` when exposed directly |
+| uvicorn flags | `--no-proxy-headers`, and **one worker only** — the LangGraph `MemorySaver` is per-process, so a second worker resets conversations at random |
+| Flutter build | `flutter build web --dart-define=API_BASE_URL=https://<api-host>` |
+| Keep warm | cold start is ~14s / ~336MB RSS; ping `/healthz` every 10 min so no judge eats that |
 
 The Flutter app calls `http://localhost:8000` by default. To point at a deployed
 backend, build the app with `--dart-define=API_BASE_URL=https://<host>`.

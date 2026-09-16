@@ -208,6 +208,12 @@ _BEDS_TTL = 60  # 서울 전체가 한 응답이라 60초 캐시하면 일일 10
 _beds_cache: tuple[float, dict[str, dict]] | None = None
 _beds_lock = threading.Lock()
 
+# 위치 조회(getEgytLcinfoInqire)는 병상 조회와 달리 좌표마다 응답이 달라서 한
+# 덩어리로 캐시할 수 없다. 대신 좌표를 반올림해 격자로 접는다 — 요청 1건이
+# 곧 호출 1건이면 일 1,000회 한도가 8분 만에 사라지고, 그러면 응급실 화면이
+# 그날 내내 죽는다. 되돌릴 방법도 없다.
+_near_cache: dict[tuple, tuple[float, list]] = {}
+
 
 def _egen(op: str, **params) -> list:
     key = os.getenv("EGEN_API_KEY", "")
@@ -328,8 +334,15 @@ class ErRequest(BaseModel):
 @router.post("/emergency-rooms")
 def emergency_rooms(req: ErRequest):
     """현재 위치에서 가까운, 실제로 운영 중인 응급실을 병상 상황과 함께 돌려준다."""
-    near = _egen("getEgytLcinfoInqire", WGS84_LON=req.lng, WGS84_LAT=req.lat)
-    rows = join_er(near, _seoul_beds(), req.want)
+    key = (round(req.lat, 3), round(req.lng, 3))   # 약 110m 격자
+    hit = _near_cache.get(key)
+    if not (hit and time.time() - hit[0] < _BEDS_TTL):
+        near = _egen("getEgytLcinfoInqire", WGS84_LON=req.lng, WGS84_LAT=req.lat)
+        if len(_near_cache) > 500:
+            _near_cache.clear()
+        _near_cache[key] = hit = (time.time(), near)
+
+    rows = join_er(hit[1], _seoul_beds(), req.want)
     return {"updated_at": rows[0]["updated_at"] if rows else "", "hospitals": rows}
 
 
@@ -423,6 +436,11 @@ class NearbyPoiRequest(BaseModel):
 
 # 좌표 캐시 키는 소수 3자리 — 약 110m. 걸어가며 화면을 다시 열 때마다 공사
 # API 를 치지 않도록 접고, 그보다 멀리 가면 새로 받는다.
+#
+# 항목 하나가 최대 300건의 POI 를 상세까지 들고 있어 50~150KB 다. 좌표를
+# 0.001 씩 밀며 호출하면 캐시가 전부 miss 인 채로 무한히 자라 프로세스를
+# OOM 으로 보낼 수 있어서 개수를 막는다.
+_POI_CACHE_MAX = 500
 _POI_CACHE: dict[tuple, tuple[float, list]] = {}
 _POI_TTL = 600  # seconds
 
@@ -498,6 +516,8 @@ def nearby_poi(req: NearbyPoiRequest):
             print(f"[live-help] locationBasedList2 failed, using snapshot: "
                   f"{type(e).__name__}: {tourapi.redact(e)}")
             rows = _snapshot_pois(req.lat, req.lng)
+        if len(_POI_CACHE) > _POI_CACHE_MAX:
+            _POI_CACHE.clear()
         _POI_CACHE[key] = hit = (time.time(), rows)
 
     rows = hit[1]
