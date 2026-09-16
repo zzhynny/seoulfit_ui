@@ -70,11 +70,13 @@ class LiveHelpService {
 
   static Future<Map<String, dynamic>> _post(
       String path, Map<String, dynamic> body) async {
-    final res = await http.post(
-      Uri.parse('$_base/$path'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
-    );
+    final res = await http
+        .post(
+          Uri.parse('$_base/$path'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 15));
     if (res.statusCode != 200) {
       throw Exception('Backend error ${res.statusCode}: ${res.body}');
     }

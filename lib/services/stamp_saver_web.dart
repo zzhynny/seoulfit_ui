@@ -9,7 +9,8 @@ import 'package:web/web.dart' as web;
 /// app, and browsers ignore `download` on cross-origin links (they'd just
 /// open the image in a tab).
 Future<void> saveStampImage(String url) async {
-  final response = await http.get(Uri.parse(url));
+  final response =
+      await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
   if (response.statusCode != 200) {
     throw Exception('Stamp download failed (${response.statusCode})');
   }
