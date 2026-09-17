@@ -1,7 +1,22 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Real signing key for the app already registered on ONE store (com.seoulfit.app).
+// key.properties and the .jks it points at are both gitignored — this is a real
+// secret, unlike a debug key, so it's never committed. Copy key.properties.example
+// to key.properties, fill in the real values, and put the .jks file wherever
+// storeFile points.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = file("key.properties")
+val hasKeystoreProperties = keystorePropertiesFile.exists()
+if (hasKeystoreProperties) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -28,22 +43,26 @@ android {
     }
 
     signingConfigs {
-        create("upload") {
-            // The exact debug.keystore that signed the binary already sitting
-            // on ONE store — not this machine's own ~/.android/debug.keystore
-            // (which is different per machine). Every teammate must build
-            // releases with this same file, or ONE store's upload-key check
-            // rejects the update.
-            storeFile = file("original-debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        if (hasKeystoreProperties) {
+            create("upload") {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("upload")
+            // Falls back to the debug config (won't match ONE store's
+            // registered upload key) when key.properties is missing, so a
+            // clean checkout still builds instead of failing outright.
+            signingConfig = if (hasKeystoreProperties) {
+                signingConfigs.getByName("upload")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
