@@ -27,11 +27,23 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("upload") {
+            // The exact debug.keystore that signed the binary already sitting
+            // on ONE store — not this machine's own ~/.android/debug.keystore
+            // (which is different per machine). Every teammate must build
+            // releases with this same file, or ONE store's upload-key check
+            // rejects the update.
+            storeFile = file("original-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("upload")
         }
     }
 }
