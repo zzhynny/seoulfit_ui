@@ -1392,6 +1392,12 @@ def reorder_supplements(
     2-opt only if transition scores stay bad. Backbone order is left untouched.
     """
     def _movable(p: dict[str, Any]) -> bool:
+        # A locked meal slot is placed for its time of day, not its walking cost
+        # -- planner._meal_slot_indices spaces lunch and dinner apart on purpose,
+        # and both are searched around the same area centre, so cheapest-
+        # insertion would happily slide them back together.
+        if p.get("meal_slot"):
+            return False
         return normalize_text(p.get("name")) in movable_names and _poi_coords(p) is not None
 
     extras = [p for p in pois if _movable(p)]

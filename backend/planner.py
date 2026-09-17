@@ -181,12 +181,17 @@ def fetch_nearby_places(
     radius: int = 1700,
     min_rating: float = 4.0,
     max_results: int = 5,
+    center: tuple[float, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """Google Places Nearby Search for one area."""
+    """Google Places Nearby Search for one area.
+
+    `center` overrides the neighbourhood's hand-placed point -- see
+    `_anchor_search_origin`, which centres the sweep on the day's own courses.
+    """
     if not api_key:
         return []
 
-    lat, lng = SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
+    lat, lng = center or SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
     url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
     params = {
         "location": f"{lat},{lng}",
@@ -254,12 +259,18 @@ def fetch_text_places(
     min_rating: float = 0.0,
     max_results: int = 5,
     poi_type: str = "tourist_spot",
+    center: tuple[float, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """Google Places Text Search for one area."""
+    """Google Places Text Search for one area.
+
+    `query` keeps naming the requested area: for Text Search the place name in
+    the text is the precision mechanism and location/radius only bias it, so
+    `center` refines where inside that area to look rather than replacing it.
+    """
     if not api_key:
         return []
 
-    lat, lng = SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
+    lat, lng = center or SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {
         "query": query,
@@ -413,6 +424,7 @@ def fetch_kpop_places_for_area(
     api_key: str,
     purpose: str,
     max_results: int = 5,
+    center: tuple[float, float] | None = None,
 ) -> list[dict[str, Any]]:
     if not api_key:
         return []
@@ -453,6 +465,7 @@ def fetch_kpop_places_for_area(
             min_rating=0.0,
             max_results=3,
             poi_type="kpop_landmark",
+            center=center,
         )
         for p in places:
             key = _normalize_text(p.get("poi_name"))
@@ -464,15 +477,103 @@ def fetch_kpop_places_for_area(
     return all_places[:max_results]
 
 
+# Anchor-centred search. SEOUL_AREA_CENTERS holds one hand-placed point per
+# neighbourhood, but a day's courses cluster wherever the course actually runs.
+# Measured against the current dataset, that fixed point sits a median ~1km --
+# and up to 3.7km in Mapo, 3.5km in Gangnam -- from the POIs the day will
+# actually visit, so the search circle can miss the very stops it is meant to
+# surround (reorder_supplements' docstring notes the same symptom downstream).
+_ANCHOR_MIN_POINTS = 3          # below this the centroid is one outlier away from nonsense
+_ANCHOR_WALK_BUFFER_M = 800     # a stop just outside the cluster is still walkable
+_ANCHOR_RADIUS_MAX_M = 3000     # past this, fall back: see _anchor_search_origin
+
+
+def _anchor_points_for_area(
+    area: str, day_segments: list[dict[str, Any]] | None,
+) -> list[tuple[float, float]]:
+    """Coordinates of the anchor-course POIs planned for `area`.
+
+    Mirrors _format_one_course's restrict_area cut, so a POI dropped from the
+    prompt for sitting in the wrong neighbourhood cannot drag the search centre
+    toward itself.
+    """
+    points: list[tuple[float, float]] = []
+    for seg in day_segments or []:
+        if seg.get("area") != area:
+            continue
+        for course in seg.get("anchor_courses") or []:
+            for p in course.get("sequence") or []:
+                lat, lng = p.get("lat"), p.get("lng")
+                if lat is None or lng is None:
+                    continue
+                poi_area = _infer_area_from_text_or_coords(
+                    p.get("poi_name", ""),
+                    p.get("address_en") or p.get("address_ko") or "",
+                    lat, lng,
+                )
+                if poi_area and not _area_matches_requested(poi_area, area):
+                    continue
+                points.append((float(lat), float(lng)))
+    return points
+
+
+def _anchor_search_origin(
+    area: str, day_segments: list[dict[str, Any]] | None,
+) -> tuple[tuple[float, float], int] | None:
+    """((lat, lng), radius_m) to search `area` from, or None to use the fixed centre.
+
+    None means "too scattered for a centroid to help". Gangnam's courses straddle
+    Sinsa and Apgujeong, so their centroid lands in the low-density gap between
+    the two clusters and is measurably worse than the hand-placed point -- the
+    same is true of any area whose spread exceeds what one sweep can cover.
+    Falling back leaves those areas behaving exactly as they did before.
+    """
+    points = _anchor_points_for_area(area, day_segments)
+    if len(points) < _ANCHOR_MIN_POINTS:
+        return None
+
+    lat = sum(p[0] for p in points) / len(points)
+    lng = sum(p[1] for p in points) / len(points)
+
+    # Trim the farthest 10% before sizing the sweep: with 3-11 points a single
+    # outlier would otherwise set the radius for the whole day.
+    spread = sorted(_haversine_km(lat, lng, p[0], p[1]) for p in points)
+    kept = spread[:max(_ANCHOR_MIN_POINTS, int(len(spread) * 0.9))]
+
+    radius_m = int(kept[-1] * 1000) + _ANCHOR_WALK_BUFFER_M
+    if radius_m > _ANCHOR_RADIUS_MAX_M:
+        return None
+    return (lat, lng), radius_m
+
+
 def build_google_supplement_for_area(
     *,
     area: str,
     purpose: str,
     api_key: str,
+    day_segments: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Collect Google Places supplement for one requested area."""
     if not api_key:
         return []
+
+    origin = _anchor_search_origin(area, day_segments)
+    center = origin[0] if origin else None
+
+    def _radius(default: int) -> int:
+        """Widen a sweep only when the day's own POIs are spread out enough to
+        need it -- never shrink below the per-type default, which encodes how
+        sparse that category is (shopping malls need more room than cafes).
+        Growing it for its own sake would backfire: these Nearby Searches send
+        no `rankby`, so Google ranks by prominence, and a bigger circle pulls in
+        famous places further away instead of closer ones."""
+        if not origin:
+            return default
+        return min(max(default, origin[1]), _ANCHOR_RADIUS_MAX_M)
+
+    if origin:
+        print(f"[Google Places][{_area_label(area)}] 앵커 중심 검색 "
+              f"({origin[0][0]:.4f},{origin[0][1]:.4f}) r={origin[1]}m")
 
     purpose_lower = purpose.lower()
     supplement: list[dict[str, Any]] = []
@@ -484,19 +585,21 @@ def build_google_supplement_for_area(
             area=area,
             place_type="cafe",
             api_key=api_key,
-            radius=1800,
+            radius=_radius(1800),
             min_rating=4.1,
             max_results=5,
+            center=center,
         )
         if len(cafes) < 3:
             cafes += fetch_text_places(
                 area=area,
                 query=f"best cafes in {_area_label(area)} Seoul",
                 api_key=api_key,
-                radius=2500,
+                radius=_radius(2500),
                 min_rating=4.0,
                 max_results=5 - len(cafes),
                 poi_type="cafe",
+                center=center,
             )
         supplement.extend(cafes)
         print(f"[Google Places][{_area_label(area)}] 카페 {len(cafes)}개 추가")
@@ -505,19 +608,21 @@ def build_google_supplement_for_area(
         area=area,
         place_type="restaurant",
         api_key=api_key,
-        radius=1800,
+        radius=_radius(1800),
         min_rating=4.0,
         max_results=5,
+        center=center,
     )
     if len(restaurants) < 3:
         restaurants += fetch_text_places(
             area=area,
             query=f"popular restaurants in {_area_label(area)} Seoul",
             api_key=api_key,
-            radius=2500,
+            radius=_radius(2500),
             min_rating=4.0,
             max_results=5 - len(restaurants),
             poi_type="restaurant",
+            center=center,
         )
     supplement.extend(restaurants)
     print(f"[Google Places][{_area_label(area)}] 식당 {len(restaurants)}개 추가")
@@ -528,6 +633,7 @@ def build_google_supplement_for_area(
             api_key=api_key,
             purpose=purpose,
             max_results=5,
+            center=center,
         )
         supplement.extend(kpop_places)
         print(f"[Google Places][{_area_label(area)}] K-POP 장소 {len(kpop_places)}개 추가")
@@ -537,19 +643,21 @@ def build_google_supplement_for_area(
             area=area,
             place_type="shopping_mall",
             api_key=api_key,
-            radius=2200,
+            radius=_radius(2200),
             min_rating=4.0,
             max_results=3,
+            center=center,
         )
         if len(shops) < 2:
             shops += fetch_text_places(
                 area=area,
                 query=f"shopping in {_area_label(area)} Seoul",
                 api_key=api_key,
-                radius=2500,
+                radius=_radius(2500),
                 min_rating=4.0,
                 max_results=3 - len(shops),
                 poi_type="shopping",
+                center=center,
             )
         supplement.extend(shops)
         print(f"[Google Places][{_area_label(area)}] 쇼핑 {len(shops)}개 추가")
@@ -563,9 +671,10 @@ def build_google_supplement_for_area(
             area=area,
             query=f"{purpose} in {_area_label(area)} Seoul",
             api_key=api_key,
-            radius=2500,
+            radius=_radius(2500),
             min_rating=4.0,
             max_results=5,
+            center=center,
         )
         # Text Search's radius is only a bias, and fetch_text_places stamps
         # area=requested on every hit. Re-infer each POI's true area from its
@@ -591,6 +700,7 @@ def build_google_supplement_by_areas(
     location: str,
     purpose: str,
     api_key: str,
+    day_segments: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Collect Google Places supplement for every requested area."""
     if not api_key:
@@ -614,6 +724,7 @@ def build_google_supplement_by_areas(
             area=area,
             purpose=purpose,
             api_key=api_key,
+            day_segments=day_segments,
         )
         all_places.extend(places)
 
@@ -1072,6 +1183,41 @@ def _is_locked_meal(poi: dict[str, Any]) -> bool:
     return bool(poi.get("meal_slot"))
 
 
+def _meal_slot_indices(n: int) -> tuple[int, int]:
+    """(lunch, dinner) insertion points for a day holding `n` other stops.
+
+    Both meals used to be inserted at a fixed index 2, which put them side by
+    side every single time: dinner went in at 2, then lunch went in at 2 and
+    pushed dinner to 3. Spreading them puts lunch around a third of the way
+    through the day and dinner around three quarters, leaving at least one stop
+    between them whenever the day has one to spare.
+
+    Indices are measured against the pre-insertion list, so the caller must
+    insert dinner first -- filling the lunch slot first shifts dinner one place
+    right and eats the gap.
+    """
+    if n < 2:
+        return 0, 1
+    lunch = min(max(round(n / 3), 1), n - 1)
+    dinner = min(max(round(n * 0.75), lunch + 1), n)
+    return lunch, dinner
+
+
+def _pending_meal(
+    meal_source: dict[int, dict[str, Any]] | None,
+    day_num: int,
+    pois: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """The locked pick still needing insertion for this day, else None."""
+    meal = (meal_source or {}).get(day_num)
+    if not meal:
+        return None  # no lock for this day/meal (no trip_start_date/area, or tier 3 unfilled)
+    meal_name_key = _normalize_text(meal.get("name"))
+    if any(_normalize_text(p.get("name")) == meal_name_key for p in pois):
+        return None  # LLM already included this exact locked restaurant
+    return meal
+
+
 def _is_meal_poi(poi: dict[str, Any]) -> bool:
     # A meal_slots.fill_meal_slot() result carries this key -- an explicit
     # "this IS the meal slot" marker beats guessing from type/name, so it's
@@ -1329,14 +1475,17 @@ def _validate_and_repair_itinerary(
     for day in days:
         pois = day.setdefault("pois", [])
         day_num = int(day.get("day") or 0)
-        for meal_source in (locked_meals, locked_lunch_meals):
-            meal = (meal_source or {}).get(day_num)
-            if not meal:
-                continue  # no lock for this day/meal (no trip_start_date/area, or tier 3 unfilled) -- skip silently
 
-            meal_name_key = _normalize_text(meal.get("name"))
-            if any(_normalize_text(p.get("name")) == meal_name_key for p in pois):
-                continue  # LLM already included this exact locked restaurant
+        lunch_idx, dinner_idx = _meal_slot_indices(len(pois))
+        # Dinner goes in first despite sitting later in the day: inserting at the
+        # earlier lunch index first would shift dinner one place right and close
+        # the gap _meal_slot_indices opened.
+        for meal, insert_idx in (
+            (_pending_meal(locked_meals, day_num, pois), dinner_idx),
+            (_pending_meal(locked_lunch_meals, day_num, pois), lunch_idx),
+        ):
+            if not meal:
+                continue
 
             day_area = _primary_area_for_day(day, day_segments) or meal.get("area")
             out = {
@@ -1360,7 +1509,6 @@ def _validate_and_repair_itinerary(
                     if meal.get("source_tier") == "google" else []
                 ),
             }
-            insert_idx = min(2, len(pois))
             pois.insert(insert_idx, out)
             used_names.add(_normalize_text(out.get("name")))
             print(
@@ -1937,6 +2085,7 @@ def plan_node(state: TravelState) -> TravelState:
             location=location,
             purpose=purpose,
             api_key=GOOGLE_PLACES_API_KEY,
+            day_segments=day_segments,
         )
     else:
         print("[planner] GOOGLE_PLACES_API_KEY 없음 -- Google Places 보완 생략")
