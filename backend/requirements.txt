@@ -1,11 +1,4 @@
 # Web framework
-#
-# dspy 2.5.43 pulls in litellm[proxy] 1.53.7, whose extra pins are very tight:
-#   fastapi          <0.112,>=0.111
-#   uvicorn          <0.23,  >=0.22
-#   python-multipart <0.0.10,>=0.0.9
-# We list the packages here (so they're explicit deps of our code) but leave
-# them unpinned - pip resolves them against litellm[proxy]'s constraints.
 fastapi
 uvicorn[standard]
 python-dotenv
@@ -22,7 +15,6 @@ langchain-core>=0.3.25,<0.4
 langchain-community>=0.3,<0.4
 langchain-google-genai>=2,<3
 langgraph>=0.2.60,<0.3
-dspy==2.5.43
 
 # retrieval.py 가 코스 벡터(dataset/course_vectors.npz)에 내적을 건다.
 # 125개뿐이라 FAISS 같은 근사 탐색은 필요 없고, 필터가 남긴 부분집합에만

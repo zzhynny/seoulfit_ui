@@ -1,9 +1,9 @@
 """Itinerary planning nodes for the LangGraph.
 
-`retrieve_node` runs FAISS retrieval over course_data.json and stashes
-the top courses in state. `plan_node` calls a DSPy signature that turns
-those courses + the user's confirmed fields into a structured day-by-day
-itinerary.
+`retrieve_node` runs retrieval.select_anchors over the course dataset and
+stashes each day's anchor courses in state. `plan_node` sends those courses +
+the user's confirmed fields to Gemini and parses the structured day-by-day
+itinerary back out.
 
 Main improvements:
 1. Search RAG by requested areas such as Hongdae and Seongsu.
@@ -17,14 +17,12 @@ Main improvements:
 from __future__ import annotations
 
 import json
-import math
 import os
 import re
 import time
 from pathlib import Path
 from typing import Any
 
-import dspy
 import requests
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
@@ -37,11 +35,9 @@ from geo import (
     SEOUL_AREA_CENTERS,
     area_label as _area_label,
     area_matches_requested as _area_matches_requested,
-    get_area_center as _get_area_center,
     haversine_km as _haversine_km,
     infer_area_from_fields as _infer_area_from_text_or_coords,
 )
-# lm_context removed — DSPy replaced with direct Gemini calls
 from rag import _parse_num_days
 from retrieval import base_id, load_vectors, select_anchors
 from state import TravelState
@@ -342,32 +338,6 @@ def fetch_text_places(
 _WEEKDAY_NAMES = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
 ]
-
-
-def find_place_id(
-    *, name: str, address: str, lat: float | None, lng: float | None, api_key: str
-) -> str | None:
-    """Legacy Find Place — resolves a (name, address) pair to a Google place_id.
-    Location-biased when lat/lng are available to avoid mismatching a same-named
-    place elsewhere. Returns None on any failure (never raises)."""
-    if not api_key or not name:
-        return None
-
-    url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
-    params = {
-        "input": f"{name}, {address}" if address else name,
-        "inputtype": "textquery",
-        "fields": "place_id,name,formatted_address",
-        "key": api_key,
-    }
-    if lat is not None and lng is not None:
-        params["locationbias"] = f"point:{lat},{lng}"
-
-    data = _google_get(url, params)
-    candidates = data.get("candidates") or []
-    if not candidates:
-        return None
-    return candidates[0].get("place_id")
 
 
 # Seoul City Hall, 25 km: covers the whole city, so a same-named place
@@ -734,11 +704,10 @@ def _format_requested_area_rules(
 
 
 # ---------------------------------------------------------------------------
-# DSPy signatures
+# Generation prompt
 # ---------------------------------------------------------------------------
 
-class ItineraryPlanner(dspy.Signature):
-    """Generate a personalized Seoul travel itinerary for foreign tourists.
+ITINERARY_PROMPT = """Generate a personalized Seoul travel itinerary for foreign tourists.
 
     You are given:
     1. the user's trip details,
@@ -771,7 +740,7 @@ class ItineraryPlanner(dspy.Signature):
     - Sections marked `[ANCHOR COURSE]` are editorially curated sequences from Visit Seoul / Visit Korea.
     - Use the anchor course's POI order as the backbone for that day's itinerary.
     - You may drop POIs from an anchor course if they are irrelevant to the user's purpose.
-    - You may insert `[SUPPLEMENT POIs]` or Google Places POIs into the sequence at appropriate positions.
+    - You may insert Google Places POIs into the sequence at appropriate positions.
     - Do NOT reorder anchor course POIs unless geography requires it.
     - When a section spans multiple days (e.g. DAY 1–2), distribute its anchor courses across those days; do not put all POIs into one day.
 
@@ -831,47 +800,6 @@ class ItineraryPlanner(dspy.Signature):
     }
     """
 
-    duration: str = dspy.InputField(desc="Trip length, e.g. '2 days'.")
-    location: str = dspy.InputField(desc="Destination or requested neighborhoods.")
-    budget: str = dspy.InputField(desc="Total trip budget.")
-    dietary: str = dspy.InputField(desc="Dietary restrictions or preferences.")
-    purpose: str = dspy.InputField(desc="Trip purpose, e.g. cafes, shopping, K-POP.")
-    candidate_courses: str = dspy.InputField(
-        desc="Candidate courses and Google Places supplement as compact text."
-    )
-    itinerary_json: str = dspy.OutputField(
-        desc="Strict JSON itinerary matching the schema."
-    )
-
-
-class FixJSON(dspy.Signature):
-    """Repair a JSON document that failed to parse.
-
-    Output ONLY the corrected JSON object. No prose, no markdown fences.
-    Preserve all fields and values from the broken input; only fix syntax.
-    """
-    broken_json: str = dspy.InputField(desc="Malformed JSON text.")
-    error_message: str = dspy.InputField(desc="Parser error.")
-    fixed_json: str = dspy.OutputField(desc="Strictly valid JSON only.")
-
-
-_planner: dspy.Predict | None = None
-_fixer: dspy.Predict | None = None
-
-
-def get_planner() -> dspy.Predict:
-    global _planner
-    if _planner is None:
-        _planner = dspy.Predict(ItineraryPlanner)
-    return _planner
-
-
-def get_fixer() -> dspy.Predict:
-    global _fixer
-    if _fixer is None:
-        _fixer = dspy.Predict(FixJSON)
-    return _fixer
-
 
 # ---------------------------------------------------------------------------
 # Candidate formatting
@@ -929,34 +857,6 @@ def _format_one_course(
     )
 
 
-def _format_one_poi(poi: dict[str, Any]) -> str:
-    # Same exclusion as _build_candidate_pool / _format_one_course -- return
-    # "" for anything flagged as not a real plannable destination so it never
-    # reaches the LLM prompt. Caller skips empty lines.
-    if poi.get("is_generic_activity") or poi.get("is_transit_marker") or poi.get("requires_review"):
-        return ""
-
-    name = poi.get("poi_name", "")
-    address = poi.get("address_en") or poi.get("address_ko", "")
-    lat = poi.get("lat")
-    lng = poi.get("lng")
-    area = _infer_area_from_text_or_coords(name, address, lat, lng) or ""
-    source_str = (
-        f" course_id={poi['course_id']} source_url={poi['source_url']}"
-        if poi.get("source_url")
-        else ""
-    )
-    return (
-        f"  - {name} "
-        f"[{poi.get('poi_type', '')}] "
-        f"area={area} "
-        f"addr={address} "
-        f"lat={lat} lng={lng} "
-        f"stay={poi.get('estimated_stay_time')}min"
-        f"{source_str}"
-    )
-
-
 def _format_segment_block(seg: dict[str, Any]) -> str:
     days = seg.get("day_numbers") or []
     if not days:
@@ -987,15 +887,7 @@ def _format_segment_block(seg: dict[str, Any]) -> str:
         lines.extend(rendered)
     else:
         lines.append("")
-        lines.append("[ANCHOR COURSE — none available; rely on supplement POIs + Google Places]")
-
-    suppl = seg.get("supplement_pois") or []
-    if suppl:
-        rendered_pois = [line for poi in suppl if (line := _format_one_poi(poi))]
-        if rendered_pois:
-            lines.append("")
-            lines.append("[SUPPLEMENT POIs — individual additions for gaps in anchor courses]")
-            lines.extend(rendered_pois)
+        lines.append("[ANCHOR COURSE — none available; rely on Google Places]")
 
     return "\n".join(lines)
 
@@ -1799,7 +1691,7 @@ _PACE_LABELS: dict[str, str] = {"packed": "packed schedule", "relaxed": "relaxed
 
 def _pace_target_line(state: TravelState) -> str:
     """Extra prompt line steering the LLM's per-day POI count toward the
-    user's trip_style. Kept out of the ItineraryPlanner docstring (which is
+    user's trip_style. Kept out of ITINERARY_PROMPT (which is
     shared/static across every call) since the target varies per request.
     Silent (no line) when pace is unset/unrecognized -- the LLM falls back to
     the docstring's plain 5-8 rule, and the validator's default bounds (6-7,
@@ -2059,7 +1951,7 @@ def plan_node(state: TravelState) -> TravelState:
     )
 
     try:
-        system_prompt = ItineraryPlanner.__doc__ or ""
+        system_prompt = ITINERARY_PROMPT
         pace_line = _pace_target_line(state)
         locked_meals_lines = (
             _locked_meals_prompt_lines(locked_meals)

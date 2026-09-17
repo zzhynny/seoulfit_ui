@@ -1,6 +1,6 @@
 """meal_slots.py — 미쉐린 서울 restaurant.json을 식사 슬롯 후보로 쓰기 위한
-순수 함수 로더/필터. 네트워크 호출 없음. generator/validator에는 아직 연결하지
-않는다 (이번 작업 범위 밖).
+로더/필터. planner.plan_node 가 Gemini 호출 전에 fill_meal_slot 으로 날짜별
+점심·저녁을 확정하고, 그 선택을 프롬프트에 "바꾸지 말 것"으로 박아 넣는다.
 
 지역 판정은 geo.py의 기존 alias/좌표 로직(infer_area, area_matches_requested)을
 그대로 재사용한다 — 새 지역 정의를 만들지 않는다.
@@ -17,10 +17,6 @@ import geo
 _HERE = Path(__file__).resolve().parent
 RESTAURANT_PATH = _HERE / "dataset" / "restaurant.json"
 CUISINE_FAMILY_PATH = _HERE / "dataset" / "cuisine_family.json"
-
-WEEKDAYS: list[str] = [
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
-]
 
 # (start, end) as "HH:MM" — breakfast is optional per spec, excluded from the
 # coverage probe but kept here since filter_candidates/is_open take it generically.
@@ -232,7 +228,7 @@ _GOOGLE_PLACES_CACHE: dict[tuple[str, str], list[dict[str, Any]]] = {}
 
 def _fetch_google_restaurants_raw(area: str) -> list[dict[str, Any]]:
     """실제 네트워크 호출 지점 — 테스트는 이 함수만 스텁으로 바꾸면 된다.
-    planner.py를 지연 import한다: planner는 dspy/rag(FAISS)까지 끌고 오는
+    planner.py를 지연 import한다: planner는 langgraph·google-genai까지 끌고 오는
     무거운 의존성이라, 2층을 실제로 쓸 때만(즉 1층이 비었을 때만) 문다."""
     import planner
 

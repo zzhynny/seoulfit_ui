@@ -276,16 +276,6 @@ def infer_area_from_fields(
     return infer_area(text=text, lat=lat, lng=lng)
 
 
-def infer_poi_area(poi: dict[str, Any]) -> str | None:
-    """Convenience wrapper used by rag.py — accepts a raw POI dict."""
-    text = " ".join([
-        str(poi.get("poi_name") or ""),
-        str(poi.get("address_en") or ""),
-        str(poi.get("address_ko") or ""),
-    ])
-    return infer_area(text=text, lat=poi.get("lat"), lng=poi.get("lng"))
-
-
 def get_area_center(area_or_location: str) -> tuple[float, float]:
     """Resolve a free-text location to a (lat, lng) center, defaulting to Seoul city center."""
     text = re.sub(r"\s+", " ", str(area_or_location or "").strip().lower())
