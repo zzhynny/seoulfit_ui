@@ -20,6 +20,7 @@ import json
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +74,13 @@ def _gemini_text(prompt: str) -> str:
 # ---------------------------------------------------------------------------
 
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
+
+# How many per-area / per-day fan-outs run at once. Each unit does its own
+# short sequential chain of blocking HTTP calls, so this is also the ceiling on
+# concurrent Places requests — 6 keeps a 7-day trip to roughly one round-trip's
+# wait without leaning on anyone's QPS limit. Threads, not async: every fetcher
+# below is blocking `requests`, which releases the GIL while it waits.
+_FANOUT_WORKERS = 6
 
 KAKAO_ROUTE_BASE = "https://m.map.kakao.com/scheme/route"
 WALK_KMH = 4.0
@@ -719,14 +727,27 @@ def build_google_supplement_by_areas(
     print(f"[planner] 요청 지역별 Google Places 보완 시작: {[_area_label(a) for a in requested_areas]}")
 
     all_places: list[dict[str, Any]] = []
-    for area in requested_areas:
-        places = build_google_supplement_for_area(
-            area=area,
-            purpose=purpose,
-            api_key=api_key,
-            day_segments=day_segments,
-        )
-        all_places.extend(places)
+    # Each area's sweep is independent -- its own 3-7 Places calls, no shared
+    # state -- so they overlap instead of queueing behind each other. On a 7-day
+    # trip that was the single longest wait in generation.
+    #
+    # .map, not as_completed: it yields in `requested_areas` order, and
+    # _dedupe_places keeps the FIRST copy of each duplicate. Completion order
+    # would hand the same trip a different winner run to run, so the itinerary
+    # would stop being reproducible from the same inputs.
+    with ThreadPoolExecutor(
+        max_workers=min(len(requested_areas), _FANOUT_WORKERS)
+    ) as pool:
+        for places in pool.map(
+            lambda area: build_google_supplement_for_area(
+                area=area,
+                purpose=purpose,
+                api_key=api_key,
+                day_segments=day_segments,
+            ),
+            requested_areas,
+        ):
+            all_places.extend(places)
 
     all_places = _dedupe_places(all_places)
     print(f"[planner] Google Places 총 {len(all_places)}개 보완 데이터 확보")
@@ -1888,19 +1909,33 @@ def _resolve_locked_meals(
         return locked
 
     slot_start, slot_end = meal_slots.MEAL_SLOTS[meal_type]
-    for day_num in range(1, expected_days + 1):
+
+    def _fill_one(day_num: int) -> tuple[int, dict[str, Any] | None]:
+        """One day's lookup. None means 'no slot to resolve', not 'unfilled'."""
         day_area = _primary_area_for_day({"day": day_num}, day_segments)
         if not day_area:
-            continue
+            return day_num, None
         try:
             weekday = weekday_for_day(trip_start_date, day_num, lang="en")
         except (ValueError, TypeError):
-            continue
-
-        result = meal_slots.fill_meal_slot(
+            return day_num, None
+        return day_num, meal_slots.fill_meal_slot(
             area=day_area, weekday=weekday, slot_start=slot_start, slot_end=slot_end,
             exclude_names=(exclude_by_day or {}).get(day_num, ()),
         )
+
+    # Days are independent *within* one meal_type: exclude_by_day is computed by
+    # the caller before this runs, never from a sibling day. The dinner -> lunch
+    # ordering lives in plan_node (lunch excludes dinner's picks) and stays
+    # strictly sequential -- only this inner per-day loop fans out.
+    with ThreadPoolExecutor(
+        max_workers=min(expected_days, _FANOUT_WORKERS)
+    ) as pool:
+        results = list(pool.map(_fill_one, range(1, expected_days + 1)))
+
+    for day_num, result in results:
+        if result is None:
+            continue
         if result["status"] == "filled":
             locked[day_num] = result
         else:
