@@ -1474,7 +1474,7 @@ def reorder_supplements(
     return route
 
 
-def make_critic_repair_node(base_dir: Any | None = None):
+def make_critic_repair_node():
     critic = CriticAgent()
     repairer = RepairAgent()
 
@@ -1556,12 +1556,16 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 "messages": [AIMessage(content=msg)],
             }
 
-        except Exception as e:
+        except Exception:
+            # The unrepaired itinerary is still on the state, so the traveller
+            # keeps a plan. Log the exception; don't send its text to the client.
+            import traceback
+            traceback.print_exc()
             return {
                 **state,
                 "current_step": "done",
                 "messages": [
-                    AIMessage(content=f"⚠️ Critic-Repair error: {e}")
+                    AIMessage(content="Your itinerary is ready, but its final check hit a problem.")
                 ],
             }
 

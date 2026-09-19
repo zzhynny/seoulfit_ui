@@ -41,7 +41,7 @@ SEOUL_AREA_CENTERS: dict[str, tuple[float, float]] = {
     "jamsil":     (37.5133, 127.1028),
     "dmc":        (37.5770, 126.8902),
     # 앱의 지역 질문(graph.py FIELD_EXTRACT["region"])이 제시하는 12개 중 이 둘만
-    # 여기 없어서, 사용자가 고르면 extract_requested_areas 가 빈 리스트를 돌려주고
+    # 여기 없어서, 사용자가 고르면 지역 추출이 빈 리스트를 돌려주고
     # Google Places 보완이 myeongdong 기본값으로 떨어졌다.
     "bukchon":    (37.5826, 126.9836),
     "apgujeong":  (37.5271, 127.0286),
@@ -208,29 +208,6 @@ def area_label(area: str) -> str:
     return _AREA_LABELS.get(area, area.title())
 
 
-def extract_requested_areas(
-    location: str | None,
-    purpose: str | None = None,
-) -> list[str]:
-    """Extract requested Seoul neighborhoods from user free-text.
-
-    Areas are returned in the order they first appear in the text (location is
-    scanned before purpose), so a "Gangnam and Hongdae" request maps Day 1 to
-    Gangnam — matching what the user actually typed rather than an arbitrary
-    alias-table order.
-    """
-    text = f"{location or ''} {purpose or ''}".lower()
-    positions: dict[str, int] = {}
-    for area, _alias, pattern in _ALIAS_PATTERNS:
-        match = pattern.search(text)
-        if not match:
-            continue
-        pos = match.start()
-        if area not in positions or pos < positions[area]:
-            positions[area] = pos
-    return sorted(positions, key=lambda area: positions[area])
-
-
 def infer_area(
     *,
     text: str | None = None,
@@ -274,15 +251,6 @@ def infer_area_from_fields(
     """Convenience wrapper used by planner.py — accepts name/address split fields."""
     text = f"{name or ''} {address or ''}"
     return infer_area(text=text, lat=lat, lng=lng)
-
-
-def get_area_center(area_or_location: str) -> tuple[float, float]:
-    """Resolve a free-text location to a (lat, lng) center, defaulting to Seoul city center."""
-    text = re.sub(r"\s+", " ", str(area_or_location or "").strip().lower())
-    inferred = infer_area(text=text)
-    if inferred and inferred in SEOUL_AREA_CENTERS:
-        return SEOUL_AREA_CENTERS[inferred]
-    return DEFAULT_CENTER
 
 
 def area_matches_requested(area: str | None, requested: str) -> bool:

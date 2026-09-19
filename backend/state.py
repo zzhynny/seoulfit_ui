@@ -11,12 +11,13 @@ class TravelState(TypedDict, total=False):
                                         # 항상 채워진다 — 못 읽으면 슬롯을 비우는 대신 다시 묻는다.
                                         # Generator(planner.py)는 아직 이 값을 쓰지 않음
                                         # — 넘겨받을 준비만 된 상태.
-    category: Optional[str]            # 관심사 카테고리
     restrictions: Optional[str]        # 식이/신체 제약
     companion: Optional[str]           # 동행자
     pace: Optional[str]                # 여행 스타일
     purpose: Optional[str]             # 여행 목적. 사용자 문장 원문 또는 "" (건너뜀).
                                         # retrieval 의 유사도 질의로 쓰인다.
+    purpose_keywords: Optional[list[dict[str, str]]]  # [{phrase, poi_type}] ≤2, purpose 에서
+                                        # 추출. 지역마다 Google Text Search 로 쓰인다. 대개 [].
     day_specs: Optional[list[dict[str, Any]]]  # [{day, region, interest}] — Day Planner
                                         # 화면이 정하고 POST /day-plan 이 쓴다.
                                         # day_plan 단계 진입 시 서버가 기본값을 채운다.

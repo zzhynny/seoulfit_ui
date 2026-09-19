@@ -32,7 +32,7 @@ def test_results_follow_request_order_not_completion_order() -> None:
     """The first-requested area must land first even when it finishes last."""
     delay = {area: (len(AREAS) - i) * 0.05 for i, area in enumerate(AREAS)}
 
-    def fake(*, area, purpose, api_key, day_segments):
+    def fake(*, area, keywords, api_key, day_segments):
         time.sleep(delay[area])          # earlier areas are the SLOWEST here
         return [_place(area, 0)]
 
@@ -40,7 +40,7 @@ def test_results_follow_request_order_not_completion_order() -> None:
     planner.build_google_supplement_for_area = fake
     try:
         out = planner.build_google_supplement_by_areas(
-            requested_areas=list(AREAS), location="", purpose="food",
+            requested_areas=list(AREAS), location="", keywords=[{"phrase": "food", "poi_type": "restaurant"}],
             api_key="test-key", day_segments=None,
         )
     finally:
@@ -51,7 +51,7 @@ def test_results_follow_request_order_not_completion_order() -> None:
 
 def test_duplicate_resolution_is_stable() -> None:
     """Same POI from two areas: the earlier-requested area always wins."""
-    def fake(*, area, purpose, api_key, day_segments):
+    def fake(*, area, keywords, api_key, day_segments):
         time.sleep(0.05 if area == "jongno" else 0.0)   # jongno finishes LAST
         return [{"poi_name": "Shared Cafe", "lat": 37.5, "lng": 127.0, "area": area}]
 
@@ -59,7 +59,7 @@ def test_duplicate_resolution_is_stable() -> None:
     planner.build_google_supplement_for_area = fake
     try:
         out = planner.build_google_supplement_by_areas(
-            requested_areas=["jongno", "hongdae"], location="", purpose="food",
+            requested_areas=["jongno", "hongdae"], location="", keywords=[{"phrase": "food", "poi_type": "restaurant"}],
             api_key="test-key", day_segments=None,
         )
     finally:
@@ -71,7 +71,7 @@ def test_duplicate_resolution_is_stable() -> None:
 
 def test_areas_actually_overlap() -> None:
     """Fails if this ever regresses to a plain for-loop."""
-    def fake(*, area, purpose, api_key, day_segments):
+    def fake(*, area, keywords, api_key, day_segments):
         time.sleep(0.2)
         return [_place(area, 0)]
 
@@ -80,7 +80,7 @@ def test_areas_actually_overlap() -> None:
     try:
         start = time.monotonic()
         planner.build_google_supplement_by_areas(
-            requested_areas=list(AREAS), location="", purpose="food",
+            requested_areas=list(AREAS), location="", keywords=[{"phrase": "food", "poi_type": "restaurant"}],
             api_key="test-key", day_segments=None,
         )
         elapsed = time.monotonic() - start

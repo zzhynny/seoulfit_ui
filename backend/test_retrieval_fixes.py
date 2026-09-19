@@ -2,7 +2,7 @@
 
   1. geo: Yongsan is a recognized area (alias + center).
   2. planner.build_google_supplement_for_area: an off-category purpose (K-beauty)
-     now pulls purpose-matching POIs via a generic text search (network seams
+     pulls purpose-keyword POIs via a text search (network seams
      monkeypatched — the one unavoidable mock).
 
 rag.segment_k and rag.rerank_courses_by_area were deleted in the retrieval
@@ -21,8 +21,6 @@ import geo  # noqa: E402
 
 
 def test_yongsan_recognized():
-    assert "yongsan" in geo.extract_requested_areas("Hongdae, Itaewon, and Yongsan"), \
-        "Yongsan should be extracted from a request string"
     assert geo.infer_area(text="서울특별시 용산구 한강대로 405") == "yongsan", \
         "a Yongsan-gu address should infer the 'yongsan' area"
     assert geo.area_matches_requested("itaewon", "yongsan"), \
@@ -48,13 +46,14 @@ def test_generic_supplement_for_offcategory_purpose():
     planner.fetch_text_places = fake_text
     try:
         out = planner.build_google_supplement_for_area(
-            area="seongsu", purpose="K-beauty and skincare", api_key="x")
+            area="seongsu", api_key="x",
+            keywords=[{"phrase": "K-beauty and skincare shops", "poi_type": "shopping"}])
     finally:
         planner.fetch_nearby_places, planner.fetch_text_places = orig_nearby, orig_text
 
     names = {p.get("poi_name") for p in out}
     assert "Olive Young Seongsu" in names, \
-        "off-category purpose should pull a purpose-matching POI via generic text search"
+        "a purpose keyword should pull a matching POI via text search"
 
 
 def main():

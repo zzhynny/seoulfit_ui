@@ -74,7 +74,7 @@ def test_google_places_span_never_carries_the_api_key(spy, monkeypatch):
 
     monkeypatch.setattr(planner.requests, "get", lambda *a, **k: _Resp())
     planner.build_google_supplement_by_areas(
-        requested_areas=["jongno"], location="Seoul", purpose="cafe",
+        requested_areas=["jongno"], location="Seoul", keywords=[{"phrase": "cafes", "poi_type": "cafe"}],
         api_key="SECRET-KEY-123", day_segments=None,
     )
 
@@ -100,7 +100,7 @@ def test_thread_fanout_spans_stay_attached_to_the_parent_run(spy, monkeypatch):
     def root():
         planner.build_google_supplement_by_areas(
             requested_areas=["jongno", "hongdae"], location="Seoul",
-            purpose="cafe", api_key="k", day_segments=None,
+            keywords=[{"phrase": "cafes", "poi_type": "cafe"}], api_key="k", day_segments=None,
         )
 
     root()

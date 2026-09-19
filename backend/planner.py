@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -59,17 +61,34 @@ def set_planner_api_key(key: str) -> None:
     _PLANNER_GEMINI_KEY = key
 
 
+# Seconds before each retry of a rate-limited / overloaded Gemini call. With
+# several travellers generating at once a 429 is the likeliest failure, and it
+# clears in seconds. Jittered so a burst of users doesn't retry in lockstep.
+# Worst case adds ~12s -- well inside the app's 180s generation timeout.
+_GEMINI_RETRY_DELAYS = (2.0, 6.0)
+_GEMINI_RETRYABLE = {429, 500, 503}
+
+
 @traceable(run_type="llm", name="itinerary_generation")
 def _gemini_text(prompt: str) -> str:
     """Call Gemini and return raw text (JSON expected from caller)."""
     from google import genai as _genai
+    from google.genai import errors as _errors
     client = _genai.Client(api_key=_PLANNER_GEMINI_KEY)
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config={"response_mime_type": "application/json"},
-    )
-    return response.text or ""
+    for delay in (*_GEMINI_RETRY_DELAYS, None):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt,
+                config={"response_mime_type": "application/json"},
+            )
+            return response.text or ""
+        except _errors.APIError as e:
+            if delay is None or e.code not in _GEMINI_RETRYABLE:
+                raise
+            print(f"[planner] Gemini {e.code}, retrying in ~{delay:.0f}s")
+            time.sleep(delay * random.uniform(1.0, 1.5))
+    raise AssertionError("unreachable")
 
 
 # ---------------------------------------------------------------------------
@@ -236,6 +255,11 @@ def _stamp_true_area(
     return kept
 
 
+# Minutes a supplement stop is budgeted for, by poi_type. Cafes are a sit-down
+# break, malls take a while to walk; everything else gets the planner's 60.
+_STAY_MINUTES = {"cafe": 45, "shopping": 75, "shopping_mall": 75}
+
+
 def fetch_nearby_places(
     *,
     area: str,
@@ -290,14 +314,6 @@ def fetch_nearby_places(
         if "lat" not in loc or "lng" not in loc:
             continue
 
-        stay = 60
-        if place_type == "cafe":
-            stay = 45
-        elif place_type == "restaurant":
-            stay = 60
-        elif place_type == "shopping_mall":
-            stay = 75
-
         places.append({
             "poi_name": r.get("name", ""),
             "poi_type": place_type,
@@ -306,7 +322,7 @@ def fetch_nearby_places(
             "lat": loc["lat"],
             "lng": loc["lng"],
             "rating": r.get("rating"),
-            "estimated_stay_time": stay,
+            "estimated_stay_time": _STAY_MINUTES.get(place_type, 60),
             "source": f"Google Places ({_area_label(area)})",
             "area": area,
             "place_id": r.get("place_id", ""),
@@ -383,7 +399,7 @@ def fetch_text_places(
             "lat": loc["lat"],
             "lng": loc["lng"],
             "rating": r.get("rating"),
-            "estimated_stay_time": 60,
+            "estimated_stay_time": _STAY_MINUTES.get(poi_type, 60),
             "source": f"Google Places Text ({_area_label(area)})",
             "area": area,
             "place_id": r.get("place_id", ""),
@@ -480,101 +496,15 @@ def derive_closed_weekdays(opening_hours: dict[str, Any] | None) -> list[str] | 
     return closed
 
 
-def fetch_kpop_places_for_area(
-    *,
-    area: str,
-    api_key: str,
-    purpose: str,
-    max_results: int = 5,
-    center: tuple[float, float] | None = None,
-) -> list[dict[str, Any]]:
-    if not api_key:
-        return []
-
-    purpose_lower = purpose.lower()
-
-    artists = [
-        "bts", "blackpink", "aespa", "newjeans", "ive", "stray kids",
-        "twice", "exo", "seventeen", "txt", "enhypen", "idol", "kpop", "k-pop",
-    ]
-
-    detected = [a for a in artists if a in purpose_lower]
-    area_name = _area_label(area)
-
-    queries: list[str] = []
-
-    if detected:
-        for artist in detected[:2]:
-            artist_clean = artist.replace("k-pop", "kpop")
-            queries.append(f"{artist_clean} store {area_name} Seoul")
-            queries.append(f"{artist_clean} cafe {area_name} Seoul")
-
-    queries.extend([
-        f"kpop store {area_name} Seoul",
-        f"kpop merchandise {area_name} Seoul",
-        f"kpop popup store {area_name} Seoul",
-    ])
-
-    all_places: list[dict[str, Any]] = []
-    seen: set[str] = set()
-
-    for q in queries[:4]:
-        places = fetch_text_places(
-            area=area,
-            query=q,
-            api_key=api_key,
-            radius=3500,
-            min_rating=0.0,
-            max_results=3,
-            poi_type="kpop_landmark",
-            center=center,
-        )
-        for p in places:
-            key = _normalize_text(p.get("poi_name"))
-            if key and key not in seen:
-                seen.add(key)
-                all_places.append(p)
-        time.sleep(0.2)
-
-    return all_places[:max_results]
-
-
 # Anchor-centred search. SEOUL_AREA_CENTERS holds one hand-placed point per
 # neighbourhood, but a day's courses cluster wherever the course actually runs.
 # Measured against the current dataset, that fixed point sits a median ~1km --
 # and up to 3.7km in Mapo, 3.5km in Gangnam -- from the POIs the day will
 # actually visit, so the search circle can miss the very stops it is meant to
 # surround (reorder_supplements' docstring notes the same symptom downstream).
-# What each Day Planner interest label actually means as a search phrase. The
-# catch-all Text Search below used to be handed the label verbatim, so Google
-# received "Culture & History, Food & Cafes in Jongno Seoul" -- a dropdown label
-# with a comma in it, not a phrase anyone would type.
-#
-# None means "already covered": Food & Cafes has the cafe and restaurant sweeps,
-# Shopping has the shopping_mall sweep, K-POP has its own text queries. A third
-# search for those is a paid duplicate, so the catch-all skips them. That leaves
-# it doing what its comment always said -- the interests with no typed sweep.
-_INTEREST_QUERIES: dict[str, str | None] = {
-    "Culture & History": "historic sites, palaces and museums",
-    "Nature & Relaxation": "parks, gardens and riverside walks",
-    "Food & Cafes": None,
-    "Shopping": None,
-    "K-POP & Hallyu": None,
-}
-
-
-def _generic_query_terms(purpose: str) -> list[str]:
-    """Search phrases for the catch-all sweep, or [] to skip it.
-
-    A purpose made entirely of known interest labels maps to their phrases
-    (minus the ones with a typed sweep). Anything else is a free-form purpose
-    from a caller outside the Day Planner flow, and is searched as written --
-    that is the long tail the catch-all was added for.
-    """
-    interests = [i.strip() for i in purpose.split(",") if i.strip()]
-    if interests and all(i in _INTEREST_QUERIES for i in interests):
-        return [q for i in interests if (q := _INTEREST_QUERIES[i])]
-    return [purpose.strip()] if purpose.strip() else []
+# A purpose keyword's rating floor. K-pop pop-up and merch stores are routinely
+# unrated, and a 4.0 floor dropped every one of them.
+_MIN_RATING = {"kpop_landmark": 0.0}
 
 
 _ANCHOR_MIN_POINTS = 3          # below this the centroid is one outlier away from nonsense
@@ -643,197 +573,62 @@ def _anchor_search_origin(
 def build_google_supplement_for_area(
     *,
     area: str,
-    purpose: str,
+    keywords: list[dict[str, str]],
     api_key: str,
     day_segments: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Collect Google Places supplement for one requested area."""
-    if not api_key:
+    """One "{phrase} in {area} Seoul" Text Search per purpose keyword.
+
+    The keywords are what the traveller named in their purpose
+    (graph._extract_purpose_keywords). The day's interest is not searched: the
+    anchor courses are already filtered by it, so a search for it only paid for
+    places the plan already had. No keywords, no calls.
+    """
+    if not api_key or not keywords:
         return []
 
     origin = _anchor_search_origin(area, day_segments)
     center = origin[0] if origin else None
 
-    def _radius(default: int) -> int:
-        """Widen a sweep only when the day's own POIs are spread out enough to
-        need it -- never shrink below the per-type default, which encodes how
-        sparse that category is (shopping malls need more room than cafes).
-        Growing it for its own sake would backfire: these Nearby Searches send
-        no `rankby`, so Google ranks by prominence, and a bigger circle pulls in
-        famous places further away instead of closer ones."""
-        if not origin:
-            return default
-        return min(max(default, origin[1]), _ANCHOR_RADIUS_MAX_M)
+    # Widened only when the day's own POIs are spread out enough to need it,
+    # never below 2500m. Growing it for its own sake backfires: Google ranks by
+    # prominence, so a bigger circle pulls in famous places further away
+    # instead of closer ones.
+    radius = min(max(2500, origin[1]), _ANCHOR_RADIUS_MAX_M) if origin else 2500
 
     if origin:
         print(f"[Google Places][{_area_label(area)}] 앵커 중심 검색 "
               f"({origin[0][0]:.4f},{origin[0][1]:.4f}) r={origin[1]}m")
 
-    purpose_lower = purpose.lower()
     supplement: list[dict[str, Any]] = []
-
-    # Cafes are essential for Seoul travel and the current project use case.
-    need_cafe = any(k in purpose_lower for k in ["cafe", "coffee", "relax", "카페"])
-    if need_cafe:
-        cafes = fetch_nearby_places(
+    for kw in keywords:
+        phrase, poi_type = kw["phrase"], kw["poi_type"]
+        found = fetch_text_places(
             area=area,
-            place_type="cafe",
+            query=f"{phrase} in {_area_label(area)} Seoul",
             api_key=api_key,
-            radius=_radius(1800),
-            min_rating=4.1,
+            radius=radius,
+            min_rating=_MIN_RATING.get(poi_type, 4.0),
             max_results=5,
+            poi_type=poi_type,
             center=center,
         )
-        if len(cafes) < 3:
-            cafes += fetch_text_places(
-                area=area,
-                query=f"best cafes in {_area_label(area)} Seoul",
-                api_key=api_key,
-                radius=_radius(2500),
-                min_rating=4.0,
-                max_results=5 - len(cafes),
-                poi_type="cafe",
-                center=center,
-            )
-        supplement.extend(cafes)
-        print(f"[Google Places][{_area_label(area)}] 카페 {len(cafes)}개 추가")
-
-    # Gated like the cafe sweep above -- it used to be the one branch that ran
-    # unconditionally, with no comment saying why. Every day already gets a
-    # lunch and a dinner from meal_slots (Michelin tier 1, Google tier 2), so
-    # sweeping for more restaurants on a Culture or Nature day bought POIs the
-    # traveller already has, then _candidate_items_for_area ranked them ahead of
-    # sightseeing when backfilling a short day.
-    #
-    # "relax" is deliberately NOT a keyword here (it is for cafes): Nature &
-    # Relaxation matching it is incidental, and a park day does not want a
-    # restaurant sweep. meal_slots' own tier-2 fallback calls
-    # fetch_nearby_places(area, "restaurant") directly and is unaffected, as is
-    # /swap-candidates, which runs google_fallback_candidates when the pool is
-    # empty -- so nothing loses its guaranteed meal or its swap options.
-    need_restaurant = any(k in purpose_lower for k in ["food", "restaurant", "eat", "맛집"])
-    if need_restaurant:
-        restaurants = fetch_nearby_places(
-            area=area,
-            place_type="restaurant",
-            api_key=api_key,
-            radius=_radius(1800),
-            min_rating=4.0,
-            max_results=5,
-            center=center,
-        )
-        if len(restaurants) < 3:
-            restaurants += fetch_text_places(
-                area=area,
-                query=f"popular restaurants in {_area_label(area)} Seoul",
-                api_key=api_key,
-                radius=_radius(2500),
-                min_rating=4.0,
-                max_results=5 - len(restaurants),
-                poi_type="restaurant",
-                center=center,
-            )
-        supplement.extend(restaurants)
-        print(f"[Google Places][{_area_label(area)}] 식당 {len(restaurants)}개 추가")
-
-    if any(k in purpose_lower for k in ["kpop", "k-pop", "bts", "blackpink", "idol", "아이돌"]):
-        kpop_places = fetch_kpop_places_for_area(
-            area=area,
-            api_key=api_key,
-            purpose=purpose,
-            max_results=5,
-            center=center,
-        )
-        supplement.extend(kpop_places)
-        print(f"[Google Places][{_area_label(area)}] K-POP 장소 {len(kpop_places)}개 추가")
-
-    if any(k in purpose_lower for k in ["shopping", "shop", "fashion", "쇼핑"]):
-        shops = fetch_nearby_places(
-            area=area,
-            place_type="shopping_mall",
-            api_key=api_key,
-            radius=_radius(2200),
-            min_rating=4.0,
-            max_results=3,
-            center=center,
-        )
-        if len(shops) < 2:
-            shops += fetch_text_places(
-                area=area,
-                query=f"shopping in {_area_label(area)} Seoul",
-                api_key=api_key,
-                radius=_radius(2500),
-                min_rating=4.0,
-                max_results=3 - len(shops),
-                poi_type="shopping",
-                center=center,
-            )
-        supplement.extend(shops)
-        print(f"[Google Places][{_area_label(area)}] 쇼핑 {len(shops)}개 추가")
-
-    # Catch-all for the interests with no typed sweep above. The area re-check
-    # that used to live here now runs inside both fetchers (_stamp_true_area),
-    # so every sweep gets it, not just this one.
-    # One search per term rather than one joined query: gluing two phrases with
-    # "and" produced "historic sites, palaces and museums and parks, gardens and
-    # riverside walks", which is not a query Google can do much with. At most two
-    # terms are possible (_INTEREST_QUERIES has two non-None entries), so this is
-    # one extra call only when the traveller picked both uncovered interests for
-    # the same area.
-    terms = _generic_query_terms(purpose)
-    for term in terms:
-        generic = fetch_text_places(
-            area=area,
-            query=f"{term} in {_area_label(area)} Seoul",
-            api_key=api_key,
-            radius=_radius(2500),
-            min_rating=4.0,
-            max_results=max(2, 5 // len(terms)),
-            center=center,
-        )
-        if generic:
-            supplement.extend(generic)
-            print(f"[Google Places][{_area_label(area)}] 목적 기반 {len(generic)}개 추가 ({term})")
+        supplement.extend(found)
+        print(f"[Google Places][{_area_label(area)}] {phrase}: {len(found)}개 추가")
 
     return _dedupe_places(supplement)
-
-
-def _interests_for_area(
-    area: str, day_segments: list[dict[str, Any]] | None, fallback: str,
-) -> str:
-    """The interests the traveller picked for the days assigned to `area`.
-
-    plan_node passes _trip_interests(state) -- every day's interest joined into
-    one trip-wide string -- and that same string used to drive the sweeps for
-    every area. A Jongno/Culture + Hongdae/Shopping trip therefore ran the
-    shopping sweep over Jongno and searched Hongdae for history, neither of
-    which anyone asked for. day_segments already carries each day's own choice
-    as purpose_hint, so read it from there.
-
-    Falls back to the trip-wide string when there are no segments for this area
-    (callers outside the Day Planner flow, and the tests).
-    """
-    hints = [
-        (seg.get("purpose_hint") or "").strip()
-        for seg in (day_segments or [])
-        if seg.get("area") == area
-    ]
-    # dict.fromkeys: an area used on several days keeps each distinct interest,
-    # in day order, without repeating one that appears twice.
-    hints = [h for h in dict.fromkeys(hints) if h]
-    return ", ".join(hints) if hints else fallback
 
 
 def build_google_supplement_by_areas(
     *,
     requested_areas: list[str],
     location: str,
-    purpose: str,
+    keywords: list[dict[str, str]],
     api_key: str,
     day_segments: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Collect Google Places supplement for every requested area."""
-    if not api_key:
+    if not api_key or not keywords:
         return []
 
     if not requested_areas:
@@ -849,7 +644,7 @@ def build_google_supplement_by_areas(
     print(f"[planner] 요청 지역별 Google Places 보완 시작: {[_area_label(a) for a in requested_areas]}")
 
     all_places: list[dict[str, Any]] = []
-    # Each area's sweep is independent -- its own 3-7 Places calls, no shared
+    # Each area's sweep is independent -- one Places call per keyword, no shared
     # state -- so they overlap instead of queueing behind each other. On a 7-day
     # trip that was the single longest wait in generation.
     #
@@ -869,7 +664,7 @@ def build_google_supplement_by_areas(
         with tracing_context(parent=_parent):
             return build_google_supplement_for_area(
                 area=area,
-                purpose=_interests_for_area(area, day_segments, purpose),
+                keywords=keywords,
                 api_key=api_key,
                 day_segments=day_segments,
             )
@@ -2285,7 +2080,7 @@ def plan_node(state: TravelState) -> TravelState:
         google_supplement = build_google_supplement_by_areas(
             requested_areas=requested_areas,
             location=location,
-            purpose=purpose,
+            keywords=state.get("purpose_keywords") or [],
             api_key=GOOGLE_PLACES_API_KEY,
             day_segments=day_segments,
         )
@@ -2339,17 +2134,20 @@ def plan_node(state: TravelState) -> TravelState:
 
         itinerary = _normalize_sources(itinerary, courses)
 
-    except json.JSONDecodeError as e:
+    except Exception:
+        # Back to "confirm", not "done": a failure with no itinerary on "done"
+        # fell through route_entry to collect -> day_plan, where the app's
+        # "confirm" does nothing, so every "Try again" failed the same way.
+        # From "confirm" the next "confirm" regenerates. The exception text
+        # is logged, never sent -- same rule as api._INTERNAL_ERROR.
+        traceback.print_exc()
         return {
             **state,
-            "current_step": "done",
-            "messages": [AIMessage(content=f"⚠️ Planner returned invalid JSON: {e}")],
-        }
-    except Exception as e:
-        return {
-            **state,
-            "current_step": "done",
-            "messages": [AIMessage(content=f"⚠️ Planning failed: {e}")],
+            "current_step": "confirm",
+            "messages": [AIMessage(content=(
+                "Sorry, something went wrong while building your itinerary. "
+                "Please try again."
+            ))],
         }
 
     summary = itinerary.get("summary", "")

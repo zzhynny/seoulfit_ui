@@ -103,7 +103,7 @@ def test_origin_reaches_the_actual_google_call() -> None:
     try:
         coords = [(37.5560 + i * 0.002, 126.9230 + i * 0.002) for i in range(5)]
         planner.build_google_supplement_for_area(
-            area="hongdae", purpose="cafe", api_key="test-key",
+            area="hongdae", keywords=[{"phrase": "cafes", "poi_type": "cafe"}], api_key="test-key",
             day_segments=[_seg("hongdae", coords)],
         )
     finally:
@@ -118,9 +118,9 @@ def test_origin_reaches_the_actual_google_call() -> None:
     (lat, lng) = centers.pop()
     assert (lat, lng) != fixed, "still searching from the hand-placed point"
 
-    # Per-type radii are floors, never shrunk: a tight cluster keeps 1800m for cafes.
+    # The radius is a floor, never shrunk: a tight cluster keeps 2500m.
     for c in calls:
-        assert c["radius"] >= 1800, c
+        assert c["radius"] >= 2500, c
         assert c["radius"] <= _ANCHOR_RADIUS_MAX_M, c
 
 
@@ -128,38 +128,30 @@ def test_origin_reaches_the_actual_google_call() -> None:
 # What each sweep is told to look for, and what it is allowed to bring back
 # ---------------------------------------------------------------------------
 
-def test_each_area_is_swept_for_its_own_days_interests() -> None:
-    """plan_node passes every day's interest joined into one string. Each area
-    must get only the interests of the days actually assigned to it."""
-    segs = [
-        {"area": "jongno", "purpose_hint": "Culture & History"},
-        {"area": "hongdae", "purpose_hint": "Shopping"},
-        {"area": "hongdae", "purpose_hint": "Food & Cafes"},
-    ]
-    trip_wide = "Culture & History, Shopping, Food & Cafes"
+def test_each_purpose_keyword_is_one_search_with_its_own_poi_type() -> None:
+    """The day's interest is not searched -- the anchors are already filtered by
+    it. Only what the traveller named in their purpose is, one call each."""
+    calls: list[dict] = []
+    orig = planner.fetch_text_places
+    planner.fetch_text_places = lambda **kw: calls.append(kw) or []
+    try:
+        planner.build_google_supplement_for_area(
+            area="hongdae", keywords=[], api_key="k")
+        assert calls == [], "no keywords must mean no Google calls"
 
-    assert planner._interests_for_area("jongno", segs, trip_wide) == "Culture & History"
-    assert planner._interests_for_area("hongdae", segs, trip_wide) == "Shopping, Food & Cafes"
-    # No segment for this area (callers outside the Day Planner flow, and tests).
-    assert planner._interests_for_area("seongsu", segs, trip_wide) == trip_wide
+        planner.build_google_supplement_for_area(
+            area="hongdae", api_key="k", keywords=[
+                {"phrase": "rooftop bars", "poi_type": "tourist_spot"},
+                {"phrase": "BTS merch", "poi_type": "kpop_landmark"},
+            ])
+    finally:
+        planner.fetch_text_places = orig
 
-
-def test_catch_all_search_sends_a_phrase_not_a_dropdown_label() -> None:
-    terms = planner._generic_query_terms("Culture & History")
-    assert terms == ["historic sites, palaces and museums"]
-
-    # Interests that already have their own typed sweep get no second search.
-    for covered in ("Food & Cafes", "Shopping", "K-POP & Hallyu"):
-        assert planner._generic_query_terms(covered) == [], covered
-    assert planner._generic_query_terms("Shopping, K-POP & Hallyu") == []
-
-    # Both uncovered interests on one area -> one search each, never glued into
-    # "...museums and parks, gardens and..." which Google can do nothing with.
-    assert len(planner._generic_query_terms("Culture & History, Nature & Relaxation")) == 2
-
-    # A free-form purpose is still searched as written -- the long tail.
-    assert planner._generic_query_terms("vintage record shops") == ["vintage record shops"]
-    assert planner._generic_query_terms("") == []
+    assert [c["query"] for c in calls] == [
+        "rooftop bars in Hongdae Seoul", "BTS merch in Hongdae Seoul"], calls
+    assert [c["poi_type"] for c in calls] == ["tourist_spot", "kpop_landmark"]
+    # K-pop stores are routinely unrated -- a 4.0 floor dropped all of them.
+    assert [c["min_rating"] for c in calls] == [4.0, 0.0]
 
 
 def test_a_sweep_cannot_stamp_an_out_of_area_place_with_the_requested_area() -> None:
@@ -190,7 +182,6 @@ if __name__ == "__main__":
     test_out_of_area_poi_does_not_drag_the_centre()
     test_real_dataset_gangnam_falls_back()
     test_origin_reaches_the_actual_google_call()
-    test_each_area_is_swept_for_its_own_days_interests()
-    test_catch_all_search_sends_a_phrase_not_a_dropdown_label()
+    test_each_purpose_keyword_is_one_search_with_its_own_poi_type()
     test_a_sweep_cannot_stamp_an_out_of_area_place_with_the_requested_area()
     print("all anchor search self-checks passed")

@@ -177,29 +177,28 @@ def test_backfill_fills_a_short_day_with_sights_not_more_restaurants() -> None:
     assert len(pois) - len(eating) >= 3, f"day is mostly food: {[p['name'] for p in pois]}"
 
 
-def test_a_restaurant_sweep_only_runs_when_the_traveller_asked_for_food() -> None:
-    """The sweep used to run on every area regardless of interest, duplicating
-    the locked meals. meal_slots' own tier-2 fallback and /swap-candidates each
-    call Google themselves, so nothing downstream depends on this one."""
+def test_a_restaurant_search_only_runs_when_the_purpose_names_food() -> None:
+    """The supplement used to sweep for restaurants on every area regardless of
+    interest, duplicating the locked meals. It now searches only what the
+    traveller's purpose named. meal_slots' own tier-2 fallback and
+    /swap-candidates each call Google themselves, so nothing downstream depends
+    on this one."""
     calls: list[str] = []
     orig_nearby, orig_text = planner.fetch_nearby_places, planner.fetch_text_places
     planner.fetch_nearby_places = lambda **kw: calls.append(kw["place_type"]) or []
-    planner.fetch_text_places = lambda **kw: calls.append("text") or []
+    planner.fetch_text_places = lambda **kw: calls.append(kw.get("poi_type")) or []
     try:
-        seen = {}
-        for interest in ("Culture & History", "Nature & Relaxation", "Shopping",
-                         "K-POP & Hallyu", "Food & Cafes"):
-            calls.clear()
-            planner.build_google_supplement_for_area(
-                area="hongdae", purpose=interest, api_key="k", day_segments=None)
-            seen[interest] = "restaurant" in calls
+        planner.build_google_supplement_for_area(
+            area="hongdae", keywords=[{"phrase": "rooftop bars", "poi_type": "tourist_spot"}],
+            api_key="k", day_segments=None)
+        assert "restaurant" not in calls, calls
+
+        planner.build_google_supplement_for_area(
+            area="hongdae", keywords=[{"phrase": "street food", "poi_type": "restaurant"}],
+            api_key="k", day_segments=None)
+        assert calls.count("restaurant") == 1, calls
     finally:
         planner.fetch_nearby_places, planner.fetch_text_places = orig_nearby, orig_text
-
-    assert seen["Food & Cafes"], "a food trip still needs the restaurant sweep"
-    for interest, swept in seen.items():
-        if interest != "Food & Cafes":
-            assert not swept, f"{interest} paid for a restaurant sweep it did not ask for"
 
 
 if __name__ == "__main__":
@@ -208,5 +207,5 @@ if __name__ == "__main__":
     test_repair_pass_separates_the_two_meals()
     test_route_tidy_does_not_pull_the_meals_back_together()
     test_backfill_fills_a_short_day_with_sights_not_more_restaurants()
-    test_a_restaurant_sweep_only_runs_when_the_traveller_asked_for_food()
+    test_a_restaurant_search_only_runs_when_the_purpose_names_food()
     print("all meal placement self-checks passed")

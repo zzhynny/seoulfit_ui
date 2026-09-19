@@ -76,6 +76,7 @@ one your own proxy appended and the client cannot control.
 |---|---|
 | `FRONTEND_ORIGIN` | the deployed web origin, comma-separated. Never `*` — the app refuses to start. Unset means localhost-only, and the deployed frontend is CORS-blocked. |
 | `TRUST_PROXY` | `1` behind a proxy (default), `0` when exposed directly |
+| `RATE_LIMIT_PER_MIN` | per-IP budget on the paid endpoints, default `600`. Everyone on one Wi-Fi or carrier NAT shares a bucket, so raise it for a large group on one network |
 | uvicorn flags | `--no-proxy-headers`, and **one worker only** — the LangGraph `MemorySaver` is per-process, so a second worker resets conversations at random |
 | Flutter build | `flutter build web --dart-define=API_BASE_URL=https://<api-host>` |
 | Keep warm | cold start is ~14s / ~336MB RSS; ping `/healthz` every 10 min so no judge eats that |

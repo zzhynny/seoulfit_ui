@@ -45,6 +45,7 @@ set_verbose(False)
 from dotenv import load_dotenv
 from pathlib import Path
 import datetime as _dt
+import functools
 import re as _re
 import threading as _threading
 import time as _time
@@ -160,8 +161,6 @@ _METERED_PATHS = {
     # 아래 넷은 리스트를 받아 항목마다 외부 호출을 한다. 한 요청이 수백 회로
     # 불어나므로 요청 수로 재는 이 리밋만으로는 부족하고, 모델 쪽 max_length
     # 와 같이 걸어야 의미가 있다.
-    "/transit-legs",       # 정거장 쌍마다 ODsay 1회 + 캐시 파일 재작성
-    "/poi-closure-check",  # 4건 묶음마다 Gemini 검색 그라운딩 (건당 과금)
     "/revalidate",         # Critic → Repair → Critic, 요청당 Gemini 여러 번
     "/swap-candidates",    # Google Places 유료 호출로 떨어질 수 있다
     "/events",             # 공사 API 2회 (캐시 miss 시)
@@ -170,7 +169,12 @@ _METERED_PATHS = {
 # and each fires fetchPoiDetail on build, and final_itinerary_map_screen
 # fires summary + image per stop, so a legitimate screen load is already a
 # 20-40 call burst. An abuse loop does thousands, so the gap is wide enough.
-_RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MIN", "120"))
+#
+# 600, not 120: the bucket is per IP, and a classroom on campus Wi-Fi or phones
+# behind a carrier NAT all share one. At 120 a handful of people opening their
+# itineraries in the same minute got 429s. 600 covers ~15-20 of them and still
+# caps a scripted loop at 10 requests a second.
+_RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MIN", "600"))
 _RATE_WINDOW = 60.0
 # 프록시 뒤인가. Render/Fly 처럼 TLS 를 종단하는 앞단이 있으면 1(기본).
 # 직접 인터넷에 노출한다면 0 으로 두어야 X-Forwarded-For 를 아예 안 믿는다.
@@ -335,6 +339,33 @@ def _require_thread_id(thread_id: str) -> str:
     return thread_id
 
 
+# One graph turn per session at a time. The app gives up on generation after
+# 180s while the server keeps going; a retry then resumed from the last
+# checkpoint (route_entry -> retrieve/plan) and ran a second generation
+# alongside the first -- double the Gemini/Places spend, last write wins. The
+# same read-modify-write race hit /revalidate and /swap-candidates. Blocking,
+# not 409: the retry waits for the run in flight and returns its itinerary.
+#
+# ponytail: one small Lock per session id, never evicted -- grows with
+# sessions exactly like MemorySaver does, and goes away with it on restart.
+_session_locks: dict[str, _threading.Lock] = {}
+_session_locks_guard = _threading.Lock()
+
+
+def _session_lock(thread_id: str) -> _threading.Lock:
+    with _session_locks_guard:
+        return _session_locks.setdefault(thread_id, _threading.Lock())
+
+
+def _one_turn_per_session(endpoint):
+    """Serialise an endpoint whose body (`req`) names a thread_id."""
+    @functools.wraps(endpoint)
+    def wrapper(req, *args, **kwargs):
+        with _session_lock(_require_thread_id(req.thread_id)):
+            return endpoint(req, *args, **kwargs)
+    return wrapper
+
+
 class ChatRequest(BaseModel):
     thread_id: str
     # None on first call → triggers greeting. 상한은 가드레일과 플래너 양쪽
@@ -345,7 +376,6 @@ class ChatRequest(BaseModel):
 
 class StateResponse(BaseModel):
     travel_dates: Optional[str] = None
-    category: Optional[str] = None
     restrictions: Optional[str] = None
     companion: Optional[str] = None
     pace: Optional[str] = None
@@ -358,30 +388,6 @@ class StateResponse(BaseModel):
     confirmed: bool
     reply: Optional[str]
     itinerary: Optional[dict] = None
-
-
-class TransitStop(BaseModel):
-    name: Optional[str] = None
-    lat: Optional[float] = None
-    lng: Optional[float] = None
-
-
-class TransitLegsRequest(BaseModel):
-    # ordered list of selected stops. 쌍마다 ODsay 1회 + 캐시 파일 재작성이라
-    # 상한이 없으면 한 요청이 수백 초 동안 워커를 붙잡는다. 하루 일정이 15~25개다.
-    stops: list[TransitStop] = Field(max_length=40)
-
-
-class ClosureCheckItem(BaseModel):
-    poi_name: str = Field(max_length=200)
-    address: str = Field("", max_length=300)
-    visit_date: str = Field(max_length=10)   # "YYYY-MM-DD"
-
-
-class ClosureCheckRequest(BaseModel):
-    # 한 일정당 15~25개 예상. 4건 묶음마다 Gemini 검색 그라운딩(건당 과금)이라
-    # 상한 없이 받으면 한 요청으로 수십 분어치 과금이 난다.
-    items: list[ClosureCheckItem] = Field(max_length=40)
 
 
 class CheckinRequest(BaseModel):
@@ -422,8 +428,6 @@ class SwapCandidatesRequest(BaseModel):
     # 호텔 자리에 레스토랑이 뜨는 버그가 났다. 프론트가 보내는 이 값을
     # pool 조회보다 우선해서 항상 같은 카테고리로만 후보를 좁힌다.
     current_poi_type: Optional[str] = None
-    time_window: Optional[str] = None
-    purpose: Optional[str] = None
     excluded_ids: list[str] = []
 
 
@@ -440,7 +444,7 @@ def _get_state(thread_id: str) -> dict:
     if snapshot and snapshot.values:
         return snapshot.values
     return {
-        "travel_dates": None, "category": None, "restrictions": None,
+        "travel_dates": None, "restrictions": None,
         "companion": None, "pace": None, "purpose": None, "day_specs": None,
         "current_step": "start", "confirmed": False, "messages": [],
     }
@@ -457,7 +461,6 @@ def _state_response(state: dict, *, reply: Optional[str] = None) -> StateRespons
     """StateResponse 를 만드는 유일한 곳. 필드가 늘 때마다 세 군데를 고치던 걸 막는다."""
     return StateResponse(
         travel_dates=state.get("travel_dates"),
-        category=state.get("category"),
         restrictions=state.get("restrictions"),
         companion=state.get("companion"),
         pace=state.get("pace"),
@@ -484,6 +487,7 @@ def _run(thread_id: str, user_input: Optional[str]) -> dict:
 # ---------------------------------------------------------------------------
 
 @app.post("/chat", response_model=StateResponse)
+@_one_turn_per_session
 def chat(req: ChatRequest):
     """Send a message (or None for the initial greeting) and get back
     the updated state plus the latest AI reply."""
@@ -520,7 +524,8 @@ def get_state(thread_id: str):
 @app.post("/reset")
 def reset(thread_id: str):
     """Clear one thread's conversation without touching any other sessions."""
-    clear_thread(_require_thread_id(thread_id))
+    with _session_lock(_require_thread_id(thread_id)):
+        clear_thread(thread_id)
     return {"status": "reset"}
 
 
@@ -536,6 +541,7 @@ class DayPlanRequest(BaseModel):
 
 
 @app.post("/day-plan", response_model=StateResponse)
+@_one_turn_per_session
 def day_plan(req: DayPlanRequest):
     """Day Planner 화면이 정한 날짜별 지역·관심사를 저장하고 confirm 으로 넘긴다.
 
@@ -949,49 +955,6 @@ def _chip_filter(events: list[dict], category: str | None) -> list[dict]:
     return [{k: v for k, v in e.items() if k != "_chip"} for e in rows]
 
 
-@app.post("/transit-legs")
-def transit_legs(req: TransitLegsRequest):
-    """Recompute distance / walk / car / Kakao links / ODsay public-transit
-    options for an arbitrary ordered list of stops.
-
-    Used when the user re-selects a subset of stops on the route screen, so the
-    transit between the *new* consecutive pairs is real ODsay data rather than a
-    straight-line estimate. Returns one leg per consecutive pair (N-1 legs)."""
-    from planner import compute_transit_legs
-
-    pois = [
-        {"name": s.name, "lat": s.lat, "lng": s.lng}
-        for s in req.stops
-    ]
-    try:
-        legs = compute_transit_legs(pois)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
-    return {"transit_legs": legs}
-
-
-@app.post("/poi-closure-check")
-def poi_closure_check(req: ClosureCheckRequest):
-    """Final Route 화면에서, 확정된 stops + 실제 방문일(visit_date)로 임시휴관
-    여부를 Google Search grounding으로 확인한다.
-
-    Best-effort: 어떤 실패든(API 오류, 타임아웃, 파싱 실패) 절대 500을 내지
-    않고 해당 항목을 unknown으로 채워 반환한다 — 이 체크가 일정 생성/표시
-    자체를 막아서는 안 된다."""
-    from closure_check import check_batch, _unknown_result
-
-    tuples = [(it.poi_name, it.address, it.visit_date) for it in req.items]
-    try:
-        results = check_batch(tuples)
-    except Exception:
-        import traceback
-        traceback.print_exc()
-        results = [_unknown_result(it.poi_name, it.visit_date) for it in req.items]
-    return {"results": results}
-
-
 @app.post("/trip/checkin")
 def trip_checkin(req: CheckinRequest, background_tasks: BackgroundTasks):
     """Store one trip's check-in snapshot. Write-only: the client renders its
@@ -1027,6 +990,7 @@ def trip_stamp(trip_id: str):
 
 
 @app.post("/revalidate")
+@_one_turn_per_session
 def revalidate(req: RevalidateRequest):
     """User Selection 화면에서 사용자가 편집한 슬롯 상태(제외/교체/재정렬/day
     이동)를 반영한 뒤, CriticAgent -> RepairAgent -> CriticAgent 순서로 다시
@@ -1115,6 +1079,7 @@ def _itinerary_poi(state: dict, day_num: int, slot_index: int, name: str) -> Opt
 
 
 @app.post("/swap-candidates")
+@_one_turn_per_session
 def swap_candidates(req: SwapCandidatesRequest):
     """current_poi와 같은 슬롯 성격(식당/카페 등)의 대체 후보 최대 3개를,
     같은 area 안에서 찾아 반환한다. 각 후보에는 사전 검증 경고가 붙는다 —
@@ -1123,11 +1088,7 @@ def swap_candidates(req: SwapCandidatesRequest):
 
     is_generic_activity/is_transit_marker/requires_review로 걸러진 POI는
     build_candidate_pool 단계에서 이미 후보 풀에 없으므로 여기서 따로 걸러낼
-    필요가 없다.
-
-    v1 범위: time_window/purpose는 스키마에는 받지만 아직 후보 필터링에는
-    안 쓴다(슬롯별 시간대·목적 매칭에 쓸 신호가 POI 데이터에 없음) — 나중에
-    확장 여지로 받아만 둔 상태임을 명시."""
+    필요가 없다."""
     from critic_repair import (
         build_candidate_pool, candidates_for_area, google_fallback_candidates, normalize_text,
     )
