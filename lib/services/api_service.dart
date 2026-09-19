@@ -132,11 +132,13 @@ class ApiService {
     final cacheKey = '$endpoint|$name';
     final cached = _poiCache[cacheKey];
     if (cached != null) return cached;
-    final response = await http.post(
-      Uri.parse('$_base/$endpoint'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'type': type}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$_base/$endpoint'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'name': name, 'type': type}),
+        )
+        .timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) return '';
     final json =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
@@ -177,11 +179,13 @@ class ApiService {
       ],
     });
 
-    final response = await http.post(
-      Uri.parse('$_base/transit-legs'),
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
+    final response = await http
+        .post(
+          Uri.parse('$_base/transit-legs'),
+          headers: {'Content-Type': 'application/json'},
+          body: body,
+        )
+        .timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) {
       final json =

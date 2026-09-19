@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
+import 'config/api_base.dart';
 import 'data/api/api_chat_repository.dart';
 import 'data/api/api_events_repository.dart';
 import 'data/api/api_lens_repository.dart';
@@ -33,7 +37,26 @@ import 'widgets/figma_chrome.dart';
 const kUseMocks = bool.fromEnvironment('USE_MOCKS');
 
 void main() {
+  // Fire-and-forget: a Render free-tier backend that's gone to sleep can
+  // take 20-30s to wake on the FIRST request. Pinging it now, while the
+  // splash/onboarding screens are up, gives it a head start so the user's
+  // first real chat/data call lands on an already-warm instance instead of
+  // triggering the cold start itself. Best-effort only — never awaited,
+  // and any failure (offline, mock build, still-cold) is swallowed; the app
+  // never depends on this succeeding.
+  unawaited(_warmUpBackend());
   runApp(const SeoulFitApp());
+}
+
+Future<void> _warmUpBackend() async {
+  if (kUseMocks || apiBase.isEmpty) return;
+  try {
+    await http
+        .get(Uri.parse('$apiBase/healthz'))
+        .timeout(const Duration(seconds: 30));
+  } catch (_) {
+    // Best-effort warm-up; the real request still has its own timeout.
+  }
 }
 
 class SeoulFitApp extends StatelessWidget {

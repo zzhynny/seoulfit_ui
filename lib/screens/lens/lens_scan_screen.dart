@@ -5,7 +5,12 @@ import '../../theme/theme.dart';
 class LensScanScreen extends StatefulWidget {
   const LensScanScreen({super.key, required this.onScan});
 
-  final ValueChanged<LensPhotoSource> onScan;
+  /// Awaited so the spinner below can clear on completion — success OR
+  /// failure. Previously this was fire-and-forget (`ValueChanged`), so a
+  /// thrown analyze-landmark error (timeout, backend down) left "Identifying
+  /// landmark…" spinning forever with no way back. That's the exact "long
+  /// loading, app doesn't work" shape ONE store's review flagged.
+  final Future<void> Function(LensPhotoSource source) onScan;
 
   @override
   State<LensScanScreen> createState() => _LensScanScreenState();
@@ -14,10 +19,20 @@ class LensScanScreen extends StatefulWidget {
 class _LensScanScreenState extends State<LensScanScreen> {
   bool _scanning = false;
 
-  void _selectSource(LensPhotoSource source) {
+  Future<void> _selectSource(LensPhotoSource source) async {
     if (_scanning) return;
     setState(() => _scanning = true);
-    widget.onScan(source);
+    try {
+      await widget.onScan(source);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't identify that — try again.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
   }
 
   @override

@@ -1,0 +1,4 @@
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=seoulfit
+storeFile=/absolute/or/relative/path/to/seoulfit-release.jks

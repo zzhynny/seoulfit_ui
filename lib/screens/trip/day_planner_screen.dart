@@ -45,9 +45,13 @@ class _DayPlannerLoaderState extends State<DayPlannerLoader> {
   // Mocks build with no ApiService; day_specs is empty in that case (the
   // Figma-parity mock builds never reach this route since MockChatRepository
   // never sets currentStep to 'day_plan').
-  late final Future<List<DaySpec>> _future = widget.api == null
-      ? Future.value(const <DaySpec>[])
-      : widget.api!.getState().then((s) => s.daySpecs);
+  late Future<List<DaySpec>> _future = _load();
+
+  Future<List<DaySpec>> _load() {
+    final api = widget.api;
+    if (api == null) return Future.value(const <DaySpec>[]);
+    return api.getState().then((s) => s.daySpecs);
+  }
 
   Future<void> _submit(List<DaySpec> days) async {
     try {
@@ -67,6 +71,29 @@ class _DayPlannerLoaderState extends State<DayPlannerLoader> {
     return FutureBuilder<List<DaySpec>>(
       future: _future,
       builder: (context, snapshot) {
+        // GET /state carries the same 30s timeout as every other call, so it
+        // does eventually complete — but as an error, not data. Checking
+        // only hasData (as this used to) can't tell "still loading" apart
+        // from "failed": both have hasData == false, so a failure left this
+        // spinning on CircularProgressIndicator forever, same shape as the
+        // Lens scan bug.
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Couldn't load your plan."),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => setState(() => _future = _load()),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),

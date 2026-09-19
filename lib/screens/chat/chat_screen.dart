@@ -48,9 +48,24 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _load() async {
-    final messages = await context.read<ChatRepository>().fetchConversation();
-    if (!mounted) return;
-    setState(() => _messages = messages);
+    try {
+      final messages = await context.read<ChatRepository>().fetchConversation();
+      if (!mounted) return;
+      setState(() => _messages = messages);
+    } catch (_) {
+      // Unhandled before: a timed-out/failed initial fetch left _messages at
+      // [] with no error and no way back — the chat just opens empty and
+      // silent, forever, instead of a visible spinner, but same root cause
+      // (server unreachable) as the Lens/day-planner bugs.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Couldn't reach the server."),
+            action: SnackBarAction(label: 'Retry', onPressed: _load),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickDates() async {
