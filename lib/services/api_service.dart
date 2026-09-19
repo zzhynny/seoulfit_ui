@@ -170,36 +170,6 @@ class ApiService {
   Future<String> fetchPoiDetail(String name, {String type = ''}) =>
       _fetchPoiField('poi-detail', 'detail', name, type);
 
-  /// Recomputes transit (distance / walk / car / Kakao / ODsay) for an
-  /// arbitrary ordered list of [stops]. Returns one leg per consecutive pair.
-  Future<List<TransitLeg>> fetchTransitLegs(List<Poi> stops) async {
-    final body = jsonEncode({
-      'stops': [
-        for (final s in stops) {'name': s.name, 'lat': s.lat, 'lng': s.lng},
-      ],
-    });
-
-    final response = await http
-        .post(
-          Uri.parse('$_base/transit-legs'),
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        )
-        .timeout(const Duration(seconds: 30));
-
-    if (response.statusCode == 200) {
-      final json =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-      final list = json['transit_legs'] as List? ?? const [];
-      return [
-        for (final l in list)
-          if (l is Map) TransitLeg.fromJson(Map<String, dynamic>.from(l)),
-      ];
-    } else {
-      throw Exception('Backend error ${response.statusCode}: ${response.body}');
-    }
-  }
-
   /// Ranks up to 3 replacement candidates for [currentPoi] in [dayArea],
   /// each with pre-computed warnings (e.g. closed on the day's weekday).
   /// Returns the raw `candidates` list as-is — the selection screen reads it

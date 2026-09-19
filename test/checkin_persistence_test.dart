@@ -24,7 +24,7 @@ void main() {
     final provider = await loadedProvider();
     final first = provider.itinerary!.days.first.activities.first;
 
-    provider.checkIn(first.id);
+    provider.setVisited(first.id, true);
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     final saved = await CheckinStore.loadActive();
@@ -50,7 +50,7 @@ void main() {
     // Every aggregate excludes an unrecorded day. Writing it as an empty
     // DayCheckin would read as "went nowhere that day" instead.
     final provider = await loadedProvider();
-    provider.checkIn(provider.itinerary!.days.first.activities.first.id);
+    provider.setVisited(provider.itinerary!.days.first.activities.first.id, true);
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     final saved = await CheckinStore.loadActive();
@@ -80,11 +80,11 @@ void main() {
     final provider = await loadedProvider();
     final activities = provider.itinerary!.days.first.activities;
 
-    provider.checkIn(activities.first.id);
+    provider.setVisited(activities.first.id, true);
     await Future<void>.delayed(const Duration(milliseconds: 50));
     final firstId = provider.tripId;
 
-    provider.checkIn(activities.last.id);
+    provider.setVisited(activities.last.id, true);
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     expect(provider.tripId, firstId);
@@ -102,7 +102,7 @@ void main() {
     expect(before.sources, isNotEmpty);
     expect(before.days.first.estimatedCost, isNotEmpty);
 
-    provider.checkIn(before.days.first.activities.first.id);
+    provider.setVisited(before.days.first.activities.first.id, true);
     final after = provider.itinerary!;
 
     expect(after.summary, before.summary);
