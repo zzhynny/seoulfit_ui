@@ -26,6 +26,13 @@ CACHE_PATH = Path(__file__).resolve().parent / "_poi_text_cache.json"
 CACHE_TTL = 14 * 24 * 3600
 _WEB_CHARS = 6000
 
+# 이 두 호출은 타임아웃이 아예 없었다. 부르는 쪽은 사용자가 POI 를 탭한 순간
+# 시작된 요청이고, 클라이언트는 30초에 끊는다(api_service._fetchPoiField).
+# 공사 API 4초를 먼저 쓰고 나면 남는 게 26초라, 둘을 합쳐 그 안에 끝나게 묶는다.
+# 정상일 때 Tavily 는 1~3초, Gemini 는 1~4초다 — 이 값들은 상한이지 목표가 아니다.
+_TAVILY_TIMEOUT = 8        # seconds
+_GEMINI_TIMEOUT_MS = 12_000  # google-genai 의 HttpOptions.timeout 은 밀리초다
+
 # ponytail: one JSON file rewritten per new answer, same as odsay's cache. Move
 # to SQLite if it grows past a few thousand places or runs multi-worker.
 _CACHE: dict[str, list] = {}   # "kind|name" -> [expires_at, text]
@@ -71,6 +78,7 @@ def _web_search(query: str) -> str:
         search_depth="basic",
         max_results=3,
         include_answer=True,
+        timeout=_TAVILY_TIMEOUT,
     )
     parts = [response.get("answer") or ""]
     parts += [r.get("content") or "" for r in response.get("results") or []]
@@ -79,8 +87,12 @@ def _web_search(query: str) -> str:
 
 def _rewrite(prompt: str) -> str:
     from google import genai
+    from google.genai import types
 
-    response = genai.Client(api_key=os.getenv("GEMINI_API_KEY")).models.generate_content(
+    response = genai.Client(
+        api_key=os.getenv("GEMINI_API_KEY"),
+        http_options=types.HttpOptions(timeout=_GEMINI_TIMEOUT_MS),
+    ).models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
     )

@@ -69,7 +69,6 @@ const List<String> kInterestLabels = [
 class TravelState {
   final String? travelDates;
   final String? restrictions;
-  final String? category;
   final String? companion;
   final String? pace;
   final String currentStep;
@@ -93,7 +92,6 @@ class TravelState {
   const TravelState({
     this.travelDates,
     this.restrictions,
-    this.category,
     this.companion,
     this.pace,
     this.currentStep = 'start',
@@ -110,7 +108,6 @@ class TravelState {
     return TravelState(
       travelDates: json['travel_dates'] as String?,
       restrictions: json['restrictions'] as String?,
-      category: json['category'] as String?,
       companion: json['companion'] as String?,
       pace: json['pace'] as String?,
       currentStep: (json['current_step'] as String?) ?? 'start',
@@ -130,7 +127,6 @@ class TravelState {
   Map<String, String?> get slots => {
         'travel_dates': travelDates,
         'restrictions': restrictions,
-        'category': category,
         'companion': companion,
         'pace': pace,
       };
@@ -224,19 +220,6 @@ class ItineraryDay {
 /// Distance + walk/car ETA + Kakao Map deep links between two consecutive
 /// POIs in a single day.
 class TransitLeg {
-  /// POI names this leg connects. The backend always sends them
-  /// (compute_transit_legs sets from_name/to_name).
-  ///
-  /// Unused while legs are read straight off an itinerary day, where they
-  /// are one per consecutive pair and index matching is exact — verified
-  /// against a live payload: every day has len(pois)-1 legs with sequential
-  /// from_idx. They are needed the moment a *recomputed* list from POST
-  /// /transit-legs is used instead: that one is flat across the whole
-  /// selection and re-indexed, so position stops meaning anything once the
-  /// view filters to a single day.
-  final String? fromName;
-  final String? toName;
-
   final double? distanceKm;
   final int? walkMinutes;
   final int? carMinutes;
@@ -246,8 +229,6 @@ class TransitLeg {
   final List<TransitOption> transitOptions;
 
   const TransitLeg({
-    this.fromName,
-    this.toName,
     this.distanceKm,
     this.walkMinutes,
     this.carMinutes,
@@ -258,8 +239,6 @@ class TransitLeg {
   });
 
   factory TransitLeg.fromJson(Map<String, dynamic> json) => TransitLeg(
-        fromName: json['from_name'] as String?,
-        toName: json['to_name'] as String?,
         distanceKm: (json['distance_km'] as num?)?.toDouble(),
         walkMinutes: (json['walk_minutes'] as num?)?.toInt(),
         carMinutes: (json['car_minutes'] as num?)?.toInt(),

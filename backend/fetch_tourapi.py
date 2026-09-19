@@ -31,18 +31,6 @@ SEOUL = "11"
 INDEX_B_CATS = ["EX", "FD", "HS", "LS", "NA", "VE", "AC"]  # EV(축제)는 상시 변동이라 제외 — searchFestival2로 실시간 조회
 OUT_DIR = Path(__file__).resolve().parent / "_tourapi"
 
-# 관광타입별 휴무일/영업시간 필드명. detailIntro2 응답이 타입마다 다르다.
-INTRO_FIELDS = {
-    "75": ("restdateleports", "usetimeleports"),
-    "76": ("restdate", "usetime"),
-    "78": ("restdateculture", "usetimeculture"),
-    "79": ("restdateshopping", "opentime"),
-    "80": (None, "checkintime"),
-    "82": ("restdatefood", "opentimefood"),
-    "85": (None, "playtime"),
-}
-
-
 def _client(key: str) -> httpx.Client:
     return httpx.Client(
         timeout=30.0,

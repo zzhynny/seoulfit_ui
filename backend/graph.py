@@ -12,6 +12,7 @@ from state import TravelState
 from planner import make_retrieve_node, plan_node
 from critic_repair import make_critic_repair_node
 from retrieval import DAY_PLAN_REGION_ORDER
+from langsmith import traceable
 
 # ---------------------------------------------------------------------------
 # Module-level API key (set by build_graph)
@@ -24,6 +25,9 @@ _api_key: str = ""
 # Direct Gemini helpers (replaces DSPy — avoids response_schema incompatibility)
 # ---------------------------------------------------------------------------
 
+# The JSON-repair retry in _gemini_json calls this a second time, so a sibling
+# intake_llm span is the signal that the model returned malformed JSON.
+@traceable(run_type="llm", name="intake_llm")
 def _gemini_raw(prompt: str) -> str:
     """Single Gemini JSON-mode call → raw text. Seam for testing + retry."""
     from google import genai as _genai
@@ -152,6 +156,56 @@ def _extract_field(field: str, text: str) -> str:
     return str(data.get(field, "MISSING")).strip()
 
 
+# poi_types a purpose keyword may be stamped with -- the ones stay time, meal
+# placement and /swap-candidates' type matching know how to read.
+KEYWORD_POI_TYPES = ("tourist_spot", "cafe", "restaurant", "shopping", "kpop_landmark")
+MAX_PURPOSE_KEYWORDS = 2
+
+
+def _extract_purpose_keywords(purpose: str) -> list[dict[str, str]]:
+    """Up to MAX_PURPOSE_KEYWORDS searchable kinds of place the traveller named.
+
+    Each becomes a "{phrase} in {area} Seoul" Google Text Search per trip area
+    (planner.build_google_supplement_for_area), so the cap is a cap on calls.
+    The anchor courses already cover each day's interest; these are for what
+    the traveller asked for on top of it. Most purposes ("first time with my
+    parents") name nothing searchable, and [] is the right answer -- a prompt
+    that must produce something invents "family-friendly restaurants".
+
+    Never raises: a failed call just means no extra searches.
+    """
+    if not purpose.strip():
+        return []
+    prompt = (
+        f'A traveller described their Seoul trip as: "{purpose}"\n\n'
+        "List the kinds of place or activity they explicitly named that could be "
+        'searched on Google Maps (e.g. "rooftop bars", "vintage clothing shops", '
+        '"hanbok rental"). Only what they actually said -- do not infer anything '
+        "from who they travel with or the occasion. Kinds of place, not one named "
+        "venue, and no neighbourhood names. Most trips name none; then return an "
+        "empty list.\n\n"
+        "Return JSON with exactly this field:\n"
+        f"- keywords: at most {MAX_PURPOSE_KEYWORDS} objects "
+        '{"phrase": short English search phrase, '
+        f'"poi_type": one of {", ".join(KEYWORD_POI_TYPES)}}}'
+    )
+    try:
+        raw = _gemini_json(prompt).get("keywords") or []
+    except Exception as e:
+        print(f"[intake] purpose keyword extraction failed: {type(e).__name__}: {e}")
+        return []
+
+    out: list[dict[str, str]] = []
+    for k in raw if isinstance(raw, list) else []:
+        phrase = str((k or {}).get("phrase") or "").strip() if isinstance(k, dict) else ""
+        if not phrase or len(phrase) > 60:
+            continue
+        ptype = k.get("poi_type")
+        out.append({"phrase": phrase,
+                    "poi_type": ptype if ptype in KEYWORD_POI_TYPES else "tourist_spot"})
+    return out[:MAX_PURPOSE_KEYWORDS]
+
+
 def build_summary(state: TravelState) -> str:
     lines = "\n".join(
         f"{FIELD_LABELS[f]}: {state.get(f) or '--'}" for f in ALL_FIELDS
@@ -234,7 +288,12 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
         # the purpose branch there), so this only fires for a direct _store
         # call. Keep the same "empty means skipped" contract for callers that
         # bypass the chat flow entirely (tests, scripts).
-        return {"purpose": "" if not value or value.upper() == "MISSING" else value}
+        purpose = "" if not value or value.upper() == "MISSING" else value
+        # Extracted here, once, while the traveller moves on to the Day
+        # Planner -- not in plan_node, where it would add to generation time.
+        # An edit from the summary comes back through here, so they stay in step.
+        return {"purpose": purpose,
+                "purpose_keywords": _extract_purpose_keywords(purpose)}
 
     if not value or value.upper() == "MISSING":
         return {}

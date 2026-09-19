@@ -1,6 +1,6 @@
 """meal_slots.py — 미쉐린 서울 restaurant.json을 식사 슬롯 후보로 쓰기 위한
-순수 함수 로더/필터. 네트워크 호출 없음. generator/validator에는 아직 연결하지
-않는다 (이번 작업 범위 밖).
+로더/필터. planner.plan_node 가 Gemini 호출 전에 fill_meal_slot 으로 날짜별
+점심·저녁을 확정하고, 그 선택을 프롬프트에 "바꾸지 말 것"으로 박아 넣는다.
 
 지역 판정은 geo.py의 기존 alias/좌표 로직(infer_area, area_matches_requested)을
 그대로 재사용한다 — 새 지역 정의를 만들지 않는다.
@@ -13,14 +13,11 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 import geo
+from langsmith import traceable
 
 _HERE = Path(__file__).resolve().parent
 RESTAURANT_PATH = _HERE / "dataset" / "restaurant.json"
 CUISINE_FAMILY_PATH = _HERE / "dataset" / "cuisine_family.json"
-
-WEEKDAYS: list[str] = [
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
-]
 
 # (start, end) as "HH:MM" — breakfast is optional per spec, excluded from the
 # coverage probe but kept here since filter_candidates/is_open take it generically.
@@ -169,6 +166,80 @@ class FilterResult(NamedTuple):
     step_counts: dict[str, int]
 
 
+# A swap candidate the traveller would have to cross town for is not a swap.
+# 2km is the range a day already assumes: the anchor sweep caps its own radius at
+# 3km and treats 800m as walkable, so this sits inside both.
+SWAP_RADIUS_KM = 2.0
+
+
+def _closed_for(
+    restaurant: dict[str, Any], weekday: str | None, meal_slot: str | None,
+) -> bool | None:
+    """Is this restaurant shut then? None when there are no hours to judge by.
+
+    43 of the 180 rows carry no opening_hours at all. is_open() treats that as
+    "not open" because it is filling a meal slot and must not seat anyone at a
+    closed door. A swap sheet has the opposite duty: it should say "we don't
+    know" rather than silently rank a restaurant last for missing data.
+    """
+    hours = restaurant.get("opening_hours")
+    if not weekday or not hours:
+        return None
+    if meal_slot in MEAL_SLOTS:
+        slot_start, slot_end = MEAL_SLOTS[meal_slot]
+        return not is_open(restaurant, weekday, slot_start, slot_end)
+    # Slot unknown (a course restaurant, not one of our locked picks) -- fall back
+    # to "shut all day", which is what the swap endpoint's existing
+    # closed_weekday warning already means.
+    return not [r for r in (hours.get(weekday) or []) if r != "closed"]
+
+
+def nearest_michelin(
+    *,
+    lat: float,
+    lng: float,
+    weekday: str | None = None,
+    meal_slot: str | None = None,
+    exclude_names: tuple[str, ...] = (),
+    radius_km: float = SWAP_RADIUS_KM,
+    limit: int = 3,
+    restaurants: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Michelin restaurants nearest (lat, lng), closest first.
+
+    Deliberately not filter_candidates: that one fills a locked meal slot, so it
+    filters on opening hours and ranks by Michelin grade. A swap sheet is the
+    traveller choosing for themselves, so this ranks purely by distance and
+    reports closure as a flag instead of dropping the row.
+
+    Each entry is the restaurant dict plus `distance_km` and `closed`
+    (True/False/None -- see _closed_for).
+    """
+    if restaurants is None:
+        restaurants = load_restaurants()
+
+    excluded = {n.strip().lower() for n in exclude_names if n}
+
+    out: list[dict[str, Any]] = []
+    for r in restaurants:
+        rlat, rlon = r.get("lat"), r.get("lon")
+        if rlat is None or rlon is None:
+            continue
+        if (r.get("name") or "").strip().lower() in excluded:
+            continue
+        distance = geo.haversine_km(lat, lng, float(rlat), float(rlon))
+        if distance > radius_km:
+            continue
+        out.append({
+            **r,
+            "distance_km": round(distance, 2),
+            "closed": _closed_for(r, weekday, meal_slot),
+        })
+
+    out.sort(key=lambda r: r["distance_km"])
+    return out[:limit]
+
+
 def filter_candidates(
     restaurants: list[dict[str, Any]],
     *,
@@ -232,7 +303,7 @@ _GOOGLE_PLACES_CACHE: dict[tuple[str, str], list[dict[str, Any]]] = {}
 
 def _fetch_google_restaurants_raw(area: str) -> list[dict[str, Any]]:
     """실제 네트워크 호출 지점 — 테스트는 이 함수만 스텁으로 바꾸면 된다.
-    planner.py를 지연 import한다: planner는 dspy/rag(FAISS)까지 끌고 오는
+    planner.py를 지연 import한다: planner는 langgraph·google-genai까지 끌고 오는
     무거운 의존성이라, 2층을 실제로 쓸 때만(즉 1층이 비었을 때만) 문다."""
     import planner
 
@@ -281,6 +352,12 @@ def _unfilled(slot_start: str, slot_end: str, reason: str) -> dict[str, Any]:
     }
 
 
+@traceable(
+    run_type="tool",
+    name="meal_slot",
+    # `restaurants` is the full 180-row catalogue when a caller passes it.
+    process_inputs=lambda i: {k: v for k, v in i.items() if k != "restaurants"},
+)
 def fill_meal_slot(
     *,
     area: str,

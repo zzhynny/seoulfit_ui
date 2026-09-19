@@ -331,20 +331,6 @@ void main() {
     expect(itinerary.sources, isEmpty);
   });
 
-  test('legs carry the pair they connect', () {
-    // Needed the moment a recomputed /transit-legs list is used: that one is
-    // flat across the whole selection, so a leg has to be matched to its
-    // (from, to) pair by name rather than by position.
-    final leg = api.TransitLeg.fromJson(const {
-      'from_name': 'Gyeongbokgung',
-      'to_name': 'Bukchon Hanok Village',
-      'walk_minutes': 12,
-    });
-
-    expect(leg.fromName, 'Gyeongbokgung');
-    expect(leg.toName, 'Bukchon Hanok Village');
-  });
-
   test('a day pairs each leg with the stop it leaves from', () {
     // Verified against a live payload: every day carries exactly
     // len(pois) - 1 legs with sequential from_idx, so position is exact
@@ -364,9 +350,5 @@ void main() {
     });
 
     expect(day.transitLegs.length, day.pois.length - 1);
-    for (var i = 0; i < day.transitLegs.length; i++) {
-      expect(day.transitLegs[i].fromName, day.pois[i].name);
-      expect(day.transitLegs[i].toName, day.pois[i + 1].name);
-    }
   });
 }

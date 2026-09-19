@@ -30,8 +30,10 @@ try:
 except Exception:
     TravelState = dict
 
+import eval_store
 from date_utils import weekday_for_day
 from planner import compute_transit_legs, _google_get
+from langsmith import traceable
 
 
 # ---------------------------------------------------------------------------
@@ -526,13 +528,34 @@ def candidates_for_area(
         items.append(item)
 
     def sort_key(x: dict[str, Any]) -> tuple[int, int]:
-        # Prefer Google current places, then food/cafe/kpop/shopping.
+        # Prefer Google current places, then kpop/shopping.
         source_score = 0 if x.get("source_kind") == "google" else 1
         ptype = normalize_text(x.get("type"))
         type_score = 0
-        if ptype in {"cafe", "restaurant", "kpop_landmark", "shopping", "shopping_mall"}:
+        # Meal types go LAST. meal_slots already locks a lunch and a dinner into
+        # every day, so a backfill that reaches for a restaurant first spends the
+        # day's remaining slots on food the traveller already has -- and step 4's
+        # target counts only non-meal POIs, so each one inserted does not move it
+        # any closer to the target. Measured before this: a relaxed Hongdae day
+        # came out 1 sight / 5 eating stops.
+        # kpop/shopping stay boosted -- they are destinations, not duplicate meals.
+        # /swap-candidates passes preferred_types, so its list is already a single
+        # category and this ordering is moot there -- this only steers
+        # RepairAgent's area backfill, which passes no type filter at all.
+        if ptype in {"cafe", "restaurant", "market", "food", "meal_takeaway"}:
+            type_score = 1
+        elif ptype in {"kpop_landmark", "shopping", "shopping_mall"}:
             type_score = -1
-        return (source_score, type_score)
+        # (type, source), not (source, type): source_score used to lead, so every
+        # Google item outranked every course item and the type ordering below
+        # could only break ties *within* one source. With the pool's Google half
+        # being restaurants and its course half being sights, that meant a
+        # sightseeing gap got filled with restaurants no matter what type_score
+        # said. Type decides what the day needs; source only picks between two
+        # candidates of the same kind. /swap-candidates is unaffected -- it
+        # passes preferred_types, so its list is one category and type_score is
+        # constant across it.
+        return (type_score, source_score)
 
     return sorted(items, key=sort_key)
 
@@ -646,6 +669,21 @@ def google_fallback_candidates(
 # Critic data structures
 # ---------------------------------------------------------------------------
 
+def _trace_days(state: Any) -> dict[str, Any]:
+    """Trim a TravelState to the day -> POI-name skeleton for a LangSmith span.
+
+    Raw state carries retrieved_courses (~31KB), day_segments (which nests the
+    same anchor courses a second time) and LangChain message objects. Both
+    CriticAgent.evaluate and RepairAgent.repair take it, and evaluate runs
+    twice per generation -- untrimmed that is ~200KB of noise per trace.
+    """
+    days = ((state or {}).get("itinerary") or {}).get("days") or []
+    return {"days": [
+        {"day": d.get("day"), "pois": [p.get("name") for p in (d.get("pois") or [])]}
+        for d in days
+    ]}
+
+
 @dataclass
 class CriticIssue:
     code: str
@@ -656,6 +694,11 @@ class CriticIssue:
 
 
 class CriticAgent:
+    @traceable(
+        run_type="chain",
+        name="critic_evaluate",
+        process_inputs=lambda i: _trace_days(i.get("state")),
+    )
     def evaluate(self, state: dict[str, Any]) -> dict[str, Any]:
         itinerary = state.get("itinerary") or {}
         requested_areas = self._get_requested_areas(state)
@@ -948,6 +991,20 @@ class CriticAgent:
 # ---------------------------------------------------------------------------
 
 class RepairAgent:
+    @traceable(
+        run_type="chain",
+        name="repair",
+        process_inputs=lambda i: {
+            **_trace_days(i.get("state")),
+            "issues": [x.get("code") for x in ((i.get("report") or {}).get("issues") or [])],
+        },
+        # repair() returns (itinerary, logs) -- surface the log, which is the
+        # only human-readable account of what was swapped.
+        process_outputs=lambda o: {
+            "repair_log": o[1],
+            **_trace_days({"itinerary": o[0]}),
+        },
+    )
     def repair(self, state: dict[str, Any], report: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         itinerary = state.get("itinerary") or {}
         pool = build_candidate_pool(state)
@@ -1392,6 +1449,12 @@ def reorder_supplements(
     2-opt only if transition scores stay bad. Backbone order is left untouched.
     """
     def _movable(p: dict[str, Any]) -> bool:
+        # A locked meal slot is placed for its time of day, not its walking cost
+        # -- planner._meal_slot_indices spaces lunch and dinner apart on purpose,
+        # and both are searched around the same area centre, so cheapest-
+        # insertion would happily slide them back together.
+        if p.get("meal_slot"):
+            return False
         return normalize_text(p.get("name")) in movable_names and _poi_coords(p) is not None
 
     extras = [p for p in pois if _movable(p)]
@@ -1411,11 +1474,13 @@ def reorder_supplements(
     return route
 
 
-def make_critic_repair_node(base_dir: Any | None = None):
+def make_critic_repair_node():
     critic = CriticAgent()
     repairer = RepairAgent()
 
-    def critic_repair_node(state: TravelState) -> TravelState:
+    # `config` is injected by LangGraph (api._config puts thread_id there) and
+    # defaults to None so direct calls from tests and scripts still work.
+    def critic_repair_node(state: TravelState, config: Any | None = None) -> TravelState:
         itinerary = state.get("itinerary")
 
         if not itinerary:
@@ -1454,6 +1519,19 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 "repair_log": repair_logs,
             }
 
+            # The only place both reports and the repair log exist together, so
+            # the only place the score can be banked. save_eval swallows its own
+            # failures and returns None -- a logging table must never be able to
+            # fail a traveller's itinerary.
+            eval_store.save_eval(
+                state=state,
+                itinerary=repaired_itinerary,
+                before=before_report,
+                after=after_report,
+                repair_logs=repair_logs,
+                thread_id=((config or {}).get("configurable") or {}).get("thread_id"),
+            )
+
             requested = after_report.get("requested_areas") or []
             coverage = after_report.get("area_coverage") or {}
             coverage_text = ", ".join(
@@ -1478,12 +1556,16 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 "messages": [AIMessage(content=msg)],
             }
 
-        except Exception as e:
+        except Exception:
+            # The unrepaired itinerary is still on the state, so the traveller
+            # keeps a plan. Log the exception; don't send its text to the client.
+            import traceback
+            traceback.print_exc()
             return {
                 **state,
                 "current_step": "done",
                 "messages": [
-                    AIMessage(content=f"⚠️ Critic-Repair 오류: {e}")
+                    AIMessage(content="Your itinerary is ready, but its final check hit a problem.")
                 ],
             }
 

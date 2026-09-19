@@ -1306,15 +1306,15 @@ class _TourChip extends StatelessWidget {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.12) : AppColors.surface,
-          border: Border.all(color: selected ? accent : AppColors.border),
+          color: accent.withValues(alpha: selected ? 0.16 : 0.07),
+          border: Border.all(color: accent, width: selected ? 1.5 : 1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label,
             style: AppTextStyles.sans(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: selected ? accent : AppColors.textSecondary)),
+                color: accent)),
       ),
     );
   }

@@ -19,6 +19,7 @@ from typing import Any, Iterable, NamedTuple
 import numpy as np
 
 from geo import area_matches_requested, infer_area_from_fields
+from langsmith import traceable
 
 _HERE = Path(__file__).resolve().parent
 COURSE_DATA = _HERE / "dataset" / "course_data_v6.json"
@@ -121,6 +122,27 @@ def filter_pool(region: str, interest: str | None = None) -> list[dict[str, Any]
     return in_region
 
 
+@traceable(
+    run_type="retriever",
+    name="select_anchors",
+    # `vectors` is the whole 125x3072 matrix (8.7MB as JSON) and purpose_vec is
+    # another 69KB -- per call, per day. Neither is readable; drop both.
+    process_inputs=lambda i: {
+        "day": (i.get("day_spec") or {}).get("day"),
+        "region": (i.get("day_spec") or {}).get("region"),
+        "interest": (i.get("day_spec") or {}).get("interest"),
+        "has_query_vec": (i.get("day_spec") or {}).get("purpose_vec") is not None,
+        "exclude": sorted(i.get("exclude") or ()),
+    },
+    # Selection is a NamedTuple -- without this it serialises as a positional
+    # tuple holding three full course dicts (~10KB). `relaxed` is the field that
+    # currently only reaches stdout.
+    process_outputs=lambda o: {
+        "relaxed": o.relaxed,
+        "course_ids": [c["course_id"] for c in o.courses],
+        "top_sims": dict(sorted(o.sims.items(), key=lambda kv: -kv[1])[:5]),
+    },
+)
 def select_anchors(
     day_spec: dict[str, Any],
     k: int = DEFAULT_K,

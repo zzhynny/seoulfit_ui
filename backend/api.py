@@ -45,6 +45,7 @@ set_verbose(False)
 from dotenv import load_dotenv
 from pathlib import Path
 import datetime as _dt
+import functools
 import re as _re
 import threading as _threading
 import time as _time
@@ -160,8 +161,6 @@ _METERED_PATHS = {
     # 아래 넷은 리스트를 받아 항목마다 외부 호출을 한다. 한 요청이 수백 회로
     # 불어나므로 요청 수로 재는 이 리밋만으로는 부족하고, 모델 쪽 max_length
     # 와 같이 걸어야 의미가 있다.
-    "/transit-legs",       # 정거장 쌍마다 ODsay 1회 + 캐시 파일 재작성
-    "/poi-closure-check",  # 4건 묶음마다 Gemini 검색 그라운딩 (건당 과금)
     "/revalidate",         # Critic → Repair → Critic, 요청당 Gemini 여러 번
     "/swap-candidates",    # Google Places 유료 호출로 떨어질 수 있다
     "/events",             # 공사 API 2회 (캐시 miss 시)
@@ -170,7 +169,12 @@ _METERED_PATHS = {
 # and each fires fetchPoiDetail on build, and final_itinerary_map_screen
 # fires summary + image per stop, so a legitimate screen load is already a
 # 20-40 call burst. An abuse loop does thousands, so the gap is wide enough.
-_RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MIN", "120"))
+#
+# 600, not 120: the bucket is per IP, and a classroom on campus Wi-Fi or phones
+# behind a carrier NAT all share one. At 120 a handful of people opening their
+# itineraries in the same minute got 429s. 600 covers ~15-20 of them and still
+# caps a scripted loop at 10 requests a second.
+_RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MIN", "600"))
 _RATE_WINDOW = 60.0
 # 프록시 뒤인가. Render/Fly 처럼 TLS 를 종단하는 앞단이 있으면 1(기본).
 # 직접 인터넷에 노출한다면 0 으로 두어야 X-Forwarded-For 를 아예 안 믿는다.
@@ -335,6 +339,33 @@ def _require_thread_id(thread_id: str) -> str:
     return thread_id
 
 
+# One graph turn per session at a time. The app gives up on generation after
+# 180s while the server keeps going; a retry then resumed from the last
+# checkpoint (route_entry -> retrieve/plan) and ran a second generation
+# alongside the first -- double the Gemini/Places spend, last write wins. The
+# same read-modify-write race hit /revalidate and /swap-candidates. Blocking,
+# not 409: the retry waits for the run in flight and returns its itinerary.
+#
+# ponytail: one small Lock per session id, never evicted -- grows with
+# sessions exactly like MemorySaver does, and goes away with it on restart.
+_session_locks: dict[str, _threading.Lock] = {}
+_session_locks_guard = _threading.Lock()
+
+
+def _session_lock(thread_id: str) -> _threading.Lock:
+    with _session_locks_guard:
+        return _session_locks.setdefault(thread_id, _threading.Lock())
+
+
+def _one_turn_per_session(endpoint):
+    """Serialise an endpoint whose body (`req`) names a thread_id."""
+    @functools.wraps(endpoint)
+    def wrapper(req, *args, **kwargs):
+        with _session_lock(_require_thread_id(req.thread_id)):
+            return endpoint(req, *args, **kwargs)
+    return wrapper
+
+
 class ChatRequest(BaseModel):
     thread_id: str
     # None on first call → triggers greeting. 상한은 가드레일과 플래너 양쪽
@@ -345,7 +376,6 @@ class ChatRequest(BaseModel):
 
 class StateResponse(BaseModel):
     travel_dates: Optional[str] = None
-    category: Optional[str] = None
     restrictions: Optional[str] = None
     companion: Optional[str] = None
     pace: Optional[str] = None
@@ -358,30 +388,6 @@ class StateResponse(BaseModel):
     confirmed: bool
     reply: Optional[str]
     itinerary: Optional[dict] = None
-
-
-class TransitStop(BaseModel):
-    name: Optional[str] = None
-    lat: Optional[float] = None
-    lng: Optional[float] = None
-
-
-class TransitLegsRequest(BaseModel):
-    # ordered list of selected stops. 쌍마다 ODsay 1회 + 캐시 파일 재작성이라
-    # 상한이 없으면 한 요청이 수백 초 동안 워커를 붙잡는다. 하루 일정이 15~25개다.
-    stops: list[TransitStop] = Field(max_length=40)
-
-
-class ClosureCheckItem(BaseModel):
-    poi_name: str = Field(max_length=200)
-    address: str = Field("", max_length=300)
-    visit_date: str = Field(max_length=10)   # "YYYY-MM-DD"
-
-
-class ClosureCheckRequest(BaseModel):
-    # 한 일정당 15~25개 예상. 4건 묶음마다 Gemini 검색 그라운딩(건당 과금)이라
-    # 상한 없이 받으면 한 요청으로 수십 분어치 과금이 난다.
-    items: list[ClosureCheckItem] = Field(max_length=40)
 
 
 class CheckinRequest(BaseModel):
@@ -422,8 +428,6 @@ class SwapCandidatesRequest(BaseModel):
     # 호텔 자리에 레스토랑이 뜨는 버그가 났다. 프론트가 보내는 이 값을
     # pool 조회보다 우선해서 항상 같은 카테고리로만 후보를 좁힌다.
     current_poi_type: Optional[str] = None
-    time_window: Optional[str] = None
-    purpose: Optional[str] = None
     excluded_ids: list[str] = []
 
 
@@ -440,7 +444,7 @@ def _get_state(thread_id: str) -> dict:
     if snapshot and snapshot.values:
         return snapshot.values
     return {
-        "travel_dates": None, "category": None, "restrictions": None,
+        "travel_dates": None, "restrictions": None,
         "companion": None, "pace": None, "purpose": None, "day_specs": None,
         "current_step": "start", "confirmed": False, "messages": [],
     }
@@ -457,7 +461,6 @@ def _state_response(state: dict, *, reply: Optional[str] = None) -> StateRespons
     """StateResponse 를 만드는 유일한 곳. 필드가 늘 때마다 세 군데를 고치던 걸 막는다."""
     return StateResponse(
         travel_dates=state.get("travel_dates"),
-        category=state.get("category"),
         restrictions=state.get("restrictions"),
         companion=state.get("companion"),
         pace=state.get("pace"),
@@ -484,6 +487,7 @@ def _run(thread_id: str, user_input: Optional[str]) -> dict:
 # ---------------------------------------------------------------------------
 
 @app.post("/chat", response_model=StateResponse)
+@_one_turn_per_session
 def chat(req: ChatRequest):
     """Send a message (or None for the initial greeting) and get back
     the updated state plus the latest AI reply."""
@@ -520,7 +524,8 @@ def get_state(thread_id: str):
 @app.post("/reset")
 def reset(thread_id: str):
     """Clear one thread's conversation without touching any other sessions."""
-    clear_thread(_require_thread_id(thread_id))
+    with _session_lock(_require_thread_id(thread_id)):
+        clear_thread(thread_id)
     return {"status": "reset"}
 
 
@@ -536,6 +541,7 @@ class DayPlanRequest(BaseModel):
 
 
 @app.post("/day-plan", response_model=StateResponse)
+@_one_turn_per_session
 def day_plan(req: DayPlanRequest):
     """Day Planner 화면이 정한 날짜별 지역·관심사를 저장하고 confirm 으로 넘긴다.
 
@@ -610,6 +616,27 @@ except Exception as _e:  # 파일이 없어도 서버는 떠야 한다 — 폴�
     print(f"[poi] tour_poi.json index skipped: {_e}")
 print(f"[poi] TourAPI name index: {len(_POI_SNAP)} entries")
 
+# ── 미쉐린 가이드 restaurant.json 로 채우는 식당 텍스트·사진 ───────────────────
+#
+# 잠긴 점심·저녁 슬롯과 /swap-candidates 후보는 전부 이 파일에서 온다. 그런데
+# 그 180곳 중 공사 DB(_POI_SNAP)에 걸리는 곳은 0곳이라, 지금까지 전부 Tavily
+# 검색 + Gemini 생성으로 소개글을 새로 써 왔다 — 파일 안에 미쉐린 자신의 영문
+# 리뷰(180/180)와 사진(180/180)이 이미 들어 있는데도. 이름 색인 하나를 앞에
+# 두어 그 호출을 없앤다. 3일 일정이면 식당 6곳 × (Tavily + Gemini + Places 사진).
+_MICHELIN_SNAP: dict[str, dict] = {}
+try:
+    import meal_slots as _meal_slots
+
+    for _r in _meal_slots.load_restaurants():
+        _MICHELIN_SNAP.setdefault(_norm_poi_name(_r["name"]), _r)
+except Exception as _e:  # 파일이 없어도 서버는 떠야 한다 — 폴백 경로가 있다.
+    print(f"[poi] restaurant.json index skipped: {_e}")
+print(f"[poi] Michelin name index: {len(_MICHELIN_SNAP)} entries")
+
+
+def _michelin(name: str) -> Optional[dict]:
+    return _MICHELIN_SNAP.get(_norm_poi_name(name))
+
 # ponytail: in-memory dict, 24시간 TTL. 공사 데이터는 하루 1회 갱신이라 그 이상
 # 잡아둘 이유가 없다. 재시작하면 비지만, 한 번 받는 비용이 1회 호출이라 괜찮다.
 _COMMON_CACHE: dict[str, tuple[float, dict]] = {}
@@ -669,6 +696,9 @@ def poi_summary(req: PoiSummaryRequest):
 
     한국관광공사 TourAPI 에 있는 곳이면 공사의 공식 영문 소개글(detailCommon2)
     앞 두 문장을 쓴다. 없는 곳만 Tavily 웹 검색 + Gemini 로 넘긴다."""
+    michelin = _michelin(req.name)
+    if michelin and (michelin.get("review") or "").strip():
+        return {"summary": _first_sentences(michelin["review"])}
     common = _tour_common(req.name)
     if common and (common.get("overview") or "").strip():
         return {"summary": _first_sentences(common["overview"])}
@@ -690,6 +720,11 @@ def poi_image(req: PoiSummaryRequest, request: Request):
     서버 밖으로 나가지 않는다. 웹 이미지 검색과 달리 동명의 엉뚱한 장소 사진이
     섞이지 않고, Gemini 호출도 들지 않는다.
     """
+    # 미쉐린 식당이면 가이드 CDN 사진. 그 식당의 실제 사진이고 출처가 분명하다.
+    michelin = _michelin(req.name)
+    if michelin and (michelin.get("image") or "").strip():
+        return {"image_url": michelin["image"].strip()}
+
     # 공사 DB 에 있는 곳이면 공사 CDN 사진을 먼저 쓴다. 출처가 분명하고,
     # 아래 스크래핑 캐시나 Places 사진과 달리 저작권 표기가 가능한 이미지다.
     common = _tour_common(req.name)
@@ -751,6 +786,31 @@ def poi_detail(req: PoiSummaryRequest):
     영업시간·휴무일·요금이 공식 값이고 LLM 이 끼지 않는다. 공사 DB 에 없는 골목
     가게 같은 곳만 Tavily + Gemini 경로로 간다.
     """
+    michelin = _michelin(req.name)
+    if michelin:
+        closed_days = [
+            day for day, ranges in (michelin.get("opening_hours") or {}).items()
+            if not [r for r in (ranges or []) if r != "closed"]
+        ]
+        lines = [
+            f"• {label}: {value}"
+            for label, value in (
+                ("Michelin", _MICHELIN_GRADE_EN.get(michelin.get("grade"), michelin.get("grade"))),
+                ("Cuisine", michelin.get("cuisine")),
+                ("Price", michelin.get("price")),
+                # From opening_hours, which 137 of 180 rows carry. A row without
+                # it yields no line rather than a wrong "open daily".
+                ("Closed", ", ".join(closed_days) if closed_days else ""),
+                ("Phone", michelin.get("tel")),
+            )
+            if str(value or "").strip()
+        ]
+        highlight = (michelin.get("review_full") or michelin.get("review") or "").strip()
+        if highlight:
+            lines.append(f"• Highlight: {_first_sentences(highlight, 1)}")
+        if len(lines) >= 2:
+            return {"detail": "\n".join(lines)}
+
     snap = _POI_SNAP.get(_norm_poi_name(req.name))
     common = _tour_common(req.name)
     if common and snap:
@@ -895,49 +955,6 @@ def _chip_filter(events: list[dict], category: str | None) -> list[dict]:
     return [{k: v for k, v in e.items() if k != "_chip"} for e in rows]
 
 
-@app.post("/transit-legs")
-def transit_legs(req: TransitLegsRequest):
-    """Recompute distance / walk / car / Kakao links / ODsay public-transit
-    options for an arbitrary ordered list of stops.
-
-    Used when the user re-selects a subset of stops on the route screen, so the
-    transit between the *new* consecutive pairs is real ODsay data rather than a
-    straight-line estimate. Returns one leg per consecutive pair (N-1 legs)."""
-    from planner import compute_transit_legs
-
-    pois = [
-        {"name": s.name, "lat": s.lat, "lng": s.lng}
-        for s in req.stops
-    ]
-    try:
-        legs = compute_transit_legs(pois)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
-    return {"transit_legs": legs}
-
-
-@app.post("/poi-closure-check")
-def poi_closure_check(req: ClosureCheckRequest):
-    """Final Route 화면에서, 확정된 stops + 실제 방문일(visit_date)로 임시휴관
-    여부를 Google Search grounding으로 확인한다.
-
-    Best-effort: 어떤 실패든(API 오류, 타임아웃, 파싱 실패) 절대 500을 내지
-    않고 해당 항목을 unknown으로 채워 반환한다 — 이 체크가 일정 생성/표시
-    자체를 막아서는 안 된다."""
-    from closure_check import check_batch, _unknown_result
-
-    tuples = [(it.poi_name, it.address, it.visit_date) for it in req.items]
-    try:
-        results = check_batch(tuples)
-    except Exception:
-        import traceback
-        traceback.print_exc()
-        results = [_unknown_result(it.poi_name, it.visit_date) for it in req.items]
-    return {"results": results}
-
-
 @app.post("/trip/checkin")
 def trip_checkin(req: CheckinRequest, background_tasks: BackgroundTasks):
     """Store one trip's check-in snapshot. Write-only: the client renders its
@@ -973,6 +990,7 @@ def trip_stamp(trip_id: str):
 
 
 @app.post("/revalidate")
+@_one_turn_per_session
 def revalidate(req: RevalidateRequest):
     """User Selection 화면에서 사용자가 편집한 슬롯 상태(제외/교체/재정렬/day
     이동)를 반영한 뒤, CriticAgent -> RepairAgent -> CriticAgent 순서로 다시
@@ -1024,7 +1042,44 @@ def revalidate(req: RevalidateRequest):
     }
 
 
+_MICHELIN_GRADE_EN = {
+    "3스타": "3 Michelin Stars", "2스타": "2 Michelin Stars", "1스타": "1 Michelin Star",
+    "빕구르망": "Bib Gourmand", "Selected": "Michelin Selected",
+}
+
+
+def _closed_warning(weekday: str, day_num: int) -> str:
+    """Shown as-is in the swap sheet, so it is written for the traveller.
+
+    Both candidate paths (Michelin and pool/Google) emit this, and keeping the
+    wording in one place stops them drifting apart.
+    """
+    return f"Usually closed on {weekday}s — Day {day_num} is a {weekday}"
+
+
+def _itinerary_poi(state: dict, day_num: int, slot_index: int, name: str) -> Optional[dict]:
+    """The POI the traveller tapped, read off the itinerary itself.
+
+    Not build_candidate_pool: a locked meal is inserted by the validator from
+    meal_slots, so it appears in neither retrieved_courses nor google_supplement
+    and a pool lookup returns None for exactly the POIs this endpoint most needs
+    coordinates and a meal_slot for. Matched by name first, since slot_index
+    comes from the client's own list ordering; index is the fallback.
+    """
+    days = ((state.get("itinerary") or {}).get("days")) or []
+    day = next((d for d in days if d.get("day") == day_num), None)
+    if not day:
+        return None
+    pois = day.get("pois") or []
+    key = _re.sub(r"\s+", " ", str(name or "").strip().lower())
+    for poi in pois:
+        if _re.sub(r"\s+", " ", str(poi.get("name") or "").strip().lower()) == key:
+            return poi
+    return pois[slot_index] if 0 <= slot_index < len(pois) else None
+
+
 @app.post("/swap-candidates")
+@_one_turn_per_session
 def swap_candidates(req: SwapCandidatesRequest):
     """current_poi와 같은 슬롯 성격(식당/카페 등)의 대체 후보 최대 3개를,
     같은 area 안에서 찾아 반환한다. 각 후보에는 사전 검증 경고가 붙는다 —
@@ -1033,16 +1088,13 @@ def swap_candidates(req: SwapCandidatesRequest):
 
     is_generic_activity/is_transit_marker/requires_review로 걸러진 POI는
     build_candidate_pool 단계에서 이미 후보 풀에 없으므로 여기서 따로 걸러낼
-    필요가 없다.
-
-    v1 범위: time_window/purpose는 스키마에는 받지만 아직 후보 필터링에는
-    안 쓴다(슬롯별 시간대·목적 매칭에 쓸 신호가 POI 데이터에 없음) — 나중에
-    확장 여지로 받아만 둔 상태임을 명시."""
+    필요가 없다."""
     from critic_repair import (
         build_candidate_pool, candidates_for_area, google_fallback_candidates, normalize_text,
     )
     from date_utils import weekday_for_day
     from planner import GOOGLE_PLACES_API_KEY
+    import meal_slots
 
     thread_id = _require_thread_id(req.thread_id)
     state = _get_state(thread_id)
@@ -1061,6 +1113,57 @@ def swap_candidates(req: SwapCandidatesRequest):
         exclude = {normalize_text(x) for x in req.excluded_ids}
         exclude.add(normalize_text(req.current_poi))
 
+        # Computed here rather than after the candidate search: the Michelin
+        # branch below needs it to flag a restaurant that is shut that day.
+        weekday = None
+        trip_start_date = state.get("trip_start_date")
+        if trip_start_date:
+            try:
+                weekday = weekday_for_day(trip_start_date, req.day, lang="en")
+            except (ValueError, TypeError):
+                weekday = None  # 폴백 -- 요일 경고만 생략, 나머지는 계속 진행
+
+        # A restaurant slot swaps to Michelin only, nearest first. The pool's
+        # restaurants are Google's prominence ranking of whoever is near the
+        # area centre; restaurant.json is the same curated set every locked meal
+        # already comes from, so a swap stays within the quality bar the day was
+        # built to. Falls through to the pool/Google path below when nothing
+        # Michelin is within SWAP_RADIUS_KM, so the sheet is never empty.
+        here = _itinerary_poi(state, req.day, req.slot_index, req.current_poi) or current or {}
+
+        if normalize_text(req.current_poi_type or (current or {}).get("type")) == "restaurant":
+            lat, lng = here.get("lat"), here.get("lng")
+            if lat is None or lng is None:
+                print(f"[swap michelin] {req.current_poi!r} has no coordinates -- pool path")
+            else:
+                hits = meal_slots.nearest_michelin(
+                    lat=float(lat), lng=float(lng), weekday=weekday,
+                    meal_slot=here.get("meal_slot"),
+                    exclude_names=tuple(
+                        [req.current_poi, *req.excluded_ids]
+                    ),
+                )
+                if hits:
+                    return {"candidates": [{
+                        "poi_name": r.get("name"),
+                        "poi_type": "restaurant",
+                        "address": r.get("street"),
+                        "lat": r.get("lat"),
+                        "lng": r.get("lon"),
+                        # Michelin rows carry a grade, not a 5-point score.
+                        "rating": None,
+                        "grade": _MICHELIN_GRADE_EN.get(r.get("grade"), r.get("grade")),
+                        "distance_km": r.get("distance_km"),
+                        "warnings": (
+                            [_closed_warning(weekday, req.day)]
+                            if r.get("closed") else
+                            ["Opening hours unknown — worth checking before you go"]
+                            if r.get("closed") is None else []
+                        ),
+                    } for r in hits]}
+                print(f"[swap michelin] no Michelin within "
+                      f"{meal_slots.SWAP_RADIUS_KM}km of {req.current_poi!r} -- pool path")
+
         # candidates_for_area's own sort order (source_kind/type) is shared with
         # RepairAgent's fill-in logic -- don't touch it. Re-sort its output by
         # rating on top instead, so this endpoint prefers rated candidates
@@ -1076,12 +1179,18 @@ def swap_candidates(req: SwapCandidatesRequest):
         # up empty (never on top of a non-empty result, to avoid the extra
         # cost/latency), centered on current_poi's own coordinates.
         if not filtered:
-            fallback_lat = current.get("lat") if current else None
-            fallback_lng = current.get("lng") if current else None
+            # From the itinerary, not the pool: build_candidate_pool holds
+            # retrieved_courses + google_supplement, so a locked meal (inserted by
+            # the validator from meal_slots) and anything the LLM wrote in itself
+            # are both absent from it. Reading coordinates off `current` alone
+            # meant the fallback silently skipped for exactly those POIs -- and a
+            # locked meal is the one a traveller is most likely to swap.
+            fallback_lat = here.get("lat")
+            fallback_lng = here.get("lng")
             if fallback_lat is None or fallback_lng is None:
                 print(
                     f"[swap fallback] current_poi {req.current_poi!r} has no known "
-                    "coordinates (not in pool) -- skipping Google fallback"
+                    "coordinates (not in itinerary or pool) -- skipping Google fallback"
                 )
             elif not GOOGLE_PLACES_API_KEY:
                 print("[swap fallback] GOOGLE_PLACES_API_KEY 없음 -- 폴백 생략")
@@ -1108,22 +1217,14 @@ def swap_candidates(req: SwapCandidatesRequest):
         unrated = [i for i in filtered if i.get("rating") is None]
         ranked = (rated + unrated)[:3]
 
-        weekday = None
-        trip_start_date = state.get("trip_start_date")
-        if trip_start_date:
-            try:
-                weekday = weekday_for_day(trip_start_date, req.day, lang="en")
-            except (ValueError, TypeError):
-                weekday = None  # 폴백 -- 요일 경고만 생략, 나머지는 계속 진행
-
         candidates = []
         for item in ranked:
             warnings: list[str] = []
             closed = item.get("closed_weekday") or []
             if weekday and weekday in closed:
-                warnings.append(f"{weekday} 정기휴무 — Day {req.day}과 겹칠 수 있음")
+                warnings.append(_closed_warning(weekday, req.day))
             if item.get("is_area_type"):
-                warnings.append("특정 업체가 아니라 지역/거리 전체를 가리키는 POI")
+                warnings.append("This is an area or street, not a single venue")
 
             candidates.append({
                 "poi_name": item.get("name"),

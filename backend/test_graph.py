@@ -18,13 +18,13 @@ THREAD_A = "test-clear-thread-aaaaaaaaaaaa"
 THREAD_B = "test-clear-thread-bbbbbbbbbbbb"
 
 
-def _seed(thread_id: str, category: str) -> None:
-    _graph.update_state(_config(thread_id), {"category": category, "current_step": "day_plan"})
+def _seed(thread_id: str, purpose: str) -> None:
+    _graph.update_state(_config(thread_id), {"purpose": purpose, "current_step": "day_plan"})
 
 
 def test_clear_thread_deletes_the_seeded_threads_state():
     _seed(THREAD_A, "Shopping")
-    assert _graph.get_state(_config(THREAD_A)).values.get("category") == "Shopping"
+    assert _graph.get_state(_config(THREAD_A)).values.get("purpose") == "Shopping"
 
     graph.clear_thread(THREAD_A)
 
@@ -38,4 +38,4 @@ def test_clear_thread_leaves_other_threads_untouched():
     graph.clear_thread(THREAD_A)
 
     assert _graph.get_state(_config(THREAD_A)).values == {}
-    assert _graph.get_state(_config(THREAD_B)).values.get("category") == "Food & Cafes"
+    assert _graph.get_state(_config(THREAD_B)).values.get("purpose") == "Food & Cafes"

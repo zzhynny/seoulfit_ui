@@ -132,3 +132,63 @@ if __name__ == "__main__":
             fn()
             print(f"  ok  {name}")
     print("[selfcheck] OK")
+
+# ---------------------------------------------------------------------------
+# 미쉐린 restaurant.json 경로 — 잠긴 식사 슬롯과 교체 후보가 전부 여기서 온다
+# ---------------------------------------------------------------------------
+
+MICHELIN = "Onjium"  # restaurant.json 180건 안에 있다
+
+
+def test_michelin_names_are_not_in_the_tourapi_index():
+    """이 테스트가 깨지면 아래 세 개의 존재 이유가 사라진다.
+
+    180곳 중 공사 DB 에 걸리는 곳이 0곳이라, 미쉐린 색인이 없으면 식당마다
+    Tavily 검색 + Gemini 생성이 매번 나간다 — 파일에 영문 리뷰가 있는데도.
+    """
+    import meal_slots
+
+    names = [r["name"] for r in meal_slots.load_restaurants()]
+    assert len(names) == len(api._MICHELIN_SNAP), "이름 정규화가 중복을 접었다"
+    hits = [n for n in names if api._norm_poi_name(n) in api._POI_SNAP]
+    assert hits == [], f"공사 색인에 걸리는 식당이 생겼다: {hits[:5]}"
+
+
+def test_summary_uses_the_guide_review_without_calling_tourapi_or_tavily():
+    calls = []
+    real = _swap(_with_common(None, calls))
+    try:
+        out = api.poi_summary(R(name=MICHELIN, type="restaurant"))
+    finally:
+        api.tourapi.items = real
+
+    assert calls == [], "미쉐린 식당으로 공사 API 를 부르면 안 된다"
+    # Tavily 키 없이도 통과한다 = _grounded_poi_text 로 안 갔다는 뜻.
+    assert "Gyeongbokgung" in out["summary"], out
+
+
+def test_detail_lists_the_guide_facts_not_the_llm():
+    out = api.poi_detail(R(name=MICHELIN, type="restaurant"))["detail"]
+    assert "• Michelin: 1 Michelin Star" in out, out
+    assert "• Cuisine: Korean" in out, out
+    # 한글 등급 키(1스타)가 그대로 새어 나가면 안 된다.
+    assert "스타" not in out, out
+    # opening_hours 가 있는 행만 Closed 줄을 낸다 -- 없으면 "매일 영업"으로
+    # 단정하지 않고 줄 자체를 뺀다.
+    assert "• Closed: " in out, out
+
+
+def test_image_uses_the_guide_cdn():
+    out = api.poi_image(R(name=MICHELIN, type="restaurant"), _FakeRequest())
+    assert out["image_url"].startswith("https://prod-pics.guide.michelin.com/"), out
+
+
+def test_a_restaurant_the_guide_does_not_list_still_falls_through():
+    calls = []
+    real = _swap(_with_common(None, calls))
+    try:
+        api.poi_summary(R(name="Some Random Diner", type="restaurant"))
+    except Exception:
+        pass  # Tavily 키가 없으면 여기서 죽는 게 정상 — 기존 경로로 갔다는 뜻이다.
+    finally:
+        api.tourapi.items = real

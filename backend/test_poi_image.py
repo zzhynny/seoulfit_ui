@@ -60,12 +60,16 @@ def test_course_photo_wins_without_a_google_lookup():
 
 def test_google_maps_photo_goes_through_the_key_hiding_proxy():
     def run(looked_up):
-        r = _image_for("Soseoul Hannam")
+        # Deliberately a place neither index lists: these tests exercise the fallback
+        # paths (Tavily + Gemini text, Google Places photo), and both _POI_SNAP
+        # (TourAPI) and _MICHELIN_SNAP (restaurant.json) short-circuit ahead of them.
+        # "Hannam Corner Cafe", the old fixture, is Michelin-listed and stopped reaching them.
+        r = _image_for("Hannam Corner Cafe")
         assert r.status_code == 200, r.text
         url = r.json()["image_url"]
         assert url == "http://testserver/place-photo?ref=REF123&w=400", url
         assert "test-key" not in url
-        assert looked_up == ["Soseoul Hannam"]
+        assert looked_up == ["Hannam Corner Cafe"]
 
     _with(run)
 
@@ -79,7 +83,7 @@ def test_no_google_photo_means_no_image():
 
 def test_missing_places_key_is_reported():
     def run(looked_up):
-        assert _image_for("Soseoul Hannam").status_code == 503
+        assert _image_for("Hannam Corner Cafe").status_code == 503
         assert looked_up == []
 
     _with(run, key=None)
@@ -96,15 +100,15 @@ def test_photo_lookup_takes_the_first_photo_and_stays_in_seoul():
     planner._google_get = fake_get
     try:
         fake_get.reply = {"candidates": [{"photos": [{"photo_reference": "R1"}, {"photo_reference": "R2"}]}]}
-        assert planner.find_place_photo_ref(name="Soseoul Hannam", api_key="k") == "R1"
+        assert planner.find_place_photo_ref(name="Hannam Corner Cafe", api_key="k") == "R1"
         assert "photos" in seen["fields"], seen
         assert seen["locationbias"].startswith("circle:"), seen
 
         fake_get.reply = {"candidates": [{"name": "No Photos Here"}]}
-        assert planner.find_place_photo_ref(name="Soseoul Hannam", api_key="k") is None
+        assert planner.find_place_photo_ref(name="Hannam Corner Cafe", api_key="k") is None
 
         fake_get.reply = {"candidates": []}
-        assert planner.find_place_photo_ref(name="Soseoul Hannam", api_key="k") is None
+        assert planner.find_place_photo_ref(name="Hannam Corner Cafe", api_key="k") is None
     finally:
         planner._google_get = orig
 

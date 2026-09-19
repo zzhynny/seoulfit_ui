@@ -180,6 +180,7 @@ class RouteStop {
     required this.nameEn,
     this.nameKo,
     required this.arrivalTime,
+    this.description = '',
     this.exitInstruction,
     this.hop,
   });
@@ -188,6 +189,13 @@ class RouteStop {
   final String nameEn;
   final String? nameKo;
   final String arrivalTime;
+
+  /// The planner's own note for this stop. Shown immediately under the name and
+  /// used as [PoiSummary]'s fallback, so the line is never empty while the
+  /// fetched description is in flight. Defaults to '' so the mock repository
+  /// (which has no itinerary payload behind it) needs no change.
+  final String description;
+
   final String? exitInstruction;
 
   /// How to get from this stop to the next one. Null on the last stop of the

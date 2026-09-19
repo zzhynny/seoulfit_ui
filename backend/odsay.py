@@ -26,6 +26,7 @@ from typing import Any
 from urllib.parse import quote
 
 import requests
+from langsmith import traceable
 
 # Secrets live in backend/.env (gitignored), not in source. ODsay stays
 # dormant (is_enabled() == False) if the key is unset, same as the other keys.
@@ -179,6 +180,9 @@ def _format_subpath(subpath: list[dict[str, Any]] | None) -> list[str]:
     return lines
 
 
+# Decorated here, not on _fetch_all_paths -- that one builds the API key into
+# the URL string, which would put the key in the span.
+@traceable(run_type="tool", name="odsay")
 def fetch_odsay_options(start_lat: float, start_lng: float,
                         end_lat: float, end_lng: float) -> list[dict[str, Any]]:
     """한 leg 의 (지하철/버스/환승) 옵션 리스트, 시간 오름차순.

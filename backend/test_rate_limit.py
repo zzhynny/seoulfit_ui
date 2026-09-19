@@ -73,23 +73,18 @@ def test_eviction_keeps_live_counters():
 
 def test_expensive_endpoints_are_metered():
     """리스트를 받아 항목마다 외부 호출을 하는 경로가 리밋 밖에 있으면 안 된다."""
-    for path in ("/transit-legs", "/poi-closure-check", "/revalidate",
-                 "/swap-candidates", "/events", "/chat", "/analyze-landmark"):
+    for path in ("/revalidate", "/swap-candidates", "/events", "/chat",
+                 "/analyze-landmark"):
         assert path in api._METERED_PATHS, f"{path} 가 계량 대상에서 빠졌다"
 
 
 def test_list_requests_are_bounded():
-    """/transit-legs 는 정거장 쌍마다 ODsay 를 부른다 — 상한이 없으면 한 요청이
-    수백 초 동안 워커를 붙잡는다."""
-    stop = {"name": "x", "lat": 37.5, "lng": 127.0}
-    api.TransitLegsRequest(stops=[stop] * 40)
+    """/day-plan 은 날마다 앵커 검색을 한다 — 상한이 없으면 한 요청이 워커를
+    붙잡는다."""
+    day = {"day": 1, "region": "jongno", "interest": "Shopping"}
+    api.DayPlanRequest(thread_id="t" * 16, days=[day] * 30)
     with pytest.raises(ValidationError):
-        api.TransitLegsRequest(stops=[stop] * 41)
-
-    item = {"poi_name": "x", "visit_date": "2026-09-20"}
-    api.ClosureCheckRequest(items=[item] * 40)
-    with pytest.raises(ValidationError):
-        api.ClosureCheckRequest(items=[item] * 41)
+        api.DayPlanRequest(thread_id="t" * 16, days=[day] * 31)
 
 
 def test_free_text_is_bounded():

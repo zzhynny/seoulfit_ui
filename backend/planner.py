@@ -1,9 +1,9 @@
 """Itinerary planning nodes for the LangGraph.
 
-`retrieve_node` runs FAISS retrieval over course_data.json and stashes
-the top courses in state. `plan_node` calls a DSPy signature that turns
-those courses + the user's confirmed fields into a structured day-by-day
-itinerary.
+`retrieve_node` runs retrieval.select_anchors over the course dataset and
+stashes each day's anchor courses in state. `plan_node` sends those courses +
+the user's confirmed fields to Gemini and parses the structured day-by-day
+itinerary back out.
 
 Main improvements:
 1. Search RAG by requested areas such as Hongdae and Seongsu.
@@ -17,17 +17,20 @@ Main improvements:
 from __future__ import annotations
 
 import json
-import math
 import os
+import random
 import re
 import time
+import traceback
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-import dspy
 import requests
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
+from langsmith import traceable
+from langsmith.run_helpers import get_current_run_tree, tracing_context
 
 import meal_slots
 from date_utils import weekday_for_day
@@ -37,11 +40,9 @@ from geo import (
     SEOUL_AREA_CENTERS,
     area_label as _area_label,
     area_matches_requested as _area_matches_requested,
-    get_area_center as _get_area_center,
     haversine_km as _haversine_km,
     infer_area_from_fields as _infer_area_from_text_or_coords,
 )
-# lm_context removed — DSPy replaced with direct Gemini calls
 from rag import _parse_num_days
 from retrieval import base_id, load_vectors, select_anchors
 from state import TravelState
@@ -60,16 +61,34 @@ def set_planner_api_key(key: str) -> None:
     _PLANNER_GEMINI_KEY = key
 
 
+# Seconds before each retry of a rate-limited / overloaded Gemini call. With
+# several travellers generating at once a 429 is the likeliest failure, and it
+# clears in seconds. Jittered so a burst of users doesn't retry in lockstep.
+# Worst case adds ~12s -- well inside the app's 180s generation timeout.
+_GEMINI_RETRY_DELAYS = (2.0, 6.0)
+_GEMINI_RETRYABLE = {429, 500, 503}
+
+
+@traceable(run_type="llm", name="itinerary_generation")
 def _gemini_text(prompt: str) -> str:
     """Call Gemini and return raw text (JSON expected from caller)."""
     from google import genai as _genai
+    from google.genai import errors as _errors
     client = _genai.Client(api_key=_PLANNER_GEMINI_KEY)
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config={"response_mime_type": "application/json"},
-    )
-    return response.text or ""
+    for delay in (*_GEMINI_RETRY_DELAYS, None):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt,
+                config={"response_mime_type": "application/json"},
+            )
+            return response.text or ""
+        except _errors.APIError as e:
+            if delay is None or e.code not in _GEMINI_RETRYABLE:
+                raise
+            print(f"[planner] Gemini {e.code}, retrying in ~{delay:.0f}s")
+            time.sleep(delay * random.uniform(1.0, 1.5))
+    raise AssertionError("unreachable")
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +96,13 @@ def _gemini_text(prompt: str) -> str:
 # ---------------------------------------------------------------------------
 
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
+
+# How many per-area / per-day fan-outs run at once. Each unit does its own
+# short sequential chain of blocking HTTP calls, so this is also the ceiling on
+# concurrent Places requests — 6 keeps a 7-day trip to roughly one round-trip's
+# wait without leaning on anyone's QPS limit. Threads, not async: every fetcher
+# below is blocking `requests`, which releases the GIL while it waits.
+_FANOUT_WORKERS = 6
 
 KAKAO_ROUTE_BASE = "https://m.map.kakao.com/scheme/route"
 WALK_KMH = 4.0
@@ -164,6 +190,22 @@ def compute_transit_legs(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # Google Places API
 # ---------------------------------------------------------------------------
 
+@traceable(
+    run_type="tool",
+    name="google_places",
+    # `params` carries "key": api_key -- never let it reach LangSmith.
+    process_inputs=lambda i: {
+        "url": i.get("url"),
+        "params": {k: v for k, v in (i.get("params") or {}).items() if k != "key"},
+    },
+    # A nearbysearch returns up to 20 results with geometry and photo refs;
+    # names are what you actually read when a POI turns up unexpectedly.
+    process_outputs=lambda o: {
+        "status": o.get("status"),
+        "count": len(o.get("results") or []),
+        "names": [r.get("name") for r in (o.get("results") or [])],
+    },
+)
 def _google_get(url: str, params: dict[str, Any]) -> dict[str, Any]:
     try:
         resp = requests.get(url, params=params, timeout=12)
@@ -177,6 +219,47 @@ def _google_get(url: str, params: dict[str, Any]) -> dict[str, Any]:
         return {"status": "REQUEST_ERROR", "error_message": str(e)}
 
 
+def _stamp_true_area(
+    places: list[dict[str, Any]], requested: str,
+) -> list[dict[str, Any]]:
+    """Re-derive each POI's area from its coordinates and drop the ones that
+    aren't actually in (or adjacent to) `requested`.
+
+    Both fetchers used to stamp `area=requested` on every hit without checking.
+    Nearby Search's radius reaches _ANCHOR_RADIUS_MAX_M and Text Search's
+    location is only a bias, so either can return a place in the next district
+    -- Hongdae sweeps routinely surface Sinchon, which is not in Hongdae's
+    adjacency set. The stamp then claimed otherwise, and the two consumers
+    disagree about whether to believe it: _candidate_items_for_area trusts the
+    stamp when backfilling coverage, while the critic's _evaluate_area_coverage
+    re-infers from coordinates. So the validator would insert a "Hongdae" cafe
+    that is really in Sinchon to clear REQUESTED_AREA_UNDER_COVERED, the critic
+    would not count it, and repair would retry the same move.
+
+    A POI whose area can't be inferred is kept with the requested stamp -- the
+    same benefit of the doubt the generic branch has always given them.
+    """
+    kept: list[dict[str, Any]] = []
+    for place in places:
+        true_area = _infer_area_from_text_or_coords(
+            place.get("poi_name"), place.get("address_en"),
+            place.get("lat"), place.get("lng"),
+        )
+        if not true_area:
+            kept.append(place)
+            continue
+        if not _area_matches_requested(true_area, requested):
+            continue
+        place["area"] = true_area
+        kept.append(place)
+    return kept
+
+
+# Minutes a supplement stop is budgeted for, by poi_type. Cafes are a sit-down
+# break, malls take a while to walk; everything else gets the planner's 60.
+_STAY_MINUTES = {"cafe": 45, "shopping": 75, "shopping_mall": 75}
+
+
 def fetch_nearby_places(
     *,
     area: str,
@@ -185,12 +268,17 @@ def fetch_nearby_places(
     radius: int = 1700,
     min_rating: float = 4.0,
     max_results: int = 5,
+    center: tuple[float, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """Google Places Nearby Search for one area."""
+    """Google Places Nearby Search for one area.
+
+    `center` overrides the neighbourhood's hand-placed point -- see
+    `_anchor_search_origin`, which centres the sweep on the day's own courses.
+    """
     if not api_key:
         return []
 
-    lat, lng = SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
+    lat, lng = center or SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
     url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
     params = {
         "location": f"{lat},{lng}",
@@ -219,18 +307,12 @@ def fetch_nearby_places(
     ]
 
     places: list[dict[str, Any]] = []
-    for r in filtered[:max_results]:
+    # Capped after _stamp_true_area below, not here: slicing first would let
+    # out-of-area hits use up the budget and return short.
+    for r in filtered:
         loc = (r.get("geometry") or {}).get("location") or {}
         if "lat" not in loc or "lng" not in loc:
             continue
-
-        stay = 60
-        if place_type == "cafe":
-            stay = 45
-        elif place_type == "restaurant":
-            stay = 60
-        elif place_type == "shopping_mall":
-            stay = 75
 
         places.append({
             "poi_name": r.get("name", ""),
@@ -240,13 +322,13 @@ def fetch_nearby_places(
             "lat": loc["lat"],
             "lng": loc["lng"],
             "rating": r.get("rating"),
-            "estimated_stay_time": stay,
+            "estimated_stay_time": _STAY_MINUTES.get(place_type, 60),
             "source": f"Google Places ({_area_label(area)})",
             "area": area,
             "place_id": r.get("place_id", ""),
         })
 
-    return places
+    return _stamp_true_area(places, area)[:max_results]
 
 
 def fetch_text_places(
@@ -258,12 +340,18 @@ def fetch_text_places(
     min_rating: float = 0.0,
     max_results: int = 5,
     poi_type: str = "tourist_spot",
+    center: tuple[float, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """Google Places Text Search for one area."""
+    """Google Places Text Search for one area.
+
+    `query` keeps naming the requested area: for Text Search the place name in
+    the text is the precision mechanism and location/radius only bias it, so
+    `center` refines where inside that area to look rather than replacing it.
+    """
     if not api_key:
         return []
 
-    lat, lng = SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
+    lat, lng = center or SEOUL_AREA_CENTERS.get(area, DEFAULT_CENTER)
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {
         "query": query,
@@ -311,16 +399,13 @@ def fetch_text_places(
             "lat": loc["lat"],
             "lng": loc["lng"],
             "rating": r.get("rating"),
-            "estimated_stay_time": 60,
+            "estimated_stay_time": _STAY_MINUTES.get(poi_type, 60),
             "source": f"Google Places Text ({_area_label(area)})",
             "area": area,
             "place_id": r.get("place_id", ""),
         })
 
-        if len(places) >= max_results:
-            break
-
-    return places
+    return _stamp_true_area(places, area)[:max_results]
 
 
 # ---------------------------------------------------------------------------
@@ -342,32 +427,6 @@ def fetch_text_places(
 _WEEKDAY_NAMES = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
 ]
-
-
-def find_place_id(
-    *, name: str, address: str, lat: float | None, lng: float | None, api_key: str
-) -> str | None:
-    """Legacy Find Place — resolves a (name, address) pair to a Google place_id.
-    Location-biased when lat/lng are available to avoid mismatching a same-named
-    place elsewhere. Returns None on any failure (never raises)."""
-    if not api_key or not name:
-        return None
-
-    url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
-    params = {
-        "input": f"{name}, {address}" if address else name,
-        "inputtype": "textquery",
-        "fields": "place_id,name,formatted_address",
-        "key": api_key,
-    }
-    if lat is not None and lng is not None:
-        params["locationbias"] = f"point:{lat},{lng}"
-
-    data = _google_get(url, params)
-    candidates = data.get("candidates") or []
-    if not candidates:
-        return None
-    return candidates[0].get("place_id")
 
 
 # Seoul City Hall, 25 km: covers the whole city, so a same-named place
@@ -437,180 +496,125 @@ def derive_closed_weekdays(opening_hours: dict[str, Any] | None) -> list[str] | 
     return closed
 
 
-def fetch_kpop_places_for_area(
-    *,
-    area: str,
-    api_key: str,
-    purpose: str,
-    max_results: int = 5,
-) -> list[dict[str, Any]]:
-    if not api_key:
-        return []
+# Anchor-centred search. SEOUL_AREA_CENTERS holds one hand-placed point per
+# neighbourhood, but a day's courses cluster wherever the course actually runs.
+# Measured against the current dataset, that fixed point sits a median ~1km --
+# and up to 3.7km in Mapo, 3.5km in Gangnam -- from the POIs the day will
+# actually visit, so the search circle can miss the very stops it is meant to
+# surround (reorder_supplements' docstring notes the same symptom downstream).
+# A purpose keyword's rating floor. K-pop pop-up and merch stores are routinely
+# unrated, and a 4.0 floor dropped every one of them.
+_MIN_RATING = {"kpop_landmark": 0.0}
 
-    purpose_lower = purpose.lower()
 
-    artists = [
-        "bts", "blackpink", "aespa", "newjeans", "ive", "stray kids",
-        "twice", "exo", "seventeen", "txt", "enhypen", "idol", "kpop", "k-pop",
-    ]
+_ANCHOR_MIN_POINTS = 3          # below this the centroid is one outlier away from nonsense
+_ANCHOR_WALK_BUFFER_M = 800     # a stop just outside the cluster is still walkable
+_ANCHOR_RADIUS_MAX_M = 3000     # past this, fall back: see _anchor_search_origin
 
-    detected = [a for a in artists if a in purpose_lower]
-    area_name = _area_label(area)
 
-    queries: list[str] = []
+def _anchor_points_for_area(
+    area: str, day_segments: list[dict[str, Any]] | None,
+) -> list[tuple[float, float]]:
+    """Coordinates of the anchor-course POIs planned for `area`.
 
-    if detected:
-        for artist in detected[:2]:
-            artist_clean = artist.replace("k-pop", "kpop")
-            queries.append(f"{artist_clean} store {area_name} Seoul")
-            queries.append(f"{artist_clean} cafe {area_name} Seoul")
+    Mirrors _format_one_course's restrict_area cut, so a POI dropped from the
+    prompt for sitting in the wrong neighbourhood cannot drag the search centre
+    toward itself.
+    """
+    points: list[tuple[float, float]] = []
+    for seg in day_segments or []:
+        if seg.get("area") != area:
+            continue
+        for course in seg.get("anchor_courses") or []:
+            for p in course.get("sequence") or []:
+                lat, lng = p.get("lat"), p.get("lng")
+                if lat is None or lng is None:
+                    continue
+                poi_area = _infer_area_from_text_or_coords(
+                    p.get("poi_name", ""),
+                    p.get("address_en") or p.get("address_ko") or "",
+                    lat, lng,
+                )
+                if poi_area and not _area_matches_requested(poi_area, area):
+                    continue
+                points.append((float(lat), float(lng)))
+    return points
 
-    queries.extend([
-        f"kpop store {area_name} Seoul",
-        f"kpop merchandise {area_name} Seoul",
-        f"kpop popup store {area_name} Seoul",
-    ])
 
-    all_places: list[dict[str, Any]] = []
-    seen: set[str] = set()
+def _anchor_search_origin(
+    area: str, day_segments: list[dict[str, Any]] | None,
+) -> tuple[tuple[float, float], int] | None:
+    """((lat, lng), radius_m) to search `area` from, or None to use the fixed centre.
 
-    for q in queries[:4]:
-        places = fetch_text_places(
-            area=area,
-            query=q,
-            api_key=api_key,
-            radius=3500,
-            min_rating=0.0,
-            max_results=3,
-            poi_type="kpop_landmark",
-        )
-        for p in places:
-            key = _normalize_text(p.get("poi_name"))
-            if key and key not in seen:
-                seen.add(key)
-                all_places.append(p)
-        time.sleep(0.2)
+    None means "too scattered for a centroid to help". Gangnam's courses straddle
+    Sinsa and Apgujeong, so their centroid lands in the low-density gap between
+    the two clusters and is measurably worse than the hand-placed point -- the
+    same is true of any area whose spread exceeds what one sweep can cover.
+    Falling back leaves those areas behaving exactly as they did before.
+    """
+    points = _anchor_points_for_area(area, day_segments)
+    if len(points) < _ANCHOR_MIN_POINTS:
+        return None
 
-    return all_places[:max_results]
+    lat = sum(p[0] for p in points) / len(points)
+    lng = sum(p[1] for p in points) / len(points)
+
+    # Trim the farthest 10% before sizing the sweep: with 3-11 points a single
+    # outlier would otherwise set the radius for the whole day.
+    spread = sorted(_haversine_km(lat, lng, p[0], p[1]) for p in points)
+    kept = spread[:max(_ANCHOR_MIN_POINTS, int(len(spread) * 0.9))]
+
+    radius_m = int(kept[-1] * 1000) + _ANCHOR_WALK_BUFFER_M
+    if radius_m > _ANCHOR_RADIUS_MAX_M:
+        return None
+    return (lat, lng), radius_m
 
 
 def build_google_supplement_for_area(
     *,
     area: str,
-    purpose: str,
+    keywords: list[dict[str, str]],
     api_key: str,
+    day_segments: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Collect Google Places supplement for one requested area."""
-    if not api_key:
+    """One "{phrase} in {area} Seoul" Text Search per purpose keyword.
+
+    The keywords are what the traveller named in their purpose
+    (graph._extract_purpose_keywords). The day's interest is not searched: the
+    anchor courses are already filtered by it, so a search for it only paid for
+    places the plan already had. No keywords, no calls.
+    """
+    if not api_key or not keywords:
         return []
 
-    purpose_lower = purpose.lower()
+    origin = _anchor_search_origin(area, day_segments)
+    center = origin[0] if origin else None
+
+    # Widened only when the day's own POIs are spread out enough to need it,
+    # never below 2500m. Growing it for its own sake backfires: Google ranks by
+    # prominence, so a bigger circle pulls in famous places further away
+    # instead of closer ones.
+    radius = min(max(2500, origin[1]), _ANCHOR_RADIUS_MAX_M) if origin else 2500
+
+    if origin:
+        print(f"[Google Places][{_area_label(area)}] 앵커 중심 검색 "
+              f"({origin[0][0]:.4f},{origin[0][1]:.4f}) r={origin[1]}m")
+
     supplement: list[dict[str, Any]] = []
-
-    # Cafes are essential for Seoul travel and the current project use case.
-    need_cafe = any(k in purpose_lower for k in ["cafe", "coffee", "relax", "카페"])
-    if need_cafe:
-        cafes = fetch_nearby_places(
+    for kw in keywords:
+        phrase, poi_type = kw["phrase"], kw["poi_type"]
+        found = fetch_text_places(
             area=area,
-            place_type="cafe",
+            query=f"{phrase} in {_area_label(area)} Seoul",
             api_key=api_key,
-            radius=1800,
-            min_rating=4.1,
+            radius=radius,
+            min_rating=_MIN_RATING.get(poi_type, 4.0),
             max_results=5,
+            poi_type=poi_type,
+            center=center,
         )
-        if len(cafes) < 3:
-            cafes += fetch_text_places(
-                area=area,
-                query=f"best cafes in {_area_label(area)} Seoul",
-                api_key=api_key,
-                radius=2500,
-                min_rating=4.0,
-                max_results=5 - len(cafes),
-                poi_type="cafe",
-            )
-        supplement.extend(cafes)
-        print(f"[Google Places][{_area_label(area)}] 카페 {len(cafes)}개 추가")
-
-    restaurants = fetch_nearby_places(
-        area=area,
-        place_type="restaurant",
-        api_key=api_key,
-        radius=1800,
-        min_rating=4.0,
-        max_results=5,
-    )
-    if len(restaurants) < 3:
-        restaurants += fetch_text_places(
-            area=area,
-            query=f"popular restaurants in {_area_label(area)} Seoul",
-            api_key=api_key,
-            radius=2500,
-            min_rating=4.0,
-            max_results=5 - len(restaurants),
-            poi_type="restaurant",
-        )
-    supplement.extend(restaurants)
-    print(f"[Google Places][{_area_label(area)}] 식당 {len(restaurants)}개 추가")
-
-    if any(k in purpose_lower for k in ["kpop", "k-pop", "bts", "blackpink", "idol", "아이돌"]):
-        kpop_places = fetch_kpop_places_for_area(
-            area=area,
-            api_key=api_key,
-            purpose=purpose,
-            max_results=5,
-        )
-        supplement.extend(kpop_places)
-        print(f"[Google Places][{_area_label(area)}] K-POP 장소 {len(kpop_places)}개 추가")
-
-    if any(k in purpose_lower for k in ["shopping", "shop", "fashion", "쇼핑"]):
-        shops = fetch_nearby_places(
-            area=area,
-            place_type="shopping_mall",
-            api_key=api_key,
-            radius=2200,
-            min_rating=4.0,
-            max_results=3,
-        )
-        if len(shops) < 2:
-            shops += fetch_text_places(
-                area=area,
-                query=f"shopping in {_area_label(area)} Seoul",
-                api_key=api_key,
-                radius=2500,
-                min_rating=4.0,
-                max_results=3 - len(shops),
-                poi_type="shopping",
-            )
-        supplement.extend(shops)
-        print(f"[Google Places][{_area_label(area)}] 쇼핑 {len(shops)}개 추가")
-
-    # Catch-all: the branches above only cover food/cafe/kpop/shopping. Any other
-    # purpose (K-beauty, art, nature, nightlife, ...) gets no targeted POIs, so
-    # search Google for the purpose itself. Type-based fetches stay the primary
-    # path for the common themes; this only fills the long tail.
-    if purpose and purpose.strip():
-        generic = fetch_text_places(
-            area=area,
-            query=f"{purpose} in {_area_label(area)} Seoul",
-            api_key=api_key,
-            radius=2500,
-            min_rating=4.0,
-            max_results=5,
-        )
-        # Text Search's radius is only a bias, and fetch_text_places stamps
-        # area=requested on every hit. Re-infer each POI's true area from its
-        # coords and keep only ones actually in (or adjacent to) this area, so an
-        # off-neighborhood result can't be mislabeled and inflate area_coverage.
-        kept = []
-        for p in generic:
-            true_area = _infer_area_from_text_or_coords(
-                p.get("poi_name"), p.get("address_en"), p.get("lat"), p.get("lng"))
-            if true_area and _area_matches_requested(true_area, area):
-                p["area"] = true_area
-                kept.append(p)
-        if kept:
-            supplement.extend(kept)
-            print(f"[Google Places][{_area_label(area)}] 목적 기반 {len(kept)}개 추가")
+        supplement.extend(found)
+        print(f"[Google Places][{_area_label(area)}] {phrase}: {len(found)}개 추가")
 
     return _dedupe_places(supplement)
 
@@ -619,11 +623,12 @@ def build_google_supplement_by_areas(
     *,
     requested_areas: list[str],
     location: str,
-    purpose: str,
+    keywords: list[dict[str, str]],
     api_key: str,
+    day_segments: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Collect Google Places supplement for every requested area."""
-    if not api_key:
+    if not api_key or not keywords:
         return []
 
     if not requested_areas:
@@ -639,13 +644,36 @@ def build_google_supplement_by_areas(
     print(f"[planner] 요청 지역별 Google Places 보완 시작: {[_area_label(a) for a in requested_areas]}")
 
     all_places: list[dict[str, Any]] = []
-    for area in requested_areas:
-        places = build_google_supplement_for_area(
-            area=area,
-            purpose=purpose,
-            api_key=api_key,
-        )
-        all_places.extend(places)
+    # Each area's sweep is independent -- one Places call per keyword, no shared
+    # state -- so they overlap instead of queueing behind each other. On a 7-day
+    # trip that was the single longest wait in generation.
+    #
+    # .map, not as_completed: it yields in `requested_areas` order, and
+    # _dedupe_places keeps the FIRST copy of each duplicate. Completion order
+    # would hand the same trip a different winner run to run, so the itinerary
+    # would stop being reproducible from the same inputs.
+    # langsmith: contextvars do not cross the ThreadPoolExecutor boundary, so
+    # each worker's google_places spans would orphan into their own root traces
+    # instead of nesting under the plan node. Capture the parent run here and
+    # re-enter it inside the worker. Free when tracing is off:
+    # get_current_run_tree() returns None and tracing_context(parent=None) is a
+    # no-op (parent=False is the explicit detach, None means unchanged).
+    _parent_run = get_current_run_tree()
+
+    def _one_area(area: str, _parent=_parent_run) -> list[dict[str, Any]]:
+        with tracing_context(parent=_parent):
+            return build_google_supplement_for_area(
+                area=area,
+                keywords=keywords,
+                api_key=api_key,
+                day_segments=day_segments,
+            )
+
+    with ThreadPoolExecutor(
+        max_workers=min(len(requested_areas), _FANOUT_WORKERS)
+    ) as pool:
+        for places in pool.map(_one_area, requested_areas):
+            all_places.extend(places)
 
     all_places = _dedupe_places(all_places)
     print(f"[planner] Google Places 총 {len(all_places)}개 보완 데이터 확보")
@@ -734,11 +762,10 @@ def _format_requested_area_rules(
 
 
 # ---------------------------------------------------------------------------
-# DSPy signatures
+# Generation prompt
 # ---------------------------------------------------------------------------
 
-class ItineraryPlanner(dspy.Signature):
-    """Generate a personalized Seoul travel itinerary for foreign tourists.
+ITINERARY_PROMPT = """Generate a personalized Seoul travel itinerary for foreign tourists.
 
     You are given:
     1. the user's trip details,
@@ -771,7 +798,7 @@ class ItineraryPlanner(dspy.Signature):
     - Sections marked `[ANCHOR COURSE]` are editorially curated sequences from Visit Seoul / Visit Korea.
     - Use the anchor course's POI order as the backbone for that day's itinerary.
     - You may drop POIs from an anchor course if they are irrelevant to the user's purpose.
-    - You may insert `[SUPPLEMENT POIs]` or Google Places POIs into the sequence at appropriate positions.
+    - You may insert Google Places POIs into the sequence at appropriate positions.
     - Do NOT reorder anchor course POIs unless geography requires it.
     - When a section spans multiple days (e.g. DAY 1–2), distribute its anchor courses across those days; do not put all POIs into one day.
 
@@ -831,47 +858,6 @@ class ItineraryPlanner(dspy.Signature):
     }
     """
 
-    duration: str = dspy.InputField(desc="Trip length, e.g. '2 days'.")
-    location: str = dspy.InputField(desc="Destination or requested neighborhoods.")
-    budget: str = dspy.InputField(desc="Total trip budget.")
-    dietary: str = dspy.InputField(desc="Dietary restrictions or preferences.")
-    purpose: str = dspy.InputField(desc="Trip purpose, e.g. cafes, shopping, K-POP.")
-    candidate_courses: str = dspy.InputField(
-        desc="Candidate courses and Google Places supplement as compact text."
-    )
-    itinerary_json: str = dspy.OutputField(
-        desc="Strict JSON itinerary matching the schema."
-    )
-
-
-class FixJSON(dspy.Signature):
-    """Repair a JSON document that failed to parse.
-
-    Output ONLY the corrected JSON object. No prose, no markdown fences.
-    Preserve all fields and values from the broken input; only fix syntax.
-    """
-    broken_json: str = dspy.InputField(desc="Malformed JSON text.")
-    error_message: str = dspy.InputField(desc="Parser error.")
-    fixed_json: str = dspy.OutputField(desc="Strictly valid JSON only.")
-
-
-_planner: dspy.Predict | None = None
-_fixer: dspy.Predict | None = None
-
-
-def get_planner() -> dspy.Predict:
-    global _planner
-    if _planner is None:
-        _planner = dspy.Predict(ItineraryPlanner)
-    return _planner
-
-
-def get_fixer() -> dspy.Predict:
-    global _fixer
-    if _fixer is None:
-        _fixer = dspy.Predict(FixJSON)
-    return _fixer
-
 
 # ---------------------------------------------------------------------------
 # Candidate formatting
@@ -929,34 +915,6 @@ def _format_one_course(
     )
 
 
-def _format_one_poi(poi: dict[str, Any]) -> str:
-    # Same exclusion as _build_candidate_pool / _format_one_course -- return
-    # "" for anything flagged as not a real plannable destination so it never
-    # reaches the LLM prompt. Caller skips empty lines.
-    if poi.get("is_generic_activity") or poi.get("is_transit_marker") or poi.get("requires_review"):
-        return ""
-
-    name = poi.get("poi_name", "")
-    address = poi.get("address_en") or poi.get("address_ko", "")
-    lat = poi.get("lat")
-    lng = poi.get("lng")
-    area = _infer_area_from_text_or_coords(name, address, lat, lng) or ""
-    source_str = (
-        f" course_id={poi['course_id']} source_url={poi['source_url']}"
-        if poi.get("source_url")
-        else ""
-    )
-    return (
-        f"  - {name} "
-        f"[{poi.get('poi_type', '')}] "
-        f"area={area} "
-        f"addr={address} "
-        f"lat={lat} lng={lng} "
-        f"stay={poi.get('estimated_stay_time')}min"
-        f"{source_str}"
-    )
-
-
 def _format_segment_block(seg: dict[str, Any]) -> str:
     days = seg.get("day_numbers") or []
     if not days:
@@ -987,15 +945,7 @@ def _format_segment_block(seg: dict[str, Any]) -> str:
         lines.extend(rendered)
     else:
         lines.append("")
-        lines.append("[ANCHOR COURSE — none available; rely on supplement POIs + Google Places]")
-
-    suppl = seg.get("supplement_pois") or []
-    if suppl:
-        rendered_pois = [line for poi in suppl if (line := _format_one_poi(poi))]
-        if rendered_pois:
-            lines.append("")
-            lines.append("[SUPPLEMENT POIs — individual additions for gaps in anchor courses]")
-            lines.extend(rendered_pois)
+        lines.append("[ANCHOR COURSE — none available; rely on Google Places]")
 
     return "\n".join(lines)
 
@@ -1180,6 +1130,41 @@ def _is_locked_meal(poi: dict[str, Any]) -> bool:
     return bool(poi.get("meal_slot"))
 
 
+def _meal_slot_indices(n: int) -> tuple[int, int]:
+    """(lunch, dinner) insertion points for a day holding `n` other stops.
+
+    Both meals used to be inserted at a fixed index 2, which put them side by
+    side every single time: dinner went in at 2, then lunch went in at 2 and
+    pushed dinner to 3. Spreading them puts lunch around a third of the way
+    through the day and dinner around three quarters, leaving at least one stop
+    between them whenever the day has one to spare.
+
+    Indices are measured against the pre-insertion list, so the caller must
+    insert dinner first -- filling the lunch slot first shifts dinner one place
+    right and eats the gap.
+    """
+    if n < 2:
+        return 0, 1
+    lunch = min(max(round(n / 3), 1), n - 1)
+    dinner = min(max(round(n * 0.75), lunch + 1), n)
+    return lunch, dinner
+
+
+def _pending_meal(
+    meal_source: dict[int, dict[str, Any]] | None,
+    day_num: int,
+    pois: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """The locked pick still needing insertion for this day, else None."""
+    meal = (meal_source or {}).get(day_num)
+    if not meal:
+        return None  # no lock for this day/meal (no trip_start_date/area, or tier 3 unfilled)
+    meal_name_key = _normalize_text(meal.get("name"))
+    if any(_normalize_text(p.get("name")) == meal_name_key for p in pois):
+        return None  # LLM already included this exact locked restaurant
+    return meal
+
+
 def _is_meal_poi(poi: dict[str, Any]) -> bool:
     # A meal_slots.fill_meal_slot() result carries this key -- an explicit
     # "this IS the meal slot" marker beats guessing from type/name, so it's
@@ -1231,9 +1216,27 @@ def _candidate_items_for_area(
         source_score = 0 if x.get("source_kind") == "google" else 1
         type_score = 0
         ptype = _normalize_text(x.get("type"))
-        if ptype in {"cafe", "restaurant", "kpop_landmark", "shopping_mall", "shopping"}:
+        # Meal types go LAST. meal_slots already locks a lunch and a dinner into
+        # every day, so a backfill that reaches for a restaurant first spends the
+        # day's remaining slots on food the traveller already has -- and step 4's
+        # target counts only non-meal POIs, so each one inserted does not move it
+        # any closer to the target. Measured before this: a relaxed Hongdae day
+        # came out 1 sight / 5 eating stops.
+        # kpop/shopping stay boosted -- they are destinations, not duplicate meals.
+        if ptype in {"cafe", "restaurant", "market", "food", "meal_takeaway"}:
+            type_score = 1
+        elif ptype in {"kpop_landmark", "shopping_mall", "shopping"}:
             type_score = -1
-        return (source_score, type_score)
+        # (type, source), not (source, type): source_score used to lead, so every
+        # Google item outranked every course item and the type ordering below
+        # could only break ties *within* one source. With the pool's Google half
+        # being restaurants and its course half being sights, that meant a
+        # sightseeing gap got filled with restaurants no matter what type_score
+        # said. Type decides what the day needs; source only picks between two
+        # candidates of the same kind. /swap-candidates is unaffected -- it
+        # passes preferred_types, so its list is one category and type_score is
+        # constant across it.
+        return (type_score, source_score)
 
     return sorted(items, key=sort_key)
 
@@ -1286,6 +1289,16 @@ def _generate_day_theme(day: dict[str, Any], area: str | None, purpose: str) -> 
     return f"{area_label}: {descriptor}"
 
 
+@traceable(
+    run_type="chain",
+    name="validate_and_repair",
+    # Its only record today is 8 print() calls to stdout; diff this against
+    # the itinerary_generation span above it to see what the validator changed.
+    process_outputs=lambda o: {"days": [
+        {"day": d.get("day"), "pois": [p.get("name") for p in (d.get("pois") or [])]}
+        for d in (o.get("days") or [])
+    ]},
+)
 def _validate_and_repair_itinerary(
     itinerary: dict[str, Any],
     *,
@@ -1437,14 +1450,17 @@ def _validate_and_repair_itinerary(
     for day in days:
         pois = day.setdefault("pois", [])
         day_num = int(day.get("day") or 0)
-        for meal_source in (locked_meals, locked_lunch_meals):
-            meal = (meal_source or {}).get(day_num)
-            if not meal:
-                continue  # no lock for this day/meal (no trip_start_date/area, or tier 3 unfilled) -- skip silently
 
-            meal_name_key = _normalize_text(meal.get("name"))
-            if any(_normalize_text(p.get("name")) == meal_name_key for p in pois):
-                continue  # LLM already included this exact locked restaurant
+        lunch_idx, dinner_idx = _meal_slot_indices(len(pois))
+        # Dinner goes in first despite sitting later in the day: inserting at the
+        # earlier lunch index first would shift dinner one place right and close
+        # the gap _meal_slot_indices opened.
+        for meal, insert_idx in (
+            (_pending_meal(locked_meals, day_num, pois), dinner_idx),
+            (_pending_meal(locked_lunch_meals, day_num, pois), lunch_idx),
+        ):
+            if not meal:
+                continue
 
             day_area = _primary_area_for_day(day, day_segments) or meal.get("area")
             out = {
@@ -1464,11 +1480,10 @@ def _validate_and_repair_itinerary(
                 # warnings) so the frontend can flag it, rather than silently
                 # presenting it as verified as a Michelin pick would be.
                 "warnings": (
-                    ["cuisine 미확인 (Google Places, 미쉐린 미검증)"]
+                    ["From Google, not the Michelin guide — cuisine and opening hours unverified"]
                     if meal.get("source_tier") == "google" else []
                 ),
             }
-            insert_idx = min(2, len(pois))
             pois.insert(insert_idx, out)
             used_names.add(_normalize_text(out.get("name")))
             print(
@@ -1799,7 +1814,7 @@ _PACE_LABELS: dict[str, str] = {"packed": "packed schedule", "relaxed": "relaxed
 
 def _pace_target_line(state: TravelState) -> str:
     """Extra prompt line steering the LLM's per-day POI count toward the
-    user's trip_style. Kept out of the ItineraryPlanner docstring (which is
+    user's trip_style. Kept out of ITINERARY_PROMPT (which is
     shared/static across every call) since the target varies per request.
     Silent (no line) when pace is unset/unrecognized -- the LLM falls back to
     the docstring's plain 5-8 rule, and the validator's default bounds (6-7,
@@ -1848,19 +1863,41 @@ def _resolve_locked_meals(
         return locked
 
     slot_start, slot_end = meal_slots.MEAL_SLOTS[meal_type]
-    for day_num in range(1, expected_days + 1):
+
+    def _fill_one(day_num: int) -> tuple[int, dict[str, Any] | None]:
+        """One day's lookup. None means 'no slot to resolve', not 'unfilled'."""
         day_area = _primary_area_for_day({"day": day_num}, day_segments)
         if not day_area:
-            continue
+            return day_num, None
         try:
             weekday = weekday_for_day(trip_start_date, day_num, lang="en")
         except (ValueError, TypeError):
-            continue
-
-        result = meal_slots.fill_meal_slot(
+            return day_num, None
+        return day_num, meal_slots.fill_meal_slot(
             area=day_area, weekday=weekday, slot_start=slot_start, slot_end=slot_end,
             exclude_names=(exclude_by_day or {}).get(day_num, ()),
         )
+
+    # Days are independent *within* one meal_type: exclude_by_day is computed by
+    # the caller before this runs, never from a sibling day. The dinner -> lunch
+    # ordering lives in plan_node (lunch excludes dinner's picks) and stays
+    # strictly sequential -- only this inner per-day loop fans out.
+    # Same thread-boundary fix as build_google_supplement_by_areas above --
+    # without it each day's meal_slot span orphans out of the plan node.
+    _parent_run = get_current_run_tree()
+
+    def _fill_one_traced(day_num: int, _parent=_parent_run):
+        with tracing_context(parent=_parent):
+            return _fill_one(day_num)
+
+    with ThreadPoolExecutor(
+        max_workers=min(expected_days, _FANOUT_WORKERS)
+    ) as pool:
+        results = list(pool.map(_fill_one_traced, range(1, expected_days + 1)))
+
+    for day_num, result in results:
+        if result is None:
+            continue
         if result["status"] == "filled":
             locked[day_num] = result
         else:
@@ -2043,8 +2080,9 @@ def plan_node(state: TravelState) -> TravelState:
         google_supplement = build_google_supplement_by_areas(
             requested_areas=requested_areas,
             location=location,
-            purpose=purpose,
+            keywords=state.get("purpose_keywords") or [],
             api_key=GOOGLE_PLACES_API_KEY,
+            day_segments=day_segments,
         )
     else:
         print("[planner] GOOGLE_PLACES_API_KEY 없음 -- Google Places 보완 생략")
@@ -2059,7 +2097,7 @@ def plan_node(state: TravelState) -> TravelState:
     )
 
     try:
-        system_prompt = ItineraryPlanner.__doc__ or ""
+        system_prompt = ITINERARY_PROMPT
         pace_line = _pace_target_line(state)
         locked_meals_lines = (
             _locked_meals_prompt_lines(locked_meals)
@@ -2096,17 +2134,20 @@ def plan_node(state: TravelState) -> TravelState:
 
         itinerary = _normalize_sources(itinerary, courses)
 
-    except json.JSONDecodeError as e:
+    except Exception:
+        # Back to "confirm", not "done": a failure with no itinerary on "done"
+        # fell through route_entry to collect -> day_plan, where the app's
+        # "confirm" does nothing, so every "Try again" failed the same way.
+        # From "confirm" the next "confirm" regenerates. The exception text
+        # is logged, never sent -- same rule as api._INTERNAL_ERROR.
+        traceback.print_exc()
         return {
             **state,
-            "current_step": "done",
-            "messages": [AIMessage(content=f"⚠️ Planner returned invalid JSON: {e}")],
-        }
-    except Exception as e:
-        return {
-            **state,
-            "current_step": "done",
-            "messages": [AIMessage(content=f"⚠️ Planning failed: {e}")],
+            "current_step": "confirm",
+            "messages": [AIMessage(content=(
+                "Sorry, something went wrong while building your itinerary. "
+                "Please try again."
+            ))],
         }
 
     summary = itinerary.get("summary", "")
