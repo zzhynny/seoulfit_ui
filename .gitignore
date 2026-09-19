@@ -46,12 +46,13 @@ app.*.map.json
 
 # Backend (copied in alongside the app it serves).
 # The venv is machine-specific and 600MB; .env holds live API keys and must
-# never be committed. checkins.db is local research data.
+# never be committed. checkins.db and evals.db are local research data.
 backend/venv/
 backend/__pycache__/
 backend/**/__pycache__/
 backend/.env
 backend/checkins.db
+backend/evals.db
 
 # Live Google Places key. The file says so itself, but it was tracked anyway
 # and the key rode 21 unpushed commits before this line existed.

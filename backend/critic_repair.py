@@ -30,6 +30,7 @@ try:
 except Exception:
     TravelState = dict
 
+import eval_store
 from date_utils import weekday_for_day
 from planner import compute_transit_legs, _google_get
 
@@ -1421,7 +1422,9 @@ def make_critic_repair_node(base_dir: Any | None = None):
     critic = CriticAgent()
     repairer = RepairAgent()
 
-    def critic_repair_node(state: TravelState) -> TravelState:
+    # `config` is injected by LangGraph (api._config puts thread_id there) and
+    # defaults to None so direct calls from tests and scripts still work.
+    def critic_repair_node(state: TravelState, config: Any | None = None) -> TravelState:
         itinerary = state.get("itinerary")
 
         if not itinerary:
@@ -1459,6 +1462,19 @@ def make_critic_repair_node(base_dir: Any | None = None):
                 "repair_applied": bool(repair_logs),
                 "repair_log": repair_logs,
             }
+
+            # The only place both reports and the repair log exist together, so
+            # the only place the score can be banked. save_eval swallows its own
+            # failures and returns None -- a logging table must never be able to
+            # fail a traveller's itinerary.
+            eval_store.save_eval(
+                state=state,
+                itinerary=repaired_itinerary,
+                before=before_report,
+                after=after_report,
+                repair_logs=repair_logs,
+                thread_id=((config or {}).get("configurable") or {}).get("thread_id"),
+            )
 
             requested = after_report.get("requested_areas") or []
             coverage = after_report.get("area_coverage") or {}
