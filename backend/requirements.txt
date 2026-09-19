@@ -15,6 +15,11 @@ langchain-core>=0.3.25,<0.4
 langchain-community>=0.3,<0.4
 langchain-google-genai>=2,<3
 langgraph>=0.2.60,<0.3
+# Tracing. Already arrives as a hard dep of langchain-core, but planner/graph/
+# retrieval/meal_slots/odsay/critic_repair import `traceable` directly now, so
+# it is declared rather than relied on transitively. Inert unless
+# LANGSMITH_TRACING=true is set.
+langsmith>=0.3.45,<1
 
 # retrieval.py 가 코스 벡터(dataset/course_vectors.npz)에 내적을 건다.
 # 125개뿐이라 FAISS 같은 근사 탐색은 필요 없고, 필터가 남긴 부분집합에만

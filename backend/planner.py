@@ -27,6 +27,8 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
+from langsmith import traceable
+from langsmith.run_helpers import get_current_run_tree, tracing_context
 
 import meal_slots
 from date_utils import weekday_for_day
@@ -57,6 +59,7 @@ def set_planner_api_key(key: str) -> None:
     _PLANNER_GEMINI_KEY = key
 
 
+@traceable(run_type="llm", name="itinerary_generation")
 def _gemini_text(prompt: str) -> str:
     """Call Gemini and return raw text (JSON expected from caller)."""
     from google import genai as _genai
@@ -168,6 +171,22 @@ def compute_transit_legs(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # Google Places API
 # ---------------------------------------------------------------------------
 
+@traceable(
+    run_type="tool",
+    name="google_places",
+    # `params` carries "key": api_key -- never let it reach LangSmith.
+    process_inputs=lambda i: {
+        "url": i.get("url"),
+        "params": {k: v for k, v in (i.get("params") or {}).items() if k != "key"},
+    },
+    # A nearbysearch returns up to 20 results with geometry and photo refs;
+    # names are what you actually read when a POI turns up unexpectedly.
+    process_outputs=lambda o: {
+        "status": o.get("status"),
+        "count": len(o.get("results") or []),
+        "names": [r.get("name") for r in (o.get("results") or [])],
+    },
+)
 def _google_get(url: str, params: dict[str, Any]) -> dict[str, Any]:
     try:
         resp = requests.get(url, params=params, timeout=12)
@@ -179,6 +198,42 @@ def _google_get(url: str, params: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:
         print(f"[Google Places] request error: {e}")
         return {"status": "REQUEST_ERROR", "error_message": str(e)}
+
+
+def _stamp_true_area(
+    places: list[dict[str, Any]], requested: str,
+) -> list[dict[str, Any]]:
+    """Re-derive each POI's area from its coordinates and drop the ones that
+    aren't actually in (or adjacent to) `requested`.
+
+    Both fetchers used to stamp `area=requested` on every hit without checking.
+    Nearby Search's radius reaches _ANCHOR_RADIUS_MAX_M and Text Search's
+    location is only a bias, so either can return a place in the next district
+    -- Hongdae sweeps routinely surface Sinchon, which is not in Hongdae's
+    adjacency set. The stamp then claimed otherwise, and the two consumers
+    disagree about whether to believe it: _candidate_items_for_area trusts the
+    stamp when backfilling coverage, while the critic's _evaluate_area_coverage
+    re-infers from coordinates. So the validator would insert a "Hongdae" cafe
+    that is really in Sinchon to clear REQUESTED_AREA_UNDER_COVERED, the critic
+    would not count it, and repair would retry the same move.
+
+    A POI whose area can't be inferred is kept with the requested stamp -- the
+    same benefit of the doubt the generic branch has always given them.
+    """
+    kept: list[dict[str, Any]] = []
+    for place in places:
+        true_area = _infer_area_from_text_or_coords(
+            place.get("poi_name"), place.get("address_en"),
+            place.get("lat"), place.get("lng"),
+        )
+        if not true_area:
+            kept.append(place)
+            continue
+        if not _area_matches_requested(true_area, requested):
+            continue
+        place["area"] = true_area
+        kept.append(place)
+    return kept
 
 
 def fetch_nearby_places(
@@ -228,7 +283,9 @@ def fetch_nearby_places(
     ]
 
     places: list[dict[str, Any]] = []
-    for r in filtered[:max_results]:
+    # Capped after _stamp_true_area below, not here: slicing first would let
+    # out-of-area hits use up the budget and return short.
+    for r in filtered:
         loc = (r.get("geometry") or {}).get("location") or {}
         if "lat" not in loc or "lng" not in loc:
             continue
@@ -255,7 +312,7 @@ def fetch_nearby_places(
             "place_id": r.get("place_id", ""),
         })
 
-    return places
+    return _stamp_true_area(places, area)[:max_results]
 
 
 def fetch_text_places(
@@ -332,10 +389,7 @@ def fetch_text_places(
             "place_id": r.get("place_id", ""),
         })
 
-        if len(places) >= max_results:
-            break
-
-    return places
+    return _stamp_true_area(places, area)[:max_results]
 
 
 # ---------------------------------------------------------------------------
@@ -491,6 +545,38 @@ def fetch_kpop_places_for_area(
 # and up to 3.7km in Mapo, 3.5km in Gangnam -- from the POIs the day will
 # actually visit, so the search circle can miss the very stops it is meant to
 # surround (reorder_supplements' docstring notes the same symptom downstream).
+# What each Day Planner interest label actually means as a search phrase. The
+# catch-all Text Search below used to be handed the label verbatim, so Google
+# received "Culture & History, Food & Cafes in Jongno Seoul" -- a dropdown label
+# with a comma in it, not a phrase anyone would type.
+#
+# None means "already covered": Food & Cafes has the cafe and restaurant sweeps,
+# Shopping has the shopping_mall sweep, K-POP has its own text queries. A third
+# search for those is a paid duplicate, so the catch-all skips them. That leaves
+# it doing what its comment always said -- the interests with no typed sweep.
+_INTEREST_QUERIES: dict[str, str | None] = {
+    "Culture & History": "historic sites, palaces and museums",
+    "Nature & Relaxation": "parks, gardens and riverside walks",
+    "Food & Cafes": None,
+    "Shopping": None,
+    "K-POP & Hallyu": None,
+}
+
+
+def _generic_query_terms(purpose: str) -> list[str]:
+    """Search phrases for the catch-all sweep, or [] to skip it.
+
+    A purpose made entirely of known interest labels maps to their phrases
+    (minus the ones with a typed sweep). Anything else is a free-form purpose
+    from a caller outside the Day Planner flow, and is searched as written --
+    that is the long tail the catch-all was added for.
+    """
+    interests = [i.strip() for i in purpose.split(",") if i.strip()]
+    if interests and all(i in _INTEREST_QUERIES for i in interests):
+        return [q for i in interests if (q := _INTEREST_QUERIES[i])]
+    return [purpose.strip()] if purpose.strip() else []
+
+
 _ANCHOR_MIN_POINTS = 3          # below this the centroid is one outlier away from nonsense
 _ANCHOR_WALK_BUFFER_M = 800     # a stop just outside the cluster is still walkable
 _ANCHOR_RADIUS_MAX_M = 3000     # past this, fall back: see _anchor_search_origin
@@ -612,28 +698,43 @@ def build_google_supplement_for_area(
         supplement.extend(cafes)
         print(f"[Google Places][{_area_label(area)}] 카페 {len(cafes)}개 추가")
 
-    restaurants = fetch_nearby_places(
-        area=area,
-        place_type="restaurant",
-        api_key=api_key,
-        radius=_radius(1800),
-        min_rating=4.0,
-        max_results=5,
-        center=center,
-    )
-    if len(restaurants) < 3:
-        restaurants += fetch_text_places(
+    # Gated like the cafe sweep above -- it used to be the one branch that ran
+    # unconditionally, with no comment saying why. Every day already gets a
+    # lunch and a dinner from meal_slots (Michelin tier 1, Google tier 2), so
+    # sweeping for more restaurants on a Culture or Nature day bought POIs the
+    # traveller already has, then _candidate_items_for_area ranked them ahead of
+    # sightseeing when backfilling a short day.
+    #
+    # "relax" is deliberately NOT a keyword here (it is for cafes): Nature &
+    # Relaxation matching it is incidental, and a park day does not want a
+    # restaurant sweep. meal_slots' own tier-2 fallback calls
+    # fetch_nearby_places(area, "restaurant") directly and is unaffected, as is
+    # /swap-candidates, which runs google_fallback_candidates when the pool is
+    # empty -- so nothing loses its guaranteed meal or its swap options.
+    need_restaurant = any(k in purpose_lower for k in ["food", "restaurant", "eat", "맛집"])
+    if need_restaurant:
+        restaurants = fetch_nearby_places(
             area=area,
-            query=f"popular restaurants in {_area_label(area)} Seoul",
+            place_type="restaurant",
             api_key=api_key,
-            radius=_radius(2500),
+            radius=_radius(1800),
             min_rating=4.0,
-            max_results=5 - len(restaurants),
-            poi_type="restaurant",
+            max_results=5,
             center=center,
         )
-    supplement.extend(restaurants)
-    print(f"[Google Places][{_area_label(area)}] 식당 {len(restaurants)}개 추가")
+        if len(restaurants) < 3:
+            restaurants += fetch_text_places(
+                area=area,
+                query=f"popular restaurants in {_area_label(area)} Seoul",
+                api_key=api_key,
+                radius=_radius(2500),
+                min_rating=4.0,
+                max_results=5 - len(restaurants),
+                poi_type="restaurant",
+                center=center,
+            )
+        supplement.extend(restaurants)
+        print(f"[Google Places][{_area_label(area)}] 식당 {len(restaurants)}개 추가")
 
     if any(k in purpose_lower for k in ["kpop", "k-pop", "bts", "blackpink", "idol", "아이돌"]):
         kpop_places = fetch_kpop_places_for_area(
@@ -670,36 +771,57 @@ def build_google_supplement_for_area(
         supplement.extend(shops)
         print(f"[Google Places][{_area_label(area)}] 쇼핑 {len(shops)}개 추가")
 
-    # Catch-all: the branches above only cover food/cafe/kpop/shopping. Any other
-    # purpose (K-beauty, art, nature, nightlife, ...) gets no targeted POIs, so
-    # search Google for the purpose itself. Type-based fetches stay the primary
-    # path for the common themes; this only fills the long tail.
-    if purpose and purpose.strip():
+    # Catch-all for the interests with no typed sweep above. The area re-check
+    # that used to live here now runs inside both fetchers (_stamp_true_area),
+    # so every sweep gets it, not just this one.
+    # One search per term rather than one joined query: gluing two phrases with
+    # "and" produced "historic sites, palaces and museums and parks, gardens and
+    # riverside walks", which is not a query Google can do much with. At most two
+    # terms are possible (_INTEREST_QUERIES has two non-None entries), so this is
+    # one extra call only when the traveller picked both uncovered interests for
+    # the same area.
+    terms = _generic_query_terms(purpose)
+    for term in terms:
         generic = fetch_text_places(
             area=area,
-            query=f"{purpose} in {_area_label(area)} Seoul",
+            query=f"{term} in {_area_label(area)} Seoul",
             api_key=api_key,
             radius=_radius(2500),
             min_rating=4.0,
-            max_results=5,
+            max_results=max(2, 5 // len(terms)),
             center=center,
         )
-        # Text Search's radius is only a bias, and fetch_text_places stamps
-        # area=requested on every hit. Re-infer each POI's true area from its
-        # coords and keep only ones actually in (or adjacent to) this area, so an
-        # off-neighborhood result can't be mislabeled and inflate area_coverage.
-        kept = []
-        for p in generic:
-            true_area = _infer_area_from_text_or_coords(
-                p.get("poi_name"), p.get("address_en"), p.get("lat"), p.get("lng"))
-            if true_area and _area_matches_requested(true_area, area):
-                p["area"] = true_area
-                kept.append(p)
-        if kept:
-            supplement.extend(kept)
-            print(f"[Google Places][{_area_label(area)}] 목적 기반 {len(kept)}개 추가")
+        if generic:
+            supplement.extend(generic)
+            print(f"[Google Places][{_area_label(area)}] 목적 기반 {len(generic)}개 추가 ({term})")
 
     return _dedupe_places(supplement)
+
+
+def _interests_for_area(
+    area: str, day_segments: list[dict[str, Any]] | None, fallback: str,
+) -> str:
+    """The interests the traveller picked for the days assigned to `area`.
+
+    plan_node passes _trip_interests(state) -- every day's interest joined into
+    one trip-wide string -- and that same string used to drive the sweeps for
+    every area. A Jongno/Culture + Hongdae/Shopping trip therefore ran the
+    shopping sweep over Jongno and searched Hongdae for history, neither of
+    which anyone asked for. day_segments already carries each day's own choice
+    as purpose_hint, so read it from there.
+
+    Falls back to the trip-wide string when there are no segments for this area
+    (callers outside the Day Planner flow, and the tests).
+    """
+    hints = [
+        (seg.get("purpose_hint") or "").strip()
+        for seg in (day_segments or [])
+        if seg.get("area") == area
+    ]
+    # dict.fromkeys: an area used on several days keeps each distinct interest,
+    # in day order, without repeating one that appears twice.
+    hints = [h for h in dict.fromkeys(hints) if h]
+    return ", ".join(hints) if hints else fallback
 
 
 def build_google_supplement_by_areas(
@@ -735,18 +857,27 @@ def build_google_supplement_by_areas(
     # _dedupe_places keeps the FIRST copy of each duplicate. Completion order
     # would hand the same trip a different winner run to run, so the itinerary
     # would stop being reproducible from the same inputs.
+    # langsmith: contextvars do not cross the ThreadPoolExecutor boundary, so
+    # each worker's google_places spans would orphan into their own root traces
+    # instead of nesting under the plan node. Capture the parent run here and
+    # re-enter it inside the worker. Free when tracing is off:
+    # get_current_run_tree() returns None and tracing_context(parent=None) is a
+    # no-op (parent=False is the explicit detach, None means unchanged).
+    _parent_run = get_current_run_tree()
+
+    def _one_area(area: str, _parent=_parent_run) -> list[dict[str, Any]]:
+        with tracing_context(parent=_parent):
+            return build_google_supplement_for_area(
+                area=area,
+                purpose=_interests_for_area(area, day_segments, purpose),
+                api_key=api_key,
+                day_segments=day_segments,
+            )
+
     with ThreadPoolExecutor(
         max_workers=min(len(requested_areas), _FANOUT_WORKERS)
     ) as pool:
-        for places in pool.map(
-            lambda area: build_google_supplement_for_area(
-                area=area,
-                purpose=purpose,
-                api_key=api_key,
-                day_segments=day_segments,
-            ),
-            requested_areas,
-        ):
+        for places in pool.map(_one_area, requested_areas):
             all_places.extend(places)
 
     all_places = _dedupe_places(all_places)
@@ -1290,9 +1421,27 @@ def _candidate_items_for_area(
         source_score = 0 if x.get("source_kind") == "google" else 1
         type_score = 0
         ptype = _normalize_text(x.get("type"))
-        if ptype in {"cafe", "restaurant", "kpop_landmark", "shopping_mall", "shopping"}:
+        # Meal types go LAST. meal_slots already locks a lunch and a dinner into
+        # every day, so a backfill that reaches for a restaurant first spends the
+        # day's remaining slots on food the traveller already has -- and step 4's
+        # target counts only non-meal POIs, so each one inserted does not move it
+        # any closer to the target. Measured before this: a relaxed Hongdae day
+        # came out 1 sight / 5 eating stops.
+        # kpop/shopping stay boosted -- they are destinations, not duplicate meals.
+        if ptype in {"cafe", "restaurant", "market", "food", "meal_takeaway"}:
+            type_score = 1
+        elif ptype in {"kpop_landmark", "shopping_mall", "shopping"}:
             type_score = -1
-        return (source_score, type_score)
+        # (type, source), not (source, type): source_score used to lead, so every
+        # Google item outranked every course item and the type ordering below
+        # could only break ties *within* one source. With the pool's Google half
+        # being restaurants and its course half being sights, that meant a
+        # sightseeing gap got filled with restaurants no matter what type_score
+        # said. Type decides what the day needs; source only picks between two
+        # candidates of the same kind. /swap-candidates is unaffected -- it
+        # passes preferred_types, so its list is one category and type_score is
+        # constant across it.
+        return (type_score, source_score)
 
     return sorted(items, key=sort_key)
 
@@ -1345,6 +1494,16 @@ def _generate_day_theme(day: dict[str, Any], area: str | None, purpose: str) -> 
     return f"{area_label}: {descriptor}"
 
 
+@traceable(
+    run_type="chain",
+    name="validate_and_repair",
+    # Its only record today is 8 print() calls to stdout; diff this against
+    # the itinerary_generation span above it to see what the validator changed.
+    process_outputs=lambda o: {"days": [
+        {"day": d.get("day"), "pois": [p.get("name") for p in (d.get("pois") or [])]}
+        for d in (o.get("days") or [])
+    ]},
+)
 def _validate_and_repair_itinerary(
     itinerary: dict[str, Any],
     *,
@@ -1526,7 +1685,7 @@ def _validate_and_repair_itinerary(
                 # warnings) so the frontend can flag it, rather than silently
                 # presenting it as verified as a Michelin pick would be.
                 "warnings": (
-                    ["cuisine 미확인 (Google Places, 미쉐린 미검증)"]
+                    ["From Google, not the Michelin guide — cuisine and opening hours unverified"]
                     if meal.get("source_tier") == "google" else []
                 ),
             }
@@ -1928,10 +2087,18 @@ def _resolve_locked_meals(
     # the caller before this runs, never from a sibling day. The dinner -> lunch
     # ordering lives in plan_node (lunch excludes dinner's picks) and stays
     # strictly sequential -- only this inner per-day loop fans out.
+    # Same thread-boundary fix as build_google_supplement_by_areas above --
+    # without it each day's meal_slot span orphans out of the plan node.
+    _parent_run = get_current_run_tree()
+
+    def _fill_one_traced(day_num: int, _parent=_parent_run):
+        with tracing_context(parent=_parent):
+            return _fill_one(day_num)
+
     with ThreadPoolExecutor(
         max_workers=min(expected_days, _FANOUT_WORKERS)
     ) as pool:
-        results = list(pool.map(_fill_one, range(1, expected_days + 1)))
+        results = list(pool.map(_fill_one_traced, range(1, expected_days + 1)))
 
     for day_num, result in results:
         if result is None:

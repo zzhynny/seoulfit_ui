@@ -11,8 +11,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import planner  # noqa: E402
 from critic_repair import reorder_supplements  # noqa: E402
-from planner import _meal_slot_indices, _validate_and_repair_itinerary  # noqa: E402
+from planner import (  # noqa: E402
+    _is_meal_poi, _meal_slot_indices, _validate_and_repair_itinerary,
+)
 
 
 def _course(n: int) -> dict:
@@ -127,9 +130,83 @@ def test_route_tidy_does_not_pull_the_meals_back_together() -> None:
     assert abs(di - li) > 1, f"route tidy re-adjacented the meals: {names}"
 
 
+def test_backfill_fills_a_short_day_with_sights_not_more_restaurants() -> None:
+    """Every day already gets a locked lunch and dinner, so topping up a short
+    day must reach for sightseeing first.
+
+    It used to reach for restaurants first, twice over: _candidate_items_for_area
+    ranked cafe/restaurant types ahead of everything else, and sorted on source
+    before type so every Google item beat every course item regardless. Measured
+    on this exact fixture, the day came out 1 sight / 5 eating stops -- and
+    step 4's own target counts only non-meal POIs, so each restaurant it inserted
+    did nothing to move it closer.
+    """
+    course = _course(6)
+    google = [
+        {"poi_name": f"G Restaurant {i}", "poi_type": "restaurant", "area": "hongdae",
+         "lat": 37.5565, "lng": 126.9230, "address_en": "Mapo-gu, Seoul",
+         "estimated_stay_time": 60, "source": "Google Places (Hongdae)"}
+        for i in range(4)
+    ]
+    itinerary = {"days": [{
+        "day": 1, "theme": "Day 1", "estimated_cost": "",
+        "pois": [{"name": course["sequence"][0]["poi_name"], "type": "tourist_spot",
+                  "address": course["sequence"][0]["address_en"],
+                  "lat": course["sequence"][0]["lat"], "lng": course["sequence"][0]["lng"],
+                  "stay_minutes": 60, "notes": ""}],
+    }]}
+
+    out = _validate_and_repair_itinerary(
+        itinerary,
+        courses=[course],
+        google_supplement=google,
+        requested_areas=["hongdae"],
+        day_segments=[{"day_numbers": [1], "area": "hongdae",
+                       "purpose_hint": "Culture & History", "anchor_courses": [course]}],
+        duration="1 day",
+        num_days=1,
+        pace="relaxed",
+        locked_meals={1: _meal("DinnerPick", "dinner")},
+        locked_lunch_meals={1: _meal("LunchPick", "lunch")},
+    )
+
+    pois = out["days"][0]["pois"]
+    eating = [p["name"] for p in pois if _is_meal_poi(p)]
+    assert sorted(eating) == ["DinnerPick", "LunchPick"], (
+        f"backfill added eating stops on top of the two locked meals: {eating}")
+    assert len(pois) - len(eating) >= 3, f"day is mostly food: {[p['name'] for p in pois]}"
+
+
+def test_a_restaurant_sweep_only_runs_when_the_traveller_asked_for_food() -> None:
+    """The sweep used to run on every area regardless of interest, duplicating
+    the locked meals. meal_slots' own tier-2 fallback and /swap-candidates each
+    call Google themselves, so nothing downstream depends on this one."""
+    calls: list[str] = []
+    orig_nearby, orig_text = planner.fetch_nearby_places, planner.fetch_text_places
+    planner.fetch_nearby_places = lambda **kw: calls.append(kw["place_type"]) or []
+    planner.fetch_text_places = lambda **kw: calls.append("text") or []
+    try:
+        seen = {}
+        for interest in ("Culture & History", "Nature & Relaxation", "Shopping",
+                         "K-POP & Hallyu", "Food & Cafes"):
+            calls.clear()
+            planner.build_google_supplement_for_area(
+                area="hongdae", purpose=interest, api_key="k", day_segments=None)
+            seen[interest] = "restaurant" in calls
+    finally:
+        planner.fetch_nearby_places, planner.fetch_text_places = orig_nearby, orig_text
+
+    assert seen["Food & Cafes"], "a food trip still needs the restaurant sweep"
+    for interest, swept in seen.items():
+        if interest != "Food & Cafes":
+            assert not swept, f"{interest} paid for a restaurant sweep it did not ask for"
+
+
 if __name__ == "__main__":
     test_indices_always_leave_a_gap()
     test_lunch_comes_before_dinner_and_is_not_last()
     test_repair_pass_separates_the_two_meals()
     test_route_tidy_does_not_pull_the_meals_back_together()
+    test_backfill_fills_a_short_day_with_sights_not_more_restaurants()
+    test_a_restaurant_sweep_only_runs_when_the_traveller_asked_for_food()
     print("all meal placement self-checks passed")

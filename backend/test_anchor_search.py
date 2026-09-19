@@ -124,6 +124,65 @@ def test_origin_reaches_the_actual_google_call() -> None:
         assert c["radius"] <= _ANCHOR_RADIUS_MAX_M, c
 
 
+# ---------------------------------------------------------------------------
+# What each sweep is told to look for, and what it is allowed to bring back
+# ---------------------------------------------------------------------------
+
+def test_each_area_is_swept_for_its_own_days_interests() -> None:
+    """plan_node passes every day's interest joined into one string. Each area
+    must get only the interests of the days actually assigned to it."""
+    segs = [
+        {"area": "jongno", "purpose_hint": "Culture & History"},
+        {"area": "hongdae", "purpose_hint": "Shopping"},
+        {"area": "hongdae", "purpose_hint": "Food & Cafes"},
+    ]
+    trip_wide = "Culture & History, Shopping, Food & Cafes"
+
+    assert planner._interests_for_area("jongno", segs, trip_wide) == "Culture & History"
+    assert planner._interests_for_area("hongdae", segs, trip_wide) == "Shopping, Food & Cafes"
+    # No segment for this area (callers outside the Day Planner flow, and tests).
+    assert planner._interests_for_area("seongsu", segs, trip_wide) == trip_wide
+
+
+def test_catch_all_search_sends_a_phrase_not_a_dropdown_label() -> None:
+    terms = planner._generic_query_terms("Culture & History")
+    assert terms == ["historic sites, palaces and museums"]
+
+    # Interests that already have their own typed sweep get no second search.
+    for covered in ("Food & Cafes", "Shopping", "K-POP & Hallyu"):
+        assert planner._generic_query_terms(covered) == [], covered
+    assert planner._generic_query_terms("Shopping, K-POP & Hallyu") == []
+
+    # Both uncovered interests on one area -> one search each, never glued into
+    # "...museums and parks, gardens and..." which Google can do nothing with.
+    assert len(planner._generic_query_terms("Culture & History, Nature & Relaxation")) == 2
+
+    # A free-form purpose is still searched as written -- the long tail.
+    assert planner._generic_query_terms("vintage record shops") == ["vintage record shops"]
+    assert planner._generic_query_terms("") == []
+
+
+def test_a_sweep_cannot_stamp_an_out_of_area_place_with_the_requested_area() -> None:
+    """Sinchon is not in hongdae's adjacency set, so a Sinchon hit from a Hongdae
+    sweep must be dropped -- not relabelled 'hongdae' and handed to the validator,
+    which trusts the stamp while the critic re-infers from coordinates."""
+    places = [
+        {"poi_name": "In Hongdae", "address_en": "", "lat": 37.5563, "lng": 126.9236},
+        {"poi_name": "Really In Sinchon", "address_en": "", "lat": 37.5598, "lng": 126.9425},
+        {"poi_name": "Nowhere", "address_en": "", "lat": None, "lng": None},
+    ]
+    kept = planner._stamp_true_area([dict(p) for p in places], "hongdae")
+    names = [p["poi_name"] for p in kept]
+
+    assert "Really In Sinchon" not in names
+    assert "In Hongdae" in names
+    # Un-inferable POIs keep the benefit of the doubt.
+    assert "Nowhere" in names
+    for p in kept:
+        if p["poi_name"] == "In Hongdae":
+            assert planner._area_matches_requested(p["area"], "hongdae")
+
+
 if __name__ == "__main__":
     test_too_few_points_falls_back()
     test_tight_cluster_gets_a_centroid_that_covers_it()
@@ -131,4 +190,7 @@ if __name__ == "__main__":
     test_out_of_area_poi_does_not_drag_the_centre()
     test_real_dataset_gangnam_falls_back()
     test_origin_reaches_the_actual_google_call()
+    test_each_area_is_swept_for_its_own_days_interests()
+    test_catch_all_search_sends_a_phrase_not_a_dropdown_label()
+    test_a_sweep_cannot_stamp_an_out_of_area_place_with_the_requested_area()
     print("all anchor search self-checks passed")

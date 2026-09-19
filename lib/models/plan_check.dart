@@ -12,6 +12,8 @@ class SwapCandidate {
     this.lat,
     this.lng,
     this.rating,
+    this.grade,
+    this.distanceKm,
   });
 
   final String name;
@@ -27,6 +29,14 @@ class SwapCandidate {
   final double? lng;
   final double? rating;
 
+  /// Michelin standing ("1 Michelin Star", "Bib Gourmand", ...) for restaurant
+  /// candidates, which come from the curated set and carry no 5-point rating.
+  final String? grade;
+
+  /// Straight-line km from the stop being replaced. Restaurant candidates are
+  /// ranked by this, so showing it explains the order.
+  final double? distanceKm;
+
   /// The payload uses `poi_name`/`poi_type`, not `name`/`type` — the same
   /// record under different keys from the itinerary's own POIs.
   factory SwapCandidate.fromJson(Map<String, dynamic> json) => SwapCandidate(
@@ -40,6 +50,8 @@ class SwapCandidate {
         lat: (json['lat'] as num?)?.toDouble(),
         lng: (json['lng'] as num?)?.toDouble(),
         rating: (json['rating'] as num?)?.toDouble(),
+        grade: json['grade']?.toString(),
+        distanceKm: (json['distance_km'] as num?)?.toDouble(),
       );
 }
 

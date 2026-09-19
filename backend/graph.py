@@ -12,6 +12,7 @@ from state import TravelState
 from planner import make_retrieve_node, plan_node
 from critic_repair import make_critic_repair_node
 from retrieval import DAY_PLAN_REGION_ORDER
+from langsmith import traceable
 
 # ---------------------------------------------------------------------------
 # Module-level API key (set by build_graph)
@@ -24,6 +25,9 @@ _api_key: str = ""
 # Direct Gemini helpers (replaces DSPy — avoids response_schema incompatibility)
 # ---------------------------------------------------------------------------
 
+# The JSON-repair retry in _gemini_json calls this a second time, so a sibling
+# intake_llm span is the signal that the model returned malformed JSON.
+@traceable(run_type="llm", name="intake_llm")
 def _gemini_raw(prompt: str) -> str:
     """Single Gemini JSON-mode call → raw text. Seam for testing + retry."""
     from google import genai as _genai

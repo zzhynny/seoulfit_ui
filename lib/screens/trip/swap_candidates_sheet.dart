@@ -177,6 +177,22 @@ class _SwapCandidatesSheetState extends State<SwapCandidatesSheet> {
   }
 }
 
+/// The one-line subtitle under a candidate's name.
+///
+/// Google-sourced candidates carry a 5-point rating. Restaurant candidates come
+/// from the Michelin set instead, which has a grade rather than a score, and are
+/// ranked by distance from the stop being replaced — so show both, since the
+/// distance is what decided the order.
+String? _subtitleFor(SwapCandidate c) {
+  final parts = [
+    if (c.grade != null && c.grade!.isNotEmpty) c.grade!,
+    if (c.rating != null) '${c.rating!.toStringAsFixed(1)}★',
+    if (c.distanceKm != null) '${c.distanceKm!.toStringAsFixed(1)}km away',
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
+
 class _CandidateRow extends StatelessWidget {
   const _CandidateRow({required this.candidate, required this.onPick});
 
@@ -219,9 +235,13 @@ class _CandidateRow extends StatelessWidget {
                           category: categoryForPoiType(candidate.type)),
                     ],
                   ),
-                  if (candidate.rating != null) ...[
+                  // Rating for Google-sourced candidates; grade + distance for
+                  // restaurants, which come from the Michelin set (no 5-point
+                  // score) ranked by how far they are from the stop being
+                  // replaced. Joined so a row never shows an empty subtitle.
+                  if (_subtitleFor(candidate) case final subtitle?) ...[
                     const SizedBox(height: 2),
-                    Text('${candidate.rating!.toStringAsFixed(1)}★',
+                    Text(subtitle,
                         style: AppTextStyles.caption
                             .copyWith(color: AppColors.textSecondary)),
                   ],

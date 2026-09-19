@@ -12,8 +12,12 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import poi_text  # noqa: E402
 
-WEB = "Soseoul Hannam is a modern Korean fine-dining restaurant in Hannam-dong, Seoul."
-REPLY = "A modern Korean fine-dining restaurant in Hannam-dong."
+# Deliberately a place neither index lists: these tests exercise the fallback
+# paths (Tavily + Gemini text, Google Places photo), and both _POI_SNAP
+# (TourAPI) and _MICHELIN_SNAP (restaurant.json) short-circuit ahead of them.
+# "Hannam Corner Cafe", the old fixture, is Michelin-listed and stopped reaching them.
+WEB = "Hannam Corner Cafe is a small neighbourhood coffee shop in Hannam-dong, Seoul."
+REPLY = "A small neighbourhood coffee shop in Hannam-dong."
 
 
 def _isolated(fn, *, web=(WEB,), reply=REPLY, key="test-key"):
@@ -57,8 +61,8 @@ def _isolated(fn, *, web=(WEB,), reply=REPLY, key="test-key"):
 
 def test_text_comes_from_the_web_search_not_memory():
     def run(searches, prompts):
-        assert poi_text.poi_text("summary", "Soseoul Hannam", "restaurant") == REPLY
-        assert "Soseoul Hannam" in searches[0], searches
+        assert poi_text.poi_text("summary", "Hannam Corner Cafe", "restaurant") == REPLY
+        assert "Hannam Corner Cafe" in searches[0], searches
         assert WEB in prompts[0], prompts
         assert "ONLY" in prompts[0], prompts
 
@@ -67,8 +71,8 @@ def test_text_comes_from_the_web_search_not_memory():
 
 def test_the_same_place_reads_the_same_everywhere():
     def run(searches, prompts):
-        first = poi_text.poi_text("summary", "Soseoul Hannam", "restaurant")
-        again = poi_text.poi_text("summary", "  soseoul hannam ", "")
+        first = poi_text.poi_text("summary", "Hannam Corner Cafe", "restaurant")
+        again = poi_text.poi_text("summary", "  hannam corner cafe ", "")
         assert again == first
         assert len(searches) == 1, searches
 
@@ -78,7 +82,7 @@ def test_the_same_place_reads_the_same_everywhere():
 def test_each_kind_of_text_is_its_own_entry():
     def run(searches, prompts):
         for kind in ("summary", "detail"):
-            poi_text.poi_text(kind, "Soseoul Hannam", "restaurant")
+            poi_text.poi_text(kind, "Hannam Corner Cafe", "restaurant")
         assert len(searches) == 2, searches
 
     _isolated(run)
@@ -97,7 +101,7 @@ def test_nothing_on_the_web_means_no_text_and_no_guessing():
 def test_a_none_reply_means_no_text():
     # The model's way of saying the search didn't clearly describe this place.
     def run(searches, prompts):
-        assert poi_text.poi_text("summary", "Soseoul Hannam") == ""
+        assert poi_text.poi_text("summary", "Hannam Corner Cafe") == ""
 
     _isolated(run, reply="NONE")
 
@@ -105,11 +109,11 @@ def test_a_none_reply_means_no_text():
 def test_errors_are_not_cached():
     def run(searches, prompts):
         try:
-            poi_text.poi_text("summary", "Soseoul Hannam")
+            poi_text.poi_text("summary", "Hannam Corner Cafe")
             raise AssertionError("a search failure must surface, not become empty text")
         except RuntimeError:
             pass
-        assert poi_text.poi_text("summary", "Soseoul Hannam") == REPLY
+        assert poi_text.poi_text("summary", "Hannam Corner Cafe") == REPLY
         assert len(searches) == 2, searches
 
     _isolated(run, web=(RuntimeError("tavily down"), WEB))
@@ -117,10 +121,10 @@ def test_errors_are_not_cached():
 
 def test_cached_text_survives_a_restart():
     def run(searches, prompts):
-        poi_text.poi_text("summary", "Soseoul Hannam")
+        poi_text.poi_text("summary", "Hannam Corner Cafe")
         poi_text._CACHE.clear()
         poi_text._load_cache_from_disk()
-        assert poi_text.poi_text("summary", "Soseoul Hannam") == REPLY
+        assert poi_text.poi_text("summary", "Hannam Corner Cafe") == REPLY
         assert len(searches) == 1, searches
 
     _isolated(run)
@@ -129,7 +133,7 @@ def test_cached_text_survives_a_restart():
 def test_missing_key_is_reported_but_cached_text_still_serves():
     def run(searches, prompts):
         try:
-            poi_text.poi_text("summary", "Soseoul Hannam")
+            poi_text.poi_text("summary", "Hannam Corner Cafe")
             raise AssertionError("expected NotConfigured")
         except poi_text.NotConfigured:
             pass
@@ -144,7 +148,7 @@ def test_endpoints_serve_the_grounded_text():
 
     def run(searches, prompts):
         client = TestClient(api.app)
-        body = {"name": "Soseoul Hannam", "type": "restaurant"}
+        body = {"name": "Hannam Corner Cafe", "type": "restaurant"}
         assert client.post("/poi-summary", json=body).json() == {"summary": REPLY}
         # Removed: its web results rarely said what an entrance looks like.
         assert client.post("/poi-arrival-tip", json=body).status_code == 404
