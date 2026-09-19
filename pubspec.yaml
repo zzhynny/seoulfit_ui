@@ -1,8 +1,8 @@
 name: seoulfit_ui
-description: "SeoulFit — AI-powered Seoul travel companion (UI-only build)."
+description: "SeoulFit ??AI-powered Seoul travel companion (UI-only build)."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.12.0
