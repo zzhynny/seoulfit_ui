@@ -134,6 +134,9 @@ List<RouteStop> toUiRouteStops(api.Itinerary itinerary) {
         order: order++,
         nameEn: poi.name,
         arrivalTime: clockLabel(offset),
+        // Same expression toUiActivity uses, so a stop reads identically on the
+        // itinerary cards and here rather than falling back differently.
+        description: poi.notes.isNotEmpty ? poi.notes : poi.address,
         // No hop after the final stop of a day — the next stop belongs to a
         // different day and the planner routes no leg across that boundary.
         hop: (leg == null || isLastOfDay) ? null : toUiHop(leg),

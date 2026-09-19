@@ -5,6 +5,7 @@ import 'package:seoulfit_ui/data/mock/mock_trip_repository.dart';
 import 'package:seoulfit_ui/models/trip.dart';
 import 'package:seoulfit_ui/providers/trip_provider.dart';
 import 'package:seoulfit_ui/screens/trip/final_route_screen.dart';
+import 'package:seoulfit_ui/screens/trip/place_detail_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Two stops with a fully-populated hop between them, so every branch of the
@@ -43,9 +44,16 @@ Itinerary routed() {
       nameKo: '경복궁',
       arrivalTime: '9:30 AM',
       exitInstruction: 'Get off: Exit 5, walk 200m north',
+      description: "Seoul's main royal palace, and the one with the guard "
+          'ceremony.',
       hop: hop,
     ),
-    RouteStop(order: 2, nameEn: 'Bukchon Hanok Village', arrivalTime: '11:00 AM'),
+    RouteStop(
+      order: 2,
+      nameEn: 'Bukchon Hanok Village',
+      arrivalTime: '11:00 AM',
+      description: 'A hillside of preserved hanok, still lived in.',
+    ),
   ];
 
   return Itinerary(
@@ -172,5 +180,54 @@ void main() {
     expect(find.text('Line 3  Euljiro 3-ga → Anguk  (6 min, 3 stops)'),
         findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('each stop says what the place is, not just when to be there',
+      (tester) async {
+    // Final Route used to show only the arrival time and the transit hop: the
+    // description was on the itinerary cards and vanished once the traveller
+    // picked their stops. RouteStop carried no description at all, and
+    // toUiRouteStops dropped the planner's note.
+    //
+    // PoiSummary upgrades this to the fetched /poi-summary text when an
+    // ApiService is in scope. There is none in this test, which is the point --
+    // the fallback has to stand on its own, because it is what paints on the
+    // first frame of every real run too.
+    //
+    // Hidden until asked for: with every description on, a day of stops no
+    // longer fit on a phone between the map and the hops.
+    await pump(tester, routed());
+
+    const palace = "Seoul's main royal palace, and the one with the guard "
+        'ceremony.';
+    expect(find.text(palace), findsNothing);
+
+    await tester.tap(find.text('Show descriptions'));
+    await tester.pump();
+
+    expect(find.text(palace), findsOneWidget);
+    expect(find.text('A hillside of preserved hanok, still lived in.'),
+        findsOneWidget);
+
+    await tester.tap(find.text('Hide descriptions'));
+    await tester.pump();
+    expect(find.text(palace), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping a stop opens its detail sheet', (tester) async {
+    // The stop cards were dead: the place info the itinerary screen opens on
+    // tap was unreachable once the traveller reached Final Route.
+    await pump(tester, routed());
+
+    expect(find.byType(PlaceDetailSheet), findsNothing);
+
+    await tester.ensureVisible(find.text('Bukchon Hanok Village'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bukchon Hanok Village'));
+    await tester.pumpAndSettle();
+
+    final sheet = tester.widget<PlaceDetailSheet>(find.byType(PlaceDetailSheet));
+    expect(sheet.activity.title, 'Bukchon Hanok Village');
   });
 }

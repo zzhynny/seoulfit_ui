@@ -5,8 +5,10 @@ import '../../models/trip.dart';
 import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
 import '../../widgets/day_tabs.dart';
+import '../../widgets/poi_summary.dart';
 import '../../widgets/itinerary_detail.dart';
 import '../../widgets/route_map.dart';
+import 'place_detail_sheet.dart';
 
 class FinalRouteScreen extends StatefulWidget {
   const FinalRouteScreen({
@@ -27,6 +29,10 @@ class FinalRouteScreen extends StatefulWidget {
 class _FinalRouteScreenState extends State<FinalRouteScreen> {
   bool _showTransitTip = true;
 
+  // Off by default: with the text on, a day of stops no longer fits between
+  // the map and the hops. The full text is one tap away in the detail sheet.
+  bool _showDescriptions = false;
+
   @override
   Widget build(BuildContext context) {
     final itinerary = widget.itinerary;
@@ -41,6 +47,9 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
     // the trip-wide one printed on the map markers.
     var offset = 0;
     var stops = const <RouteStop>[];
+    // The same day's activities, index-aligned with [stops]: the detail sheet
+    // opens on a TripActivity, the one the itinerary screen's cards use.
+    var activities = const <TripActivity>[];
     for (final day in itinerary.days) {
       final count = day.activities.length;
       if (day.dayNumber == selectedDay) {
@@ -48,6 +57,7 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
             .skip(offset)
             .take(count)
             .toList(growable: false);
+        activities = day.activities;
         break;
       }
       offset += count;
@@ -171,8 +181,39 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    if (stops.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => setState(
+                              () => _showDescriptions = !_showDescriptions),
+                          icon: Icon(
+                            _showDescriptions
+                                ? Icons.visibility_off_outlined
+                                : Icons.notes,
+                            size: 16,
+                          ),
+                          label: Text(_showDescriptions
+                              ? 'Hide descriptions'
+                              : 'Show descriptions'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            textStyle: AppTextStyles.caption
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
                     for (var i = 0; i < stops.length; i++) ...[
-                      _PlaceStopCard(stop: stops[i], index: i + 1),
+                      _PlaceStopCard(
+                        stop: stops[i],
+                        index: i + 1,
+                        showDescription: _showDescriptions,
+                        // Guarded: mock data can carry more stops than the
+                        // day has activities.
+                        onTap: i < activities.length
+                            ? () => showPlaceDetailSheet(context, activities[i])
+                            : null,
+                      ),
                       // Only between stops, and only when the planner
                       // actually routed the pair.
                       if (i < stops.length - 1 &&
@@ -232,10 +273,20 @@ class _FinalRouteScreenState extends State<FinalRouteScreen> {
 }
 
 class _PlaceStopCard extends StatefulWidget {
-  const _PlaceStopCard({required this.stop, required this.index});
+  const _PlaceStopCard({
+    required this.stop,
+    required this.index,
+    required this.showDescription,
+    this.onTap,
+  });
 
   final RouteStop stop;
   final int index;
+  final bool showDescription;
+
+  /// Opens the stop's detail sheet. Null only when there's no activity to
+  /// open it on.
+  final VoidCallback? onTap;
 
   @override
   State<_PlaceStopCard> createState() => _PlaceStopCardState();
@@ -254,14 +305,19 @@ class _PlaceStopCardState extends State<_PlaceStopCard> {
     final hint = stop.exitInstruction?.trim();
     final hasHint = hint != null && hint.isNotEmpty;
 
-    return Container(
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+      onTap: widget.onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
       width: double.infinity,
       // Was 16 all round with the name on two lines and a permanent hint row
       // underneath; a day of stops did not fit on a phone without the flow
       // between them scrolling out of sight.
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
         border: Border.all(color: AppColors.borderAlt),
         borderRadius: BorderRadius.circular(14),
       ),
@@ -311,6 +367,22 @@ class _PlaceStopCardState extends State<_PlaceStopCard> {
                     ),
                   ],
                 ),
+                // What the place actually is, same source as the itinerary
+                // cards: PoiSummary fetches /poi-summary and shows the
+                // planner's note until it lands. ApiService memoises by name,
+                // so a stop already seen on the itinerary screen costs nothing
+                // here. Behind the screen's toggle and clipped to 2 lines --
+                // this card is one of 5-8 in a scroll; the sheet has it whole.
+                if (widget.showDescription) ...[
+                  const SizedBox(height: 4),
+                  PoiSummary(
+                    name: stop.nameEn,
+                    fallback: stop.description,
+                    maxLines: 2,
+                    style: AppTextStyles.caption
+                        .copyWith(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
                 // Only where the planner actually said something. An expander
                 // that opens onto nothing is the same dead affordance again.
                 if (hasHint) ...[
@@ -336,6 +408,8 @@ class _PlaceStopCardState extends State<_PlaceStopCard> {
             ),
           ),
         ],
+      ),
+      ),
       ),
     );
   }

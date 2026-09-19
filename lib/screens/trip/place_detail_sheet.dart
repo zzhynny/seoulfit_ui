@@ -8,6 +8,7 @@ import '../../services/kakao_links.dart';
 import '../../theme/theme.dart';
 import '../../widgets/category_tag.dart';
 import '../../widgets/poi_photo.dart';
+import '../../widgets/poi_summary.dart';
 
 /// Opens the detail sheet for one itinerary stop.
 Future<void> showPlaceDetailSheet(BuildContext context, TripActivity activity) {
@@ -169,6 +170,16 @@ class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            // What the place is, above what to know before going. Unclipped:
+            // the sheet is where the full text is meant to be read.
+            PoiSummary(
+              name: activity.title,
+              fallback: activity.description,
+              type: activity.poiType,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textPrimary, height: 1.55),
             ),
             const SizedBox(height: AppSpacing.xl),
             if (_loading)
