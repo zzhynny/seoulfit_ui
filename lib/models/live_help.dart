@@ -4,8 +4,6 @@
 /// 백엔드 /nearby · /emergency-rooms · /nearby-poi 응답에서 온다.
 library;
 
-import '../utils/korean_romanizer.dart';
-
 String _str(Object? v) => v is String ? v : '';
 double _dbl(Object? v) => v is num ? v.toDouble() : 0;
 int _int(Object? v) => v is num ? v.toInt() : 0;
@@ -29,9 +27,6 @@ class Embassy {
 
   /// 118건 중 15건만 값이 있다. 비어 있으면 링크 버튼을 숨긴다.
   final String website;
-
-  /// 로마자 표기(관광객용 보조 표시). 한글 주소는 택시 기사용으로 그대로 둔다.
-  String get addressEn => romanizeKorean(addressKo);
 
   const Embassy({
     required this.countryEn,

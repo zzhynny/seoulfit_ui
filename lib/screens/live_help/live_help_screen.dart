@@ -321,9 +321,6 @@ class _EmbassyCard extends StatelessWidget {
           Text(e.addressKo,
               style: AppTextStyles.sans(
                   fontSize: 13, color: AppColors.textPrimary, height: 1.4)),
-          Text(e.addressEn,
-              style: AppTextStyles.sans(
-                  fontSize: 11.5, color: AppColors.textSecondary, height: 1.3)),
           const SizedBox(height: AppSpacing.smMd),
           Wrap(
             spacing: AppSpacing.sm,
