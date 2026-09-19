@@ -6,6 +6,7 @@ import '../../models/companion.dart';
 import '../../widgets/animations.dart';
 import 'date_range_answer.dart';
 import '../../providers/companion_provider.dart';
+import '../../providers/trip_provider.dart';
 import '../../theme/theme.dart';
 
 enum ChatMode { plan, onTrip }
@@ -38,6 +39,10 @@ class _ChatScreenState extends State<ChatScreen> {
   /// reply twice sends two turns and the second answer lands on a question
   /// the backend has already moved past.
   bool _sending = false;
+
+  /// The "In Seoul now?" card was closed. Per session only: it comes back next
+  /// launch, since the whole point is that people don't find this mode.
+  bool _onTripHintDismissed = false;
   final _composerController = TextEditingController();
   int _travelerCount = 2;
 
@@ -99,6 +104,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final companion = context.watch<CompanionProvider>().selected;
+    // Nullable lookup: some test harnesses mount the chat without a trip.
+    final hasPlan = context.watch<TripProvider?>()?.hasItinerary ?? false;
     return Column(
       children: [
         _buildHeader(companion),
@@ -116,6 +123,18 @@ class _ChatScreenState extends State<ChatScreen> {
                   onPickDates: _pickDates,
                   onBuildItinerary: widget.onBuildItinerary,
                   onOpenDayPlanner: widget.onOpenDayPlanner,
+                  // Once there is a plan the traveller is on their way, and
+                  // that's when on-trip help matters -- so surface it here
+                  // instead of relying on the header toggle being found.
+                  onTripHint: hasPlan && !_onTripHintDismissed
+                      ? _OnTripHint(
+                          onOpenTopic: widget.onOpenHelpTopic,
+                          onShowAll: () =>
+                              setState(() => _mode = ChatMode.onTrip),
+                          onDismiss: () =>
+                              setState(() => _onTripHintDismissed = true),
+                        )
+                      : null,
                 )
               : _OnTripView(onOpenTopic: widget.onOpenHelpTopic),
         ),
@@ -132,36 +151,51 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Flexible + ellipsis: the title gives way, never the toggle. On a
+          // 360px phone the two only just fit, and a larger system text size
+          // overflowed the row.
           if (_mode == ChatMode.plan)
-            Row(
-              children: [
-                SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SeoulFit AI', style: AppTextStyles.headingSmall.copyWith(fontSize: 16)),
-                    Row(
+            Flexible(
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Image.asset(companion.guideChatAsset, fit: BoxFit.contain),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
+                        Text('SeoulFit AI',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.headingSmall.copyWith(fontSize: 16)),
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text('Online Concierge',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.caption),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text('Online Concierge', style: AppTextStyles.caption),
                       ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             )
           else
             const Spacer(),
@@ -188,28 +222,45 @@ class _ModeToggle extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _pill(context, 'Plan', ChatMode.plan),
-          _pill(context, 'On-trip', ChatMode.onTrip),
+          _pill(context, 'Plan', Icons.chat_bubble_outline, ChatMode.plan),
+          const SizedBox(width: 3),
+          _pill(context, 'On-trip', Icons.explore_outlined, ChatMode.onTrip),
         ],
       ),
     );
   }
 
-  Widget _pill(BuildContext context, String label, ChatMode value) {
+  // Was 11px grey-on-grey with no icon: the unselected "On-trip" read as a
+  // label, not a button, and testers never found the on-trip help behind it.
+  // The unselected pill is now a white button of its own.
+  Widget _pill(
+      BuildContext context, String label, IconData icon, ChatMode value) {
     final selected = mode == value;
-    return GestureDetector(
-      onTap: () => onChanged(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.textPrimary : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: selected ? Colors.white : AppColors.textSecondary,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+    final fg = selected ? Colors.white : AppColors.textPrimary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: value == ChatMode.onTrip ? 'On-trip help' : 'Plan chat',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () => onChanged(value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.textPrimary : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: fg, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
         ),
       ),
@@ -230,6 +281,7 @@ class _PlanView extends StatelessWidget {
     required this.onPickDates,
     required this.sending,
     required this.onOpenDayPlanner,
+    this.onTripHint,
   });
 
   final List<ChatMessage> messages;
@@ -242,6 +294,9 @@ class _PlanView extends StatelessWidget {
   final ValueChanged<String> onQuickReply;
   final VoidCallback onPickDates;
   final VoidCallback onOpenDayPlanner;
+
+  /// Shortcut card into on-trip help, under the messages. Null hides it.
+  final Widget? onTripHint;
 
   /// A turn is in flight. Shown as a typing bubble, and the composer's send
   /// button becomes a spinner.
@@ -319,6 +374,7 @@ class _PlanView extends StatelessWidget {
             },
           ),
         ),
+        ?onTripHint,
         // day_plan 단계에서는 일정 생성 대신 Day Planner 로 보낸다.
         if (messages.isNotEmpty && messages.last.awaitingStep == 'day_plan')
           _CtaButton(
@@ -519,6 +575,98 @@ class _TravelerSelector extends StatelessWidget {
         height: 28,
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, size: 16, color: fg),
+      ),
+    );
+  }
+}
+
+/// "In Seoul now?" -- the three on-trip topics people need in a hurry, one tap
+/// from the Plan chat, plus a way into the full On-trip view.
+class _OnTripHint extends StatelessWidget {
+  const _OnTripHint({
+    required this.onOpenTopic,
+    required this.onShowAll,
+    required this.onDismiss,
+  });
+
+  final void Function(LiveHelpTopic topic) onOpenTopic;
+  final VoidCallback onShowAll;
+  final VoidCallback onDismiss;
+
+  static const _shortcuts = [
+    LiveHelpTopic.nearby,
+    LiveHelpTopic.emergency,
+    LiveHelpTopic.passport,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final topics = context.read<ChatRepository>().onTripTopics();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEBF0EC),
+        border: Border.all(color: const Color(0xFFCFDDD3)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '🧭 In Seoul now? Get help on the go',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final t in topics.where((t) => _shortcuts.contains(t.topic)))
+                      _chip('${t.emoji} ${t.title}', () => onOpenTopic(t.topic)),
+                    _chip('All on-trip help →', onShowAll, strong: true),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onDismiss,
+            tooltip: 'Hide',
+            icon: const Icon(Icons.close, size: 16),
+            color: AppColors.textSecondary,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, VoidCallback onTap, {bool strong = false}) {
+    return Material(
+      color: strong ? const Color(0xFF5E836A) : Colors.white,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: strong ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
+        ),
       ),
     );
   }
