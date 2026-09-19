@@ -164,6 +164,31 @@ def test_endpoints_serve_the_grounded_text():
     _isolated(no_key, key=None)
 
 
+def test_the_whole_chain_fits_inside_the_client_budget():
+    """TourAPI -> Tavily -> Gemini must finish before the app gives up.
+
+    Every other test here stubs _search and _rewrite, so no individual timeout is
+    ever exercised and raising one back up would break nothing that runs. This is
+    the only thing standing between that and a POI sheet that spins for 30s and
+    then renders empty, which is what shipped before these bounds existed.
+
+    30s is api_service._fetchPoiField's own timeout. The margin is deliberate:
+    the legs are sequential worst cases, not a budget to spend.
+    """
+    import tourapi
+
+    CLIENT_TIMEOUT_S = 30
+    worst_case = (
+        tourapi._TIMEOUT
+        + poi_text._TAVILY_TIMEOUT
+        + poi_text._GEMINI_TIMEOUT_MS / 1000
+    )
+    assert worst_case < CLIENT_TIMEOUT_S, (
+        f"POI text chain can take {worst_case}s but the client gives up at "
+        f"{CLIENT_TIMEOUT_S}s -- the sheet will render empty"
+    )
+
+
 if __name__ == "__main__":
     test_text_comes_from_the_web_search_not_memory()
     test_the_same_place_reads_the_same_everywhere()
