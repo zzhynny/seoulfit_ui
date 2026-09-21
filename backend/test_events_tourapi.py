@@ -96,6 +96,57 @@ def test_date_range_formatting():
     assert undated["date"] == "", "상설 항목은 날짜가 없다"
 
 
+def test_landing_url_uses_the_contentid_scheme():
+    """카드 탭이 열 주소. 한때 contentsView.do?vcontsId= 였고 전건 400 이었다.
+
+    vcontsId 는 공사 API 의 contentid 와 다른 ID 체계다. 그런데 400 페이지도
+    브라우저에서는 그냥 열리므로 앱에서는 아무 오류로도 안 보였다 — 탭하면
+    오류 페이지가 뜰 뿐이었다. 그래서 모양을 여기서 못박는다. 실제로 200 이
+    오는지는 `python api.py` selfcheck 가 네트워크로 확인한다.
+    """
+    [row] = _fetch_with([], [_row("3544280")])
+    assert "vcontsId" not in row["landing_url"], "vcontsId 체계는 400 을 낸다"
+    assert row["landing_url"].endswith("cid=3544280"), row["landing_url"]
+
+
+def test_detail_fields_ride_along_with_the_list():
+    """상세 시트가 쓰는 필드가 목록 응답에 실려야 한다.
+
+    contentid 가 없으면 /event-detail 을 부를 수 없고, lat/lng 가 없으면
+    시트의 카카오맵 버튼이 사라진다. 셋 다 이미 공사 응답에 있는 값이라
+    빠뜨려도 조용하다.
+    """
+    [row] = _fetch_with([], [_row("77", mapx="127.001", mapy="37.566")])
+    assert row["contentid"] == "77"
+    assert (row["lat"], row["lng"]) == (37.566, 127.001), "mapy=위도, mapx=경도"
+
+    [nocoord] = _fetch_with([], [_row("78", mapx="", mapy="")])
+    assert nocoord["lat"] is None and nocoord["lng"] is None, "빈 좌표는 None"
+
+
+def test_event_detail_survives_a_dead_upstream():
+    """공사 API 가 죽어도 빈 칸을 주지 시트를 깨지 않는다."""
+    def boom(op, **params):
+        raise RuntimeError("upstream down")
+
+    real, api.tourapi.items = api.tourapi.items, boom
+    try:
+        detail = api._event_detail("1234")
+    finally:
+        api.tourapi.items = real
+
+    assert detail == {k: "" for k in detail}, "전 필드가 빈 문자열이어야 한다"
+    assert "1234" not in api._EVENT_DETAIL_CACHE, "빈손을 24시간 캐시하면 안 된다"
+
+
+def test_homepage_becomes_launchable():
+    """공사 homepage 는 스킴 없이 오고, 여러 줄인 것도 있다."""
+    assert api._first_url("www.kh.or.kr") == "https://www.kh.or.kr"
+    assert api._first_url("https://a.com") == "https://a.com", "스킴이 잘리면 안 된다"
+    assert api._first_url("Website: www.siwf.or.kr\nInstagram: x") == "https://www.siwf.or.kr"
+    assert api._first_url("") == ""
+
+
 def test_chip_labels_match_the_flutter_app():
     """백엔드의 칩 라벨과 lib/models/event.dart 의 kEventCategories 가 같아야 한다.
 

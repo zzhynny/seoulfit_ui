@@ -266,6 +266,42 @@ class ApiService {
     ];
   }
 
+  /// Detail for one event, keyed by its TourAPI `contentid`.
+  ///
+  /// Memoised like [_fetchPoiField]: reopening a sheet paints on the first
+  /// frame instead of flashing a spinner. Values are often empty — TourAPI
+  /// fills these unevenly (venue on nearly every event, description on about
+  /// half) — so the sheet renders per-field fallbacks rather than assuming
+  /// a populated map.
+  final Map<String, Map<String, String>> _eventDetailCache = {};
+
+  Map<String, String>? cachedEventDetail(String contentId) =>
+      _eventDetailCache[contentId];
+
+  Future<Map<String, String>> fetchEventDetail(String contentId) async {
+    final cached = _eventDetailCache[contentId];
+    if (cached != null) return cached;
+
+    final response = await http
+        .post(
+          Uri.parse('$_base/event-detail'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'contentid': contentId}),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    // The backend swallows upstream failures and returns {} rather than a 5xx,
+    // so an empty map means "nothing published", not "broken".
+    if (response.statusCode != 200) return const {};
+    final json =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    final detail = {
+      for (final e in json.entries) e.key: (e.value ?? '').toString().trim(),
+    };
+    _eventDetailCache[contentId] = detail;
+    return detail;
+  }
+
   /// The trip's journey stamp status. Cheap — never starts a generation.
   Future<StampStatus> fetchStampStatus(String tripId) async {
     final response = await http

@@ -164,6 +164,9 @@ _METERED_PATHS = {
     "/revalidate",         # Critic → Repair → Critic, 요청당 Gemini 여러 번
     "/swap-candidates",    # Google Places 유료 호출로 떨어질 수 있다
     "/events",             # 공사 API 2회 (캐시 miss 시)
+    # 탭 한 번에 공사 API 2회. contentid 를 바꿔가며 돌리면 캐시가 안 먹어서
+    # /events 와 달리 호출이 그대로 상류로 나간다 — 일일 쿼터가 표적이 된다.
+    "/event-detail",
 }
 # 120/min, not 30: user_selection_screen renders one card per candidate stop
 # and each fires fetchPoiDetail on build, and final_itinerary_map_screen
@@ -854,9 +857,10 @@ _EV_CHIP = {
 _EVENTS_CACHE: dict[str, tuple[float, list]] = {}
 _EVENTS_TTL = 600  # seconds
 
-_EVENT_LANDING = (
-    "https://english.visitkorea.or.kr/svc/contents/contentsView.do?vcontsId={cid}"
-)
+# contentsView.do?vcontsId= 는 400 을 낸다 — vcontsId 는 공사 API 의 contentid 와
+# 다른 ID 체계다. 카드 탭이 전건 오류 페이지로 가던 원인. 이쪽은 contentid 를
+# 그대로 받는다. 살아 있는지는 selfcheck 가 실제로 쳐서 확인한다.
+_EVENT_LANDING = "https://english.visitkorea.or.kr/enu/ATR/SI_EN_3_1_1_1.jsp?cid={cid}"
 
 
 def _event_date(row: dict) -> str:
@@ -891,14 +895,27 @@ def _venue_of(row: dict) -> str:
     return addr1 or addr2
 
 
+def _coord(value) -> Optional[float]:
+    """TourAPI 의 mapx/mapy 는 문자열이고, 가끔 빈 값이 온다."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _to_event(row: dict) -> dict:
+    # contentid 는 /event-detail 이 상세를 받아올 때 쓴다. mapx/mapy 는 목록 응답에
+    # 80/80 들어 있어서, 상세 시트의 카카오맵 버튼이 추가 호출 없이 선다.
     return {
+        "contentid": row.get("contentid", ""),
         "name": tourapi.name_of(row.get("title", "")),
         "date": _event_date(row),
         "venue": _venue_of(row),
         "description": "",
         "image_url": row.get("firstimage") or "",
         "landing_url": _EVENT_LANDING.format(cid=row.get("contentid", "")),
+        "lat": _coord(row.get("mapy")),
+        "lng": _coord(row.get("mapx")),
         "_chip": row.get("lclsSystm2", ""),
     }
 
@@ -953,6 +970,101 @@ def _chip_filter(events: list[dict], category: str | None) -> list[dict]:
     code = _EV_CHIP.get((category or "").strip())
     rows = [e for e in events if e["_chip"] == code] if code else events
     return [{k: v for k, v in e.items() if k != "_chip"} for e in rows]
+
+
+class EventDetailRequest(BaseModel):
+    # /events 가 돌려준 contentid. 공사 API 의 키라 숫자 문자열이다.
+    contentid: str = Field(..., min_length=1, max_length=20)
+
+
+# ponytail: _COMMON_CACHE 와 같은 모양 — 모듈 dict, 24시간 TTL. 공사 데이터는
+# 하루 1회 갱신이라 그 이상 잡을 이유가 없고, 재시작하면 비어도 한 건 다시
+# 받는 비용이 2회 호출이라 괜찮다. 탭한 행사만 받으므로 80건을 미리 받지 않는다.
+_EVENT_DETAIL_CACHE: dict[str, tuple[float, dict]] = {}
+_EVENT_DETAIL_TTL = 24 * 3600
+
+# 서울 행사는 전건 contenttypeid=85 다. detailIntro2 는 타입별로 응답 스키마가
+# 달라서 contentTypeId 를 같이 보내야 한다.
+_EVENT_CONTENT_TYPE = "85"
+
+
+def _first_url(raw: str) -> str:
+    """공사의 homepage 필드에서 열 수 있는 URL 하나.
+
+    스킴 없이 호스트만 온다('www.kh.or.kr'). 그대로 url_launcher 에 넘기면
+    상대 경로로 읽혀 열리지 않는다. 줄이 여러 개인 것도 섞여 있다
+    ('ssaf.or.kr/index\nInstagram: www.instagram.com/...') — 첫 줄만 쓴다.
+    """
+    line = raw.strip().splitlines()[0].strip() if raw.strip() else ""
+    if line.startswith(("http://", "https://")):
+        return line  # 라벨 제거보다 먼저 — 안 그러면 'https:' 가 라벨로 잘린다
+    line = _re.sub(r"^[A-Za-z ]{,12}:\s*", "", line)  # 'Website: ' 같은 라벨
+    return f"https://{line}" if line else ""
+
+
+def _event_detail(cid: str) -> dict:
+    """detailCommon2 + detailIntro2 를 합친 한 건. 실패는 삼키고 빈 칸을 남긴다.
+
+    실측(표본 14건) 기준 채움률이 고르지 않다 — eventplace 13, overview 7,
+    playtime 7. 그래서 빈 필드는 빼지 않고 빈 문자열로 내려보내고, 시트가
+    '없음' 문구로 떨어뜨린다. 여기서 예외를 올리면 공사 API 장애가 곧 화면
+    장애가 된다.
+    """
+    hit = _EVENT_DETAIL_CACHE.get(cid)
+    if hit and (_time.time() - hit[0]) < _EVENT_DETAIL_TTL:
+        return hit[1]
+
+    common: dict = {}
+    intro: dict = {}
+    try:
+        rows, _ = tourapi.items("detailCommon2", contentId=cid)
+        common = rows[0] if rows else {}
+    except Exception as e:
+        print(f"[event-detail] detailCommon2({cid}) failed: "
+              f"{type(e).__name__}: {tourapi.redact(e)}")
+    try:
+        rows, _ = tourapi.items(
+            "detailIntro2", contentId=cid, contentTypeId=_EVENT_CONTENT_TYPE)
+        intro = rows[0] if rows else {}
+    except Exception as e:
+        print(f"[event-detail] detailIntro2({cid}) failed: "
+              f"{type(e).__name__}: {tourapi.redact(e)}")
+
+    def pick(src: dict, key: str) -> str:
+        return (src.get(key) or "").strip()
+
+    detail = {
+        "overview": pick(common, "overview"),
+        "homepage": _first_url(common.get("homepage") or ""),
+        "tel": pick(common, "tel"),
+        # 공사가 주는 영문 장소명. 목록의 addr1/addr2 휴리스틱보다 한글이 덜 샌다.
+        "place": pick(intro, "eventplace"),
+        "hours": pick(intro, "playtime"),
+        "fee": pick(intro, "usetimefestival"),
+        "program": pick(intro, "program"),
+        "age_limit": pick(intro, "agelimit"),
+    }
+    # 두 호출이 다 빈손이면 캐시에 넣지 않는다 — 일시적 장애를 24시간 굳히게 된다.
+    if any(detail.values()):
+        _EVENT_DETAIL_CACHE[cid] = (_time.time(), detail)
+    return detail
+
+
+@app.post("/event-detail")
+def get_event_detail(req: EventDetailRequest):
+    """한 행사의 상세. 카드를 탭할 때만 불린다.
+
+    Returns {overview, homepage, tel, place, hours, fee, program, age_limit}
+    — 값이 없는 필드는 빈 문자열. 절대 500 을 내지 않는다.
+
+    sponsor1(주최)은 뺐다. 표본 16건 중 10건이 한글이라 영문 UI 에 그대로
+    못 올린다. 거르느니 안 쓰는 편이 낫다 — 여행자가 볼 이유도 적다."""
+    try:
+        return _event_detail(req.contentid)
+    except Exception as e:
+        print(f"[event-detail] {req.contentid!r} failed: "
+              f"{type(e).__name__}: {tourapi.redact(e)}")
+        return {}
 
 
 @app.post("/trip/checkin")
@@ -1255,6 +1367,17 @@ if __name__ == "__main__":
     assert chips["All"] == len(rows), "All chip must not filter"
     assert sum(v for k, v in chips.items() if k != "All") == len(rows), "chips must partition"
     assert "_chip" not in rows[0] or "_chip" not in _chip_filter(rows, "All")[0], "_chip leaked"
+
+    # 탭이 실제로 열리는지. 모양만 맞고 죽어 있던 적이 있어서 한 건 쳐 본다.
+    import httpx as _httpx
+    _probe = _httpx.get(rows[0]["landing_url"], timeout=12, follow_redirects=True,
+                        headers={"User-Agent": "Mozilla/5.0"})
+    assert _probe.status_code == 200, (
+        f"landing_url dead ({_probe.status_code}): {rows[0]['landing_url']}")
+
+    _detail = _event_detail(rows[0]["contentid"])
+    print(f"[selfcheck] landing 200 · detail filled="
+          f"{sum(1 for v in _detail.values() if v)}/{len(_detail)}")
 
     dated = [r for r in rows if r["date"]]
     print(f"[selfcheck] OK — {len(rows)} events {chips}; dated={len(dated)}")
