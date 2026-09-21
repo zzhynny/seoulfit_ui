@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 class SeoulEvent {
   const SeoulEvent({
     required this.title,
+    this.contentId,
+    this.lat,
+    this.lng,
     required this.dateRange,
     required this.venue,
     required this.category,
@@ -29,8 +32,18 @@ class SeoulEvent {
   final String? posterUrl;
 
   /// The event's page on the ticket site (`landing_url` from POST /events).
-  /// Null on mock data — the card is then inert rather than opening nowhere.
+  /// Null on mock data — the sheet then hides the "View on VisitKorea" button.
   final String? landingUrl;
+
+  /// 한국관광공사 TourAPI's own id (`contentid`). The key POST /event-detail
+  /// takes. Null on mock data, which is what makes the card inert there.
+  final String? contentId;
+
+  /// Where the event is. Present for every live event (TourAPI fills mapx/mapy
+  /// on all 80 Seoul rows), null on mock data — the sheet's map button is
+  /// hidden rather than opening a search for nothing.
+  final double? lat;
+  final double? lng;
 }
 
 /// The tab EventsScreen opens on. 'All' rather than a genre: the backend

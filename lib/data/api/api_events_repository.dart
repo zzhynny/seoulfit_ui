@@ -23,10 +23,19 @@ class ApiEventsRepository implements EventsRepository {
 SeoulEvent _toEvent(Map<String, dynamic> json, String category, int index) {
   String field(String key) => (json[key] ?? '').toString().trim();
 
+  double? coord(String key) {
+    final v = json[key];
+    return v is num ? v.toDouble() : double.tryParse((v ?? '').toString());
+  }
+
   final url = field('image_url');
   final landing = field('landing_url');
+  final cid = field('contentid');
   return SeoulEvent(
     title: field('name'),
+    contentId: cid.isEmpty ? null : cid,
+    lat: coord('lat'),
+    lng: coord('lng'),
     dateRange: field('date'),
     venue: field('venue'),
     // The scraper doesn't label rows — they're all the genre that was asked

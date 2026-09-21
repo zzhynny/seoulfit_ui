@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/repositories/events_repository.dart';
 import '../../models/event.dart';
 import '../../theme/theme.dart';
 import '../../widgets/data_source_note.dart';
+import 'event_detail_sheet.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key, required this.repository});
@@ -169,28 +169,15 @@ class _EventCard extends StatelessWidget {
 
   final SeoulEvent event;
 
-  /// Opens the event's page on the Korea Tourism Organization's English site.
-  /// Mock data carries no URL, so the card is inert there rather than opening
-  /// nowhere.
-  Future<void> _open(BuildContext context) async {
-    final uri = Uri.parse(event.landingUrl!);
-    var ok = false;
-    try {
-      if (await canLaunchUrl(uri)) ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      ok = false;
-    }
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Couldn't open ${event.title}.")));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: event.landingUrl == null ? null : () => _open(context),
+      // Opens the detail sheet rather than kicking straight out to a browser.
+      // Mock data has no contentid and no landing URL — nothing to show beyond
+      // the card itself, so it stays inert there.
+      onTap: event.contentId == null && event.landingUrl == null
+          ? null
+          : () => showEventDetailSheet(context, event),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
