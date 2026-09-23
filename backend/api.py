@@ -1287,7 +1287,12 @@ def swap_candidates(req: SwapCandidatesRequest):
         # Michelin is within SWAP_RADIUS_KM, so the sheet is never empty.
         here = _itinerary_poi(state, req.day, req.slot_index, req.current_poi) or current or {}
 
-        if normalize_text(req.current_poi_type or (current or {}).get("type")) == "restaurant":
+        # A diet traveller only sees Michelin rows of that diet's cuisines. Halal
+        # has none verified, so its sheet goes straight to the pool/Google path.
+        diet = state.get("diet")
+        cuisines = meal_slots.DIET_RULES[diet]["cuisines"] if diet else None
+        if (normalize_text(req.current_poi_type or (current or {}).get("type")) == "restaurant"
+                and cuisines != ()):
             lat, lng = here.get("lat"), here.get("lng")
             if lat is None or lng is None:
                 print(f"[swap michelin] {req.current_poi!r} has no coordinates -- pool path")
@@ -1298,6 +1303,7 @@ def swap_candidates(req: SwapCandidatesRequest):
                     exclude_names=tuple(
                         [req.current_poi, *req.excluded_ids]
                     ),
+                    cuisines=cuisines,
                 )
                 if hits:
                     michelin = [{

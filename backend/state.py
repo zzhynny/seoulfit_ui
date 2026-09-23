@@ -16,6 +16,8 @@ class TravelState(TypedDict, total=False):
     pace: Optional[str]                # 여행 스타일
     purpose: Optional[str]             # 여행 목적. 사용자 문장 원문 또는 "" (건너뜀).
                                         # retrieval 의 유사도 질의로 쓰인다.
+    diet: Optional[str]                # meal_slots.DIET_RULES 키 (vegetarian|vegan|halal) 또는 None.
+                                        # restrictions 에서 뽑는다. 끼니 확정이 이걸로 식당을 거른다.
     purpose_keywords: Optional[list[dict[str, str]]]  # [{phrase, poi_type}] ≤2, purpose 에서
                                         # 추출. 지역마다 Google Text Search 로 쓰인다. 대개 [].
     day_specs: Optional[list[dict[str, Any]]]  # [{day, region, note, keywords}] — Day Planner.

@@ -772,6 +772,8 @@ DAY_PROMPT = """Plan ONE day of a Seoul trip for a foreign tourist.
       for a daytime break is fine.
     - Arrange POIs in visit order starting around 09:00-10:00, ordered to
       minimise backtracking. Planned activity + travel should be 7-10 hours.
+    - Plan for the weekday given; skip anything you know is closed that day
+      (many museums close on Mondays).
 
     ANCHOR COURSE RULES:
     - `[ANCHOR COURSE]` sections are editorially curated sequences. Use one as
@@ -832,6 +834,7 @@ def _format_one_course(
     c: dict[str, Any],
     idx: int,
     restrict_area: str | None = None,
+    closed_on: str | None = None,
 ) -> str:
     title = c.get("course_title", "")
     course_id = c.get("course_id", "")
@@ -846,6 +849,10 @@ def _format_one_course(
         # activity-category label, a bare subway-station marker, or a venue
         # flagged for naming review as if it were a plannable destination.
         if p.get("is_generic_activity") or p.get("is_transit_marker") or p.get("requires_review"):
+            continue
+        # Closed on this day's weekday: not shown, so it can't be picked. Same
+        # field the critic's CLOSED_ON_ASSIGNED_DAY check reads.
+        if closed_on and closed_on in ((p.get("opening_hours") or {}).get("closed_weekday") or []):
             continue
 
         name = p.get("poi_name", "")
@@ -880,7 +887,7 @@ def _format_one_course(
     )
 
 
-def _format_segment_block(seg: dict[str, Any]) -> str:
+def _format_segment_block(seg: dict[str, Any], weekday: str | None = None) -> str:
     days = seg.get("day_numbers") or []
     if not days:
         return ""
@@ -895,7 +902,7 @@ def _format_segment_block(seg: dict[str, Any]) -> str:
     anchors = seg.get("anchor_courses") or []
     rendered: list[str] = []
     for i, c in enumerate(anchors, start=1):
-        block = _format_one_course(c, i, restrict_area=area)
+        block = _format_one_course(c, i, restrict_area=area, closed_on=weekday)
         # Drop a course that has no POIs left in this area after filtering.
         if block.rstrip().endswith("POIs:"):
             continue
@@ -1419,8 +1426,8 @@ def _validate_and_repair_itinerary(
                 # presenting it as verified as a Michelin pick would be.
                 "warnings": (
                     ["From Google, not the Michelin guide — cuisine and opening hours unverified"]
-                    if meal.get("source_tier") == "google" else []
-                ),
+                    if meal.get("source_tier") == "google" and not meal.get("diet_search") else []
+                ) + list(meal.get("warnings") or []),
             }
             pois.insert(insert_idx, out)
             used_names.add(_normalize_text(out.get("name")))
@@ -1889,6 +1896,7 @@ def _resolve_locked_meals(
     expected_days: int,
     meal_type: str = "dinner",
     exclude_by_day: dict[int, tuple[str, ...]] | None = None,
+    diet: str | None = None,
 ) -> dict[int, dict[str, Any]]:
     """Resolve one `meal_type` pick per day via meal_slots.fill_meal_slot()
     (Michelin tier 1 -> Google Places tier 2) BEFORE the Gemini call, so the
@@ -1930,6 +1938,7 @@ def _resolve_locked_meals(
         return day_num, meal_slots.fill_meal_slot(
             area=day_area, weekday=weekday, slot_start=slot_start, slot_end=slot_end,
             exclude_names=(*(exclude_by_day or {}).get(day_num, ()), *taken),
+            diet=diet,
         )
 
     # Days are independent *within* one meal_type: exclude_by_day is computed by
@@ -2090,6 +2099,42 @@ def _embed_texts(texts: list[str]):
         return None
 
 
+def _weekday_of(state: TravelState, day_num: int) -> str | None:
+    try:
+        return weekday_for_day(state.get("trip_start_date"), day_num, lang="en")
+    except (ValueError, TypeError):
+        return None
+
+
+def _meal_lines(
+    day_num: int,
+    locked: dict[int, dict[str, Any]],
+    locked_lunch: dict[int, dict[str, Any]],
+    diet: str | None,
+) -> str:
+    """The day's locked meals, and -- for a diet traveller -- any meal left open
+    because no restaurant for that diet was found."""
+    lines = (_locked_meals_prompt_lines(_meals_for_day(locked, day_num))
+             + _locked_meals_prompt_lines(_meals_for_day(locked_lunch, day_num)))
+    if diet:
+        for slot, meals in (("lunch", locked_lunch), ("dinner", locked)):
+            if day_num not in meals:
+                lines += (f"Day {day_num} {slot} is open: no verified {diet} restaurant was "
+                          f"found nearby. You may add ONE place to eat for it from the "
+                          f"candidates, only if it clearly suits a {diet} diet.\n")
+    return lines
+
+
+_NO_RESTRICTION = {"", "none", "no", "nothing", "n/a", "na", "no restrictions", "missing"}
+
+
+def _restriction_warning(state: TravelState) -> str | None:
+    text = (state.get("restrictions") or "").strip()
+    if text.lower().rstrip(".!") in _NO_RESTRICTION:
+        return None
+    return f"You mentioned: {text} — check with the restaurant"
+
+
 def _day_keywords_by_area(segments: list[dict[str, Any]]) -> dict[str, list[dict[str, str]]]:
     out: dict[str, list[dict[str, str]]] = {}
     for seg in segments:
@@ -2122,6 +2167,7 @@ def _generate_day(
     trip_lines: str,
     supplement: list[dict[str, Any]],
     locked_lines: str,
+    weekday: str | None = None,
     extra: str = "",
 ) -> dict[str, Any]:
     """One Gemini call for one day. Raises on a failed call or unparseable JSON.
@@ -2131,7 +2177,8 @@ def _generate_day(
     """
     prompt = (
         f"{DAY_PROMPT}\n\n{trip_lines}{locked_lines}\n"
-        f"{_format_segment_block(seg)}"
+        + (f"This day is a {weekday}.\n" if weekday else "")
+        + f"{_format_segment_block(seg, weekday)}"
         f"{_format_google_supplement(supplement)}\n"
         f"{extra}"
     )
@@ -2236,8 +2283,10 @@ def plan_node(state: TravelState) -> TravelState:
     location = ", ".join(_area_label(a) for a in requested_areas)
 
     expected_days = _parse_num_days(duration, override=num_days) if (duration or num_days) else 0
+    diet = state.get("diet")
     locked_meals = _resolve_locked_meals(
         state.get("trip_start_date"), day_segments, expected_days, meal_type="dinner",
+        diet=diet,
     )
     # Lunch excludes every dinner on the trip, so no restaurant is locked twice
     # anywhere -- reuses fill_meal_slot's existing exclude_names.
@@ -2245,8 +2294,15 @@ def plan_node(state: TravelState) -> TravelState:
     dinner_names_by_day = {day_num: dinner_names for day_num in range(1, expected_days + 1)}
     locked_lunch_meals = _resolve_locked_meals(
         state.get("trip_start_date"), day_segments, expected_days, meal_type="lunch",
-        exclude_by_day=dinner_names_by_day,
+        exclude_by_day=dinner_names_by_day, diet=diet,
     )
+    # A restriction the meal lookup doesn't handle (an allergy, "no pork") rides
+    # on every locked meal as a warning the app already knows how to show. A
+    # diet it does handle already carries its own warning where one is needed.
+    warning = None if diet else _restriction_warning(state)
+    if warning:
+        for meal in (*locked_meals.values(), *locked_lunch_meals.values()):
+            meal.setdefault("warnings", []).append(warning)
 
     google_supplement: list[dict[str, Any]] = []
     if GOOGLE_PLACES_API_KEY:
@@ -2269,8 +2325,8 @@ def plan_node(state: TravelState) -> TravelState:
         return {
             "trip_lines": trip_lines,
             "supplement": _supplement_for_area(google_supplement, seg.get("area")),
-            "locked_lines": _locked_meals_prompt_lines(_meals_for_day(locked_meals, n))
-                            + _locked_meals_prompt_lines(_meals_for_day(locked_lunch_meals, n)),
+            "locked_lines": _meal_lines(n, locked_meals, locked_lunch_meals, diet),
+            "weekday": _weekday_of(state, n),
         }
 
     try:
@@ -2388,8 +2444,8 @@ def revise_days(
             "trip_lines": trip_lines,
             "supplement": [p for p in _supplement_for_area(supplement, seg.get("area"))
                            if _normalize_text(p.get("poi_name")) not in used],
-            "locked_lines": _locked_meals_prompt_lines(_meals_for_day(locked, n))
-                            + _locked_meals_prompt_lines(_meals_for_day(locked_lunch, n)),
+            "locked_lines": _meal_lines(n, locked, locked_lunch, state.get("diet")),
+            "weekday": _weekday_of(state, n),
             "extra": _revision_note(by_num.get(n, {}), issues_by_day[n], used),
         }
 

@@ -98,7 +98,7 @@ def test_meal_days_keep_their_own_day_number_and_exclusions() -> None:
     def fake_area(spec, day_segments):
         return f"area{spec['day']}"
 
-    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=()):
+    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=(), diet=None):
         time.sleep(0.05)
         day = int(area.removeprefix("area"))
         seen[day] = tuple(exclude_names)
@@ -127,7 +127,7 @@ def test_unresolvable_day_is_absent_not_crashing() -> None:
     def fake_area(spec, day_segments):
         return None if spec["day"] == 2 else f"area{spec['day']}"
 
-    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=()):
+    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=(), diet=None):
         day = int(area.removeprefix("area"))
         return {"status": "filled" if day != 3 else "unfilled",
                 "name": f"Restaurant {day}", "reason": "no tier match"}
@@ -157,7 +157,7 @@ def test_two_days_in_one_area_never_lock_the_same_restaurant() -> None:
     def fake_area(spec, day_segments):
         return "hongdae"
 
-    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=()):
+    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=(), diet=None):
         name = next(n for n in ("Damtaek", "Hapjeongok", "Third") if n not in exclude_names)
         return {"status": "filled", "name": name, "area": area}
 

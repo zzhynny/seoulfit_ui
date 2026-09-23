@@ -291,6 +291,11 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     if not value or value.upper() == "MISSING":
         return {}
 
+    if field == "restrictions":
+        # The diet that decides which restaurants a meal may be locked to.
+        import meal_slots
+        return {field: value, "diet": meal_slots.parse_diet(value)}
+
     return {field: value}
 
 

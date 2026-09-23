@@ -162,3 +162,63 @@ def test_fill_meal_slot() -> None:
 if __name__ == "__main__":
     demo()
     test_fill_meal_slot()
+
+
+# --- diet -------------------------------------------------------------------
+
+def _michelin(name, cuisine, area_latlng=(37.5729, 126.9794)):
+    return {"name": name, "cuisine": cuisine, "cuisine_family": None, "needs_review": False,
+            "grade": "Selected", "lat": area_latlng[0], "lon": area_latlng[1], "street": "",
+            "opening_hours": {"Tuesday": ["11:00-22:00"]}}
+
+
+def test_parse_diet() -> None:
+    cases = {
+        "vegetarian": "vegetarian", "I'm veggie": "vegetarian", "no meat please": "vegetarian",
+        "채식해요": "vegetarian", "vegan please": "vegan", "plant-based only": "vegan",
+        "halal": "halal", "we're muslim": "halal",
+        "no pork please": None, "nut allergy": None, "none": None, "": None, None: None,
+    }
+    for text, want in cases.items():
+        assert meal_slots.parse_diet(text) == want, (text, meal_slots.parse_diet(text))
+
+
+def _diet_fill(monkeypatch, restaurants, found, diet="vegetarian"):
+    queries = []
+    monkeypatch.setattr(meal_slots, "_fetch_diet_restaurants_raw",
+                        lambda area, search: queries.append((area, search)) or found)
+    meal_slots._GOOGLE_PLACES_CACHE.clear()
+    out = fill_meal_slot(area="jongno", weekday="Tuesday", slot_start="11:00", slot_end="13:30",
+                         restaurants=restaurants, diet=diet)
+    return out, queries
+
+
+def test_a_vegetarian_never_gets_a_meat_michelin_pick(monkeypatch) -> None:
+    google = [{"poi_name": "Veg Place", "rating": 4.6, "lat": 37.57, "lng": 126.98, "address_en": ""}]
+    out, queries = _diet_fill(monkeypatch, [_michelin("Gomtang House", "Gomtang")], google)
+    assert out["name"] == "Veg Place" and out["source_tier"] == "google"
+    assert queries == [("jongno", "vegetarian restaurant")]
+    assert "vegetarian" in out["warnings"][0]
+
+
+def test_a_vegan_michelin_in_the_zone_is_picked_for_a_vegetarian(monkeypatch) -> None:
+    out, queries = _diet_fill(monkeypatch, [_michelin("Gomtang House", "Gomtang"),
+                                            _michelin("Leaf", "Vegan")], [])
+    assert out["name"] == "Leaf" and out["source_tier"] == "michelin" and queries == []
+
+
+def test_no_diet_match_leaves_the_meal_open(monkeypatch) -> None:
+    out, _ = _diet_fill(monkeypatch, [_michelin("Gomtang House", "Gomtang")], [])
+    assert out["status"] == "unfilled" and "vegetarian" in out["reason"]
+
+
+def test_halal_never_uses_michelin(monkeypatch) -> None:
+    out, queries = _diet_fill(monkeypatch, [_michelin("Leaf", "Vegan")], [], diet="halal")
+    assert out["status"] == "unfilled" and queries == [("jongno", "halal restaurant")]
+
+
+def test_nearest_michelin_can_be_limited_to_diet_cuisines() -> None:
+    rs = [_michelin("Gomtang House", "Gomtang"), _michelin("Leaf", "Vegan")]
+    hits = meal_slots.nearest_michelin(lat=37.5729, lng=126.9794, restaurants=rs,
+                                       cuisines=("Vegan", "Vegetarian"))
+    assert [h["name"] for h in hits] == ["Leaf"]

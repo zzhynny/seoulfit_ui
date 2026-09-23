@@ -121,3 +121,25 @@ def test_unrepairable_json_raises_the_json_error():
     # Used to raise NameError: `first_err` is unbound once its except block ends.
     with pytest.raises(json.JSONDecodeError):
         planner._parse_itinerary_json("{not json at all", use_llm_fallback=False)
+
+
+def test_each_day_is_told_its_weekday_and_never_shown_a_stop_closed_that_day(llm):
+    calls, answers = llm
+    answers.update({1: POOL[0:5], 2: POOL[5:10]})
+    state = _state(days=2)
+    closed = {"poi_name": "Closed On Tuesdays", "lat": 37.5729, "lng": 126.9794,
+              "estimated_stay_time": 60, "opening_hours": {"closed_weekday": ["Tuesday"]}}
+    for seg in state["day_segments"]:
+        seg["anchor_courses"][0]["sequence"].append(closed)
+    # 2026-10-19 is a Monday, so day 2 is a Tuesday. Vegetarian, and no
+    # Google key here, so no vegetarian restaurant is found: meals stay open.
+    state.update(trip_start_date="2026-10-19", diet="vegetarian", restrictions="vegetarian")
+
+    planner.plan_node(state)
+    day1 = next(c for c in calls if "=== DAY 1 " in c)
+    day2 = next(c for c in calls if "=== DAY 2 " in c)
+
+    assert "This day is a Monday." in day1 and "This day is a Tuesday." in day2
+    assert "Closed On Tuesdays" in day1 and "Closed On Tuesdays" not in day2
+    assert "Day 1 lunch is open: no verified vegetarian restaurant" in day1
+    assert "Day 2 dinner is open" in day2

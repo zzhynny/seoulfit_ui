@@ -243,3 +243,16 @@ if __name__ == "__main__":
     test_a_day_that_follows_the_pace_keeps_every_stop()
     test_a_restaurant_search_only_runs_when_the_purpose_names_food()
     print("all meal placement self-checks passed")
+
+
+def test_a_locked_meals_own_warnings_reach_the_itinerary() -> None:
+    course = _course(6)
+    meal = {**_meal("DinnerPick", "dinner"), "warnings": ["You mentioned: nut allergy — check with the restaurant"]}
+    out = _validate_and_repair_itinerary(
+        {"days": [{"day": 1, "theme": "T", "estimated_cost": "", "pois": []}]},
+        courses=[course], google_supplement=[], requested_areas=["hongdae"],
+        day_segments=[{"day_numbers": [1], "area": "hongdae", "note": "", "anchor_courses": [course]}],
+        duration="1 day", num_days=1, pace="relaxed", locked_meals={1: meal},
+    )
+    dinner = next(p for p in out["days"][0]["pois"] if p["name"] == "DinnerPick")
+    assert dinner["warnings"] == ["You mentioned: nut allergy — check with the restaurant"]

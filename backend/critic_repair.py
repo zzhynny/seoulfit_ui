@@ -597,7 +597,8 @@ class CriticAgent:
         issues: list[CriticIssue] = []
 
         area_report = self._evaluate_area_coverage(itinerary, requested_areas, issues)
-        day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues)
+        day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues,
+                                         diet=state.get("diet"))
         duplicate_report = self._evaluate_duplicates(itinerary, issues)
         foreigner_report = self._evaluate_foreigner_readiness(itinerary, issues)
 
@@ -684,6 +685,7 @@ class CriticAgent:
         pool: dict[str, dict[str, Any]],
         trip_start_date: str | None,
         issues: list[CriticIssue],
+        diet: str | None = None,
     ) -> dict[str, Any]:
         days = itinerary.get("days") or []
         if not days:
@@ -735,11 +737,40 @@ class CriticAgent:
             if self._day_has_closed_poi(pois, pool, trip_start_date, day_num, issues):
                 penalties += 0.30
 
+            if diet:
+                checks += 1
+                penalties += self._diet_meal_penalty(pois, diet, day_num, issues)
+
         if checks == 0:
             return {"score": 0.0}
 
         score = max(0.0, 1.0 - penalties / max(len(days), 1))
         return {"score": round(score, 3)}
+
+    def _diet_meal_penalty(
+        self, pois: list[dict[str, Any]], diet: str, day_num: int, issues: list[CriticIssue],
+    ) -> float:
+        """Medium, not high: a high issue sends the day back to Gemini, which
+        can't change locked meals. The point is that a diet trip with an open
+        or unverified meal can't score 1.0."""
+        meals = {p.get("meal_slot"): p for p in pois if p.get("meal_slot")}
+        penalty = 0.0
+        for slot in ("lunch", "dinner"):
+            meal = meals.get(slot)
+            if meal is None:
+                penalty += 0.15
+                issues.append(CriticIssue(
+                    code="DIET_MEAL_OPEN", severity="medium", day=day_num,
+                    message=f"Day {day_num} {slot}: no {diet} restaurant was found nearby.",
+                ))
+            elif meal.get("source_tier") != "michelin":
+                penalty += 0.10
+                issues.append(CriticIssue(
+                    code="DIET_MEAL_UNVERIFIED", severity="medium", day=day_num,
+                    message=(f"Day {day_num} {slot} at {poi_name(meal)} was found by search; "
+                             f"its menu isn't verified for a {diet} diet."),
+                ))
+        return penalty
 
     def _day_is_geographically_scattered(self, pois: list[dict[str, Any]]) -> bool:
         coords: list[tuple[float, float]] = []
@@ -931,6 +962,7 @@ class RepairAgent:
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+            diet=state.get("diet"),
         )
 
         itinerary = self._repair_underfilled_days(
@@ -1147,8 +1179,12 @@ class RepairAgent:
         pool: dict[str, dict[str, Any]],
         requested_areas: list[str],
         logs: list[str],
+        diet: str | None = None,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
+        # A pool restaurant is unverified for a diet -- it could be a gomtang
+        # place for a vegetarian. A cafe is the safe filler.
+        eat_types = {"cafe"} if diet else {"restaurant", "cafe"}
 
         for idx, day in enumerate(itinerary.get("days") or []):
             pois = day.setdefault("pois", [])
@@ -1162,14 +1198,14 @@ class RepairAgent:
                     pool,
                     target_area,
                     exclude=used,
-                    preferred_types={"restaurant", "cafe"},
+                    preferred_types=eat_types,
                 )
 
             if not candidates:
                 candidates = [
                     item for item in pool.values()
                     if normalize_text(item.get("name")) not in used
-                    and normalize_text(item.get("type")) in {"restaurant", "cafe"}
+                    and normalize_text(item.get("type")) in eat_types
                     and not belongs_to_other_requested_area(
                         item.get("area"), target_area, requested_areas
                     )

@@ -178,3 +178,42 @@ def test_a_stop_swapped_for_a_closed_one_keeps_its_priority():
     swapped = fixed["days"][0]["pois"][0]
     assert swapped["name"] == "Open Palace", logs
     assert swapped["priority"] == 1
+
+
+def _meal_poi(name, slot, tier, at=BUKCHON):
+    return {**_poi(name, at, "restaurant"), "meal_slot": slot, "source_tier": tier}
+
+
+def test_a_diet_day_with_an_open_or_unverified_meal_cannot_score_one(node):
+    run, calls = node
+    day1 = _day(1, "bukchon", BUKCHON)
+    day1["pois"] += [_meal_poi("Veg Lunch", "lunch", "google")]          # no dinner at all
+    day2 = _day(2, "gangnam", GANGNAM)
+    day2["pois"] += [_meal_poi("Leaf", "lunch", "michelin", GANGNAM),
+                     _meal_poi("Sprout", "dinner", "michelin", GANGNAM)]
+    state = {**_state(day1), "diet": "vegetarian"}
+    state["itinerary"]["days"][1] = day2
+
+    out = run(state, lambda it: it)
+    after = out["critic_report"]["after"]
+    codes = [(i["code"], i["severity"], i["day"]) for i in after["issues"]]
+    assert ("DIET_MEAL_UNVERIFIED", "medium", 1) in codes
+    assert ("DIET_MEAL_OPEN", "medium", 1) in codes
+    assert not [c for c in codes if c[2] == 2]          # verified Michelin day is clean
+    assert after["overall_score"] < 1.0
+    assert calls == []                                  # medium: no Gemini revision
+
+
+def test_the_missing_meal_repair_adds_only_a_cafe_for_a_diet():
+    import critic_repair as cr
+    pool_items = {
+        "meat house": {"name": "Meat House", "type": "restaurant", "area": "bukchon", "lat": 37.58, "lng": 126.98},
+        "tea cafe": {"name": "Tea Cafe", "type": "cafe", "area": "bukchon", "lat": 37.58, "lng": 126.98},
+    }
+    day = {"day": 1, "pois": [_poi("Sight", BUKCHON)]}
+    for diet, want in ((None, "Meat House"), ("vegetarian", "Tea Cafe")):
+        it = {"days": [{**day, "pois": list(day["pois"])}]}
+        out = cr.RepairAgent()._repair_missing_meals(
+            itinerary=it, pool=pool_items, requested_areas=["bukchon"], logs=[], diet=diet)
+        added = [p["name"] for p in out["days"][0]["pois"] if p["name"] != "Sight"]
+        assert added == [want], (diet, added)
