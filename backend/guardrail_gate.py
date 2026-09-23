@@ -9,7 +9,9 @@ before turning it on for every turn in production.
 """
 from __future__ import annotations
 
+import asyncio
 import os
+import threading
 
 # The self-check LLM runs through langchain-google-genai (engine: google_genai in
 # guardrails/config.yml). This env var must be set before nemoguardrails is
@@ -24,6 +26,24 @@ from nemoguardrails.rails.llm.options import RailStatus, RailType
 
 _here = os.path.dirname(os.path.abspath(__file__))
 _rails: LLMRails | None = None
+
+# NeMo's Gemini client binds to the first event loop it runs on. The sync
+# rails.check() makes a fresh loop on whichever thread calls it, so under
+# uvicorn's threadpool only a process's first check worked -- every later one
+# raised "attached to a different loop" and failed open. So every check runs
+# on this one loop, on its own thread, and so does building the rails.
+_loop: asyncio.AbstractEventLoop | None = None
+_loop_lock = threading.Lock()
+_CHECK_TIMEOUT_S = 20
+
+
+def _rails_loop() -> asyncio.AbstractEventLoop:
+    global _loop
+    with _loop_lock:
+        if _loop is None:
+            _loop = asyncio.new_event_loop()
+            threading.Thread(target=_loop.run_forever, name="guardrail-loop", daemon=True).start()
+    return _loop
 
 
 def _get_rails() -> LLMRails:
@@ -45,8 +65,8 @@ def is_blocked(text: str | None, question: str | None = None) -> bool:
     (FIELD_QUESTIONS), never user input, so it is safe to hand to the judge.
 
     Empty/whitespace input is never blocked (the greeting turn sends no message).
-    Any guardrail error falls open (returns False) — a flaky safety check must
-    not take down the chat endpoint. ponytail: fail-open here; flip to fail-closed
+    Any guardrail error, or a check slower than _CHECK_TIMEOUT_S, falls open
+    (returns False) — a flaky safety check must not take down the chat endpoint. ponytail: fail-open here; flip to fail-closed
     only if abuse via induced errors ever shows up.
     """
     if not text or not text.strip():
@@ -58,9 +78,14 @@ def is_blocked(text: str | None, question: str | None = None) -> bool:
         # the app sanctioned it.
         content = f'[SeoulFit Buddy asked: "{question}"]\n{text}'
     try:
-        result = _get_rails().check(
-            [{"role": "user", "content": content}],
-            rail_types=[RailType.INPUT],
+        async def check():
+            return await _get_rails().check_async(
+                [{"role": "user", "content": content}],
+                rail_types=[RailType.INPUT],
+            )
+
+        result = asyncio.run_coroutine_threadsafe(check(), _rails_loop()).result(
+            timeout=_CHECK_TIMEOUT_S
         )
         return result.status == RailStatus.BLOCKED
     except Exception:
