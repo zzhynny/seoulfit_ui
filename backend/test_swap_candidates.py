@@ -115,6 +115,17 @@ def test_restaurant_swap_offers_michelin_nearest_first():
     assert any(c["warnings"] for c in got), got
     assert all("grade" in c for c in got), got
 
+    # And the pick has to survive /revalidate. restaurant.json feeds neither of
+    # build_candidate_pool's two sources, so offering a Michelin row without
+    # leaving it on the thread silently keeps the original stop.
+    picked = got[0]["poi_name"]
+    edited = critic_repair.apply_slot_edits(
+        graph.values["itinerary"],
+        {"swapped_slots": {"Locked Dinner Pick": picked}},
+        critic_repair.build_candidate_pool(graph.values),
+    )
+    assert [p["name"] for p in edited["days"][0]["pois"]] == [picked], edited
+
 
 def test_restaurant_swap_falls_back_when_nothing_michelin_is_near():
     """Deep in a residential outer district there is no Michelin within 2km, and
