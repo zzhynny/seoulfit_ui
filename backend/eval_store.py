@@ -123,7 +123,10 @@ def save_eval(
             state.get("companion"),
             state.get("purpose"),
             json.dumps([s.get("region") for s in day_specs], ensure_ascii=False),
-            json.dumps([s.get("interest") for s in day_specs], ensure_ascii=False),
+            # The Day Planner's per-day notes. This column held the per-day
+            # interest before notes replaced it; the name stayed so the table
+            # needs no migration.
+            json.dumps([s.get("note") or "" for s in day_specs], ensure_ascii=False),
             _f(before, "overall_score"),
             _f(after, "overall_score"),
             _f(after, "feasibility_score"),

@@ -24,8 +24,8 @@ def _state(day1):
     # Day 1 was meant to be Bukchon. The candidate pool is empty, so the code
     # repairer has nothing to fix it with and the high issue survives.
     return {
-        "day_specs": [{"day": 1, "region": "bukchon", "interest": "Culture & History"},
-                      {"day": 2, "region": "gangnam", "interest": "Culture & History"}],
+        "day_specs": [{"day": 1, "region": "bukchon"},
+                      {"day": 2, "region": "gangnam"}],
         "itinerary": {"days": [day1, _day(2, "gangnam", GANGNAM)]},
         "retrieved_courses": [],
         "planning_context": {"requested_areas": ["bukchon", "gangnam"], "google_supplement": []},
@@ -162,7 +162,7 @@ def test_a_stop_swapped_for_a_closed_one_keeps_its_priority():
                                               {**raw("Market", 37.570), "poi_type": "market"}]}
     state = {
         "trip_start_date": "2026-10-13",
-        "day_specs": [{"day": 1, "region": "jongno", "interest": "Culture & History"}],
+        "day_specs": [{"day": 1, "region": "jongno"}],
         "retrieved_courses": [course],
         "planning_context": {"requested_areas": ["jongno"], "google_supplement": []},
         "itinerary": {"days": [{"day": 1, "pois": [

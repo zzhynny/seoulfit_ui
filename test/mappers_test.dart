@@ -117,18 +117,21 @@ void main() {
     expect(prefs.pace, '—');
   });
 
-  test('Travel Style sums up the interests picked per day', () {
-    // The chat no longer asks a trip-wide interest, so the Day Planner's
-    // per-day picks are the only source left -- same as the Region row.
+  test('the Day notes row lists the notes written per day', () {
+    // Blank notes are left out; the row reads — when there are none.
     final prefs = toUiPreferences(const api.TravelState(
       daySpecs: [
-        api.DaySpec(day: 1, region: 'hongdae', interest: 'Food & Cafes'),
-        api.DaySpec(day: 2, region: 'seongsu', interest: 'Shopping'),
-        api.DaySpec(day: 3, region: 'jongno', interest: 'Food & Cafes'),
+        api.DaySpec(day: 1, region: 'hongdae', note: 'vintage shops'),
+        api.DaySpec(day: 2, region: 'seongsu'),
+        api.DaySpec(day: 3, region: 'jongno', note: " mom's birthday "),
       ],
     ));
+    expect(prefs.travelStyle, "Day 1: vintage shops; Day 3: mom's birthday");
 
-    expect(prefs.travelStyle, 'Food & Cafes, Shopping');
+    final none = toUiPreferences(const api.TravelState(
+      daySpecs: [api.DaySpec(day: 1, region: 'hongdae')],
+    ));
+    expect(none.travelStyle, '—');
   });
 
   test('parses a real /chat itinerary payload end to end', () {

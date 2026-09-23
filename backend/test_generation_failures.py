@@ -86,7 +86,7 @@ def test_a_failed_plan_can_be_regenerated_and_leaks_nothing(monkeypatch):
     state = {
         "retrieved_courses": [{"course_id": "c1", "sequence": []}],
         "day_segments": [{"day_numbers": [1], "area": "jongno", "anchor_courses": []}],
-        "day_specs": [{"day": 1, "region": "jongno", "interest": "Shopping"}],
+        "day_specs": [{"day": 1, "region": "jongno"}],
         "travel_dates": "x (1 day)",
         "messages": [],
     }

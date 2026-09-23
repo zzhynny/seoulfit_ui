@@ -14,7 +14,7 @@ def _poi(name, lat, lng, area=None):
 
 def test_bukchon_pois_count_toward_a_bukchon_request():
     state = {
-        "day_specs": [{"day": 1, "region": "bukchon", "interest": "Culture & History"}],
+        "day_specs": [{"day": 1, "region": "bukchon"}],
         "itinerary": {"days": [{"day": 1, "pois": [
             _poi("Bukchon Hanok Village", 37.5826, 126.9836, area="bukchon"),
             _poi("Gahoe-dong 31", 37.5828, 126.9850, area="bukchon"),

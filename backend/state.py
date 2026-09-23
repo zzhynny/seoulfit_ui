@@ -18,7 +18,9 @@ class TravelState(TypedDict, total=False):
                                         # retrieval 의 유사도 질의로 쓰인다.
     purpose_keywords: Optional[list[dict[str, str]]]  # [{phrase, poi_type}] ≤2, purpose 에서
                                         # 추출. 지역마다 Google Text Search 로 쓰인다. 대개 [].
-    day_specs: Optional[list[dict[str, Any]]]  # [{day, region, interest}] — Day Planner
+    day_specs: Optional[list[dict[str, Any]]]  # [{day, region, note, keywords}] — Day Planner.
+                                        # region 은 9개 구역 키, note 는 그날의 선택 메모,
+                                        # keywords 는 note 에서 뽑은 그날의 Google 검색어.
                                         # 화면이 정하고 POST /day-plan 이 쓴다.
                                         # day_plan 단계 진입 시 서버가 기본값을 채운다.
     current_step: str                  # start | collecting | day_plan | confirm | retrieving | planning | critic | done

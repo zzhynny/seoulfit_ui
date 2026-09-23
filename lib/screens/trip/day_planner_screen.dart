@@ -115,7 +115,7 @@ int? _statusCodeOf(Object error) {
   return match == null ? null : int.tryParse(match.group(1)!);
 }
 
-/// Picks an area and a focus for each day of the trip.
+/// Picks a zone, and optionally a note, for each day of the trip.
 ///
 /// Opens already filled in: the backend writes defaults into `day_specs` the
 /// moment intake ends, and this screen displays them. Continuing without
@@ -168,40 +168,45 @@ class _DayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: 56,
-          child: Text('Day ${spec.day}', style: AppTextStyles.bodySmall),
+        Row(
+          children: [
+            SizedBox(
+              width: 56,
+              child: Text('Day ${spec.day}', style: AppTextStyles.bodySmall),
+            ),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                // Keyed on the day number, not list position: it's what the test
+                // (and any future deep link) addresses a row by, and the two only
+                // coincide when specs are already in day order.
+                key: ValueKey('region-${spec.day}'),
+                initialValue: spec.region,
+                isExpanded: true,
+                items: [
+                  for (final e in kRegionLabels.entries)
+                    DropdownMenuItem(value: e.key, child: Text(e.value)),
+                ],
+                onChanged: (v) => v == null ? null : onChanged(spec.copyWith(region: v)),
+              ),
+            ),
+          ],
         ),
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            // Keyed on the day number, not list position: it's what the test
-            // (and any future deep link) addresses a row by, and the two only
-            // coincide when specs are already in day order.
-            key: ValueKey('region-${spec.day}'),
-            initialValue: spec.region,
-            isExpanded: true,
-            items: [
-              for (final e in kRegionLabels.entries)
-                DropdownMenuItem(value: e.key, child: Text(e.value)),
-            ],
-            onChanged: (v) => v == null ? null : onChanged(spec.copyWith(region: v)),
+        const SizedBox(height: AppSpacing.sm),
+        // Optional. Blank lets the trip purpose from the chat drive the day;
+        // anything written here steers that day's courses and searches.
+        TextFormField(
+          key: ValueKey('note-${spec.day}'),
+          initialValue: spec.note,
+          maxLength: 200,
+          decoration: const InputDecoration(
+            hintText: 'Anything special this day? (optional)',
+            counterText: '',
+            isDense: true,
           ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          flex: 2,
-          child: DropdownButtonFormField<String>(
-            key: ValueKey('interest-${spec.day}'),
-            initialValue: spec.interest,
-            isExpanded: true,
-            items: [
-              for (final label in kInterestLabels)
-                DropdownMenuItem(value: label, child: Text(label)),
-            ],
-            onChanged: (v) => v == null ? null : onChanged(spec.copyWith(interest: v)),
-          ),
+          onChanged: (v) => onChanged(spec.copyWith(note: v)),
         ),
       ],
     );

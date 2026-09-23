@@ -222,7 +222,7 @@ def test_trim_backs_off_when_protected_set_alone_exceeds_max():
     # Real Seoul area names -- _poi_area/_infer_area_from_text_or_coords only
     # recognizes these (via alias-pattern matching on name/address text), not
     # arbitrary made-up labels.
-    requested_areas = ["hongdae", "seongsu", "gangnam", "itaewon", "myeongdong", "jongno", "sinchon"]
+    requested_areas = ["hongdae", "seongsu", "gangnam", "itaewon", "myeongdong", "jongno", "yeouido"]
     # One stop per requested area = 7 protected stops, which alone exceeds
     # relaxed's max of 6. The locked meal below is protected too but, like
     # every locked meal, doesn't count toward the max.

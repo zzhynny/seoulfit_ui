@@ -13,12 +13,12 @@ def _state(days=2, region="jongno"):
     course = {"course_id": "c1", "source_url": "u", "sequence": [
         {"poi_name": n, "lat": 37.5729, "lng": 126.9794, "estimated_stay_time": 60} for n in POOL
     ]}
-    segs = [{"day_numbers": [d], "area": region, "purpose_hint": "Culture & History",
+    segs = [{"day_numbers": [d], "area": region, "note": "rent hanbok" if d == 1 else "",
              "anchor_courses": [course]} for d in range(1, days + 1)]
     return {
         "retrieved_courses": [course],
         "day_segments": segs,
-        "day_specs": [{"day": d, "region": region, "interest": "Culture & History"}
+        "day_specs": [{"day": d, "region": region, "note": ""}
                       for d in range(1, days + 1)],
         "travel_dates": f"x ({days} days)",
         "pace": "relaxed",
@@ -64,6 +64,10 @@ def test_one_call_per_day_merged_in_order(llm):
     assert it["summary"] == "Day 1 sentence. Day 2 sentence."
     assert [s["course_id"] for s in it["sources"]] == ["c1"]
     assert "PACE: relaxed pace" in calls[0]
+    day1 = next(c for c in calls if "=== DAY 1 " in c)
+    day2 = next(c for c in calls if "=== DAY 2 " in c)
+    assert "Traveller's note for this day: rent hanbok" in day1
+    assert "Traveller's note" not in day2
     assert it["days"][0]["pois"][0]["priority"] == 1   # survives canonicalisation
 
 

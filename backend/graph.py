@@ -125,16 +125,9 @@ FIELD_EXTRACT = {
 }
 
 
-# 앱의 관심사 어휘. Day Planner 드롭다운(Flutter kInterestLabels),
-# course_descriptions.json 의 interests 가 전부 이 문자열을 그대로 쓴다.
-INTEREST_LABELS = [
-    "Culture & History", "Food & Cafes", "Shopping",
-    "K-POP & Hallyu", "Nature & Relaxation",
-]
-
-# Day Planner 화면이 제시하는 12개 지역(lib/models/travel_state.dart의
-# kRegionLabels와 동일한 키·순서). geo.SEOUL_AREA_CENTERS는 33개 키를 갖고
-# 있어 앱이 절대 주지 않는 21개(nowon, dobong, gwanak, dmc, ...)까지 통과
+# Day Planner 화면이 제시하는 9개 구역(lib/models/travel_state.dart의
+# kRegionLabels와 동일한 키). geo.SEOUL_AREA_CENTERS는 33개 키를 갖고
+# 있어 앱이 절대 주지 않는 지역(nowon, dobong, gwanak, dmc, ...)까지 통과
 # 시킨다 — 코스 풀이 1~3개뿐인 지역이 그대로 새면 그날 앵커가 거의 없다.
 # DAY_PLAN_REGION_ORDER와 같은 객체를 그대로 쓰므로 둘이 어긋날 수 없다.
 DAY_PLAN_REGIONS = DAY_PLAN_REGION_ORDER
@@ -301,9 +294,6 @@ def _store(field: str, raw: str, state: TravelState) -> dict:
     return {field: value}
 
 
-DEFAULT_INTEREST = "Culture & History"
-
-
 def default_day_specs(state: TravelState) -> list[dict[str, Any]]:
     """day_plan 단계에 들어가는 순간 채워 넣는 날짜별 기본값.
 
@@ -311,15 +301,16 @@ def default_day_specs(state: TravelState) -> list[dict[str, Any]]:
     화면 양쪽에 두면 반드시 어긋나므로 여기 한 곳에만 둔다. 그리고 day_specs 가
     항상 존재하므로 "비어 있을 때" 라는 분기가 생기지 않는다.
 
-    지역은 코스 풀이 넓은 곳부터 서로 다르게 배분한다 — 그대로 두어도 권역이
-    다양한 무난한 여행이 된다. 관심사는 기본값으로 시작하고 여행자가 날마다 고른다.
+    구역은 코스 풀이 넓은 곳부터 서로 다르게 배분한다 — 그대로 두어도 권역이
+    다양한 무난한 여행이 된다. 메모는 비워 둔다 — 비어 있으면 여행 목적이 그날을
+    정한다.
     """
     from rag import _parse_num_days
 
     days = _parse_num_days(state.get("travel_dates"))
     order = DAY_PLAN_REGION_ORDER
     return [
-        {"day": i + 1, "region": order[i % len(order)], "interest": DEFAULT_INTEREST}
+        {"day": i + 1, "region": order[i % len(order)], "note": "", "keywords": []}
         for i in range(days)
     ]
 

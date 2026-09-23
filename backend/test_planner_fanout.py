@@ -169,3 +169,29 @@ def test_two_days_in_one_area_never_lock_the_same_restaurant() -> None:
         planner._primary_area_for_day, meal_slots.fill_meal_slot = orig_area, orig_fill
 
     assert [locked[d]["name"] for d in (1, 2, 3)] == ["Damtaek", "Hapjeongok", "Third"]
+
+
+def test_a_days_note_keywords_are_searched_only_in_its_zone() -> None:
+    """Trip keywords run everywhere; a day's own run only in its zone, once,
+    and a zone's list is capped."""
+    got: dict[str, list[str]] = {}
+
+    def fake(*, area, keywords, api_key, day_segments):
+        got[area] = [k["phrase"] for k in keywords]
+        return []
+
+    kw = lambda *ps: [{"phrase": p, "poi_type": "tourist_spot"} for p in ps]  # noqa: E731
+    original = planner.build_google_supplement_for_area
+    planner.build_google_supplement_for_area = fake
+    try:
+        planner.build_google_supplement_by_areas(
+            requested_areas=["jongno", "seongsu"], location="", keywords=kw("tea house"),
+            api_key="k", day_segments=None,
+            keywords_by_area={"seongsu": kw("birthday cake", "Tea House", "a", "b", "c")},
+        )
+    finally:
+        planner.build_google_supplement_for_area = original
+
+    assert got["jongno"] == ["tea house"]
+    # Trip keyword first, the case-insensitive repeat dropped, capped at 4.
+    assert got["seongsu"] == ["tea house", "birthday cake", "a", "b"]

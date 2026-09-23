@@ -9,13 +9,12 @@ import planner  # noqa: E402
 
 BASE = {
     "travel_dates": "June 1, 2026 to June 3, 2026 (3 days)",
-    "category": "Culture & History",
     "companion": "family", "pace": "relaxed", "restrictions": "none",
     "purpose": "",
     "day_specs": [
-        {"day": 1, "region": "jongno", "interest": "Culture & History"},
-        {"day": 2, "region": "hongdae", "interest": "Shopping"},
-        {"day": 3, "region": "seongsu", "interest": "Food & Cafes"},
+        {"day": 1, "region": "jongno", "note": ""},
+        {"day": 2, "region": "hongdae", "note": ""},
+        {"day": 3, "region": "seongsu", "note": ""},
     ],
 }
 
@@ -47,9 +46,36 @@ def test_days_do_not_share_a_base_course():
 
 def test_synthesises_a_purpose_when_the_traveller_skipped_it():
     text = planner._synth_purpose(BASE)
-    assert "relaxed" in text and "family" in text and "Culture & History" in text
+    assert "relaxed" in text and "family" in text
 
 
 def test_uses_the_traveller_sentence_when_they_wrote_one():
     assert planner._synth_purpose({**BASE, "purpose": "my mother's first trip"}) == \
         "my mother's first trip"
+
+
+def test_each_day_is_searched_with_the_trip_purpose_plus_its_own_note(monkeypatch):
+    """One batched embedding of the distinct day queries; a day without a note
+    reuses the trip query, and the note reaches its segment."""
+    import numpy as np
+    import retrieval
+
+    ids = [c["course_id"] for c in retrieval.load_courses()]
+    monkeypatch.setattr(planner, "load_vectors", lambda: (ids, np.eye(len(ids), 4, dtype="float32")))
+    calls, seen = [], []
+    monkeypatch.setattr(planner, "_embed_texts",
+                        lambda texts: calls.append(list(texts)) or [np.ones(4, "float32")] * len(texts))
+    orig = planner.select_anchors
+    monkeypatch.setattr(planner, "select_anchors",
+                        lambda spec, **k: seen.append(spec["purpose_vec"] is not None) or orig(spec, **k))
+
+    state = {**BASE, "purpose": "first trip with my mom", "day_specs": [
+        {"day": 1, "region": "jongno", "note": "rent hanbok"},
+        {"day": 2, "region": "hongdae", "note": ""},
+        {"day": 3, "region": "seongsu", "note": ""},
+    ]}
+    segs = planner.make_retrieve_node("")(state)["day_segments"]
+
+    assert calls == [["first trip with my mom rent hanbok", "first trip with my mom"]]
+    assert seen == [True, True, True]
+    assert [s["note"] for s in segs] == ["rent hanbok", "", ""]

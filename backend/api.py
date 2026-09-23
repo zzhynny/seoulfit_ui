@@ -535,7 +535,29 @@ def reset(thread_id: str):
 class DaySpec(BaseModel):
     day: int
     region: str
-    interest: str
+    # 선택 메모. 그날의 검색 질의와 프롬프트에 들어가므로 길이를 막는다.
+    note: str = Field("", max_length=200)
+
+
+# The question the note field answers -- handed to the input rail so it judges
+# a short note ("mom's birthday") as an answer, not as chit-chat.
+_NOTE_QUESTION = "Anything special you want from this day of your Seoul trip?"
+
+
+def _read_note(note: str) -> tuple[str, list[dict[str, str]]]:
+    """(note to keep, its search keywords). A blocked note is dropped, not
+    rejected: it's optional, and a 400 here reaches the traveller only as a
+    generic failure. Neither call raises -- the rail fails open, extraction
+    returns []."""
+    from graph import _extract_purpose_keywords
+
+    note = note.strip()
+    if not note:
+        return "", []
+    if is_blocked(note, _NOTE_QUESTION):
+        print(f"[day-plan] note blocked by input rail, dropped: {note[:60]!r}")
+        return "", []
+    return note, _extract_purpose_keywords(note)
 
 
 class DayPlanRequest(BaseModel):
@@ -546,12 +568,15 @@ class DayPlanRequest(BaseModel):
 @app.post("/day-plan", response_model=StateResponse)
 @_one_turn_per_session
 def day_plan(req: DayPlanRequest):
-    """Day Planner 화면이 정한 날짜별 지역·관심사를 저장하고 confirm 으로 넘긴다.
+    """Day Planner 화면이 정한 날짜별 구역·메모를 저장하고 confirm 으로 넘긴다.
 
-    어휘가 어긋나면 400 으로 시끄럽게 실패한다. retrieval 의 필터는 문자열
-    비교라서, 통과시키면 조용히 0개를 반환하고 그날 앵커가 사라진다.
+    구역이 어긋나면 400 으로 시끄럽게 실패한다. 통과시키면 retrieval 이 조용히
+    0개를 반환하고 그날 앵커가 사라진다. 메모마다 검색어를 여기서 뽑는다 —
+    인테이크의 여행 목적과 같은 이유로, 일정 생성 시간에 얹지 않으려고.
     """
-    from graph import DAY_PLAN_REGIONS, INTEREST_LABELS
+    from concurrent.futures import ThreadPoolExecutor
+
+    from graph import DAY_PLAN_REGIONS
     from rag import _parse_num_days
 
     thread_id = _require_thread_id(req.thread_id)
@@ -575,8 +600,10 @@ def day_plan(req: DayPlanRequest):
     for d in days:
         if d["region"] not in DAY_PLAN_REGIONS:
             raise HTTPException(status_code=400, detail=f"unknown region: {d['region']}")
-        if d["interest"] not in INTEREST_LABELS:
-            raise HTTPException(status_code=400, detail=f"unknown interest: {d['interest']}")
+
+    with ThreadPoolExecutor(max_workers=len(days)) as pool:
+        for d, (note, keywords) in zip(days, pool.map(_read_note, [d["note"] for d in days])):
+            d["note"], d["keywords"] = note, keywords
 
     days.sort(key=lambda d: d["day"])
     _graph.update_state(_config(thread_id), {"day_specs": days, "current_step": "confirm"})

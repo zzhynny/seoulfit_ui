@@ -580,7 +580,7 @@ def build_google_supplement_for_area(
     """One "{phrase} in {area} Seoul" Text Search per purpose keyword.
 
     The keywords are what the traveller named in their purpose
-    (graph._extract_purpose_keywords). The day's interest is not searched: the
+    (graph._extract_purpose_keywords) or in a day's note. The zone itself is not searched: the
     anchor courses are already filtered by it, so a search for it only paid for
     places the plan already had. No keywords, no calls.
     """
@@ -619,6 +619,24 @@ def build_google_supplement_for_area(
     return _dedupe_places(supplement)
 
 
+# Each keyword is one paid Text Search per zone; several days in one zone can
+# each bring their own, so the zone's list is capped. Trip keywords go first.
+MAX_KEYWORDS_PER_AREA = 4
+
+
+def _keywords_for_area(
+    trip: list[dict[str, str]], extra: list[dict[str, str]] | None,
+) -> list[dict[str, str]]:
+    seen: set[str] = set()
+    out: list[dict[str, str]] = []
+    for kw in [*trip, *(extra or [])]:
+        key = kw["phrase"].strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(kw)
+    return out[:MAX_KEYWORDS_PER_AREA]
+
+
 def build_google_supplement_by_areas(
     *,
     requested_areas: list[str],
@@ -626,9 +644,15 @@ def build_google_supplement_by_areas(
     keywords: list[dict[str, str]],
     api_key: str,
     day_segments: list[dict[str, Any]] | None = None,
+    keywords_by_area: dict[str, list[dict[str, str]]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Collect Google Places supplement for every requested area."""
-    if not api_key or not keywords:
+    """Collect Google Places supplement for every requested area.
+
+    `keywords` (the trip purpose's) are searched in every area;
+    `keywords_by_area` (from each day's note) only in that day's area.
+    """
+    keywords_by_area = keywords_by_area or {}
+    if not api_key or not (keywords or any(keywords_by_area.values())):
         return []
 
     if not requested_areas:
@@ -664,7 +688,7 @@ def build_google_supplement_by_areas(
         with tracing_context(parent=_parent):
             return build_google_supplement_for_area(
                 area=area,
-                keywords=keywords,
+                keywords=_keywords_for_area(keywords, keywords_by_area.get(area)),
                 api_key=api_key,
                 day_segments=day_segments,
             )
@@ -863,13 +887,10 @@ def _format_segment_block(seg: dict[str, Any]) -> str:
     day_label = f"DAY {days[0]}" if len(days) == 1 else f"DAY {days[0]}–{days[-1]}"
 
     area = seg.get("area")
-    purpose_hint = (seg.get("purpose_hint") or "").strip()
-    if area:
-        header = f"{_area_label(area)} - {purpose_hint}" if purpose_hint else _area_label(area)
-    else:
-        header = purpose_hint or "Seoul"
-
-    lines: list[str] = [f"=== {day_label} CANDIDATES: {header} ==="]
+    lines: list[str] = [f"=== {day_label} CANDIDATES: {_area_label(area) if area else 'Seoul'} ==="]
+    note = (seg.get("note") or "").strip()
+    if note:
+        lines.append(f"Traveller's note for this day: {note}")
 
     anchors = seg.get("anchor_courses") or []
     rendered: list[str] = []
@@ -1967,12 +1988,6 @@ def _locked_meals_prompt_lines(locked_meals: dict[int, dict[str, Any]]) -> str:
 # Graph nodes
 # ---------------------------------------------------------------------------
 
-def _trip_interests(state: TravelState) -> str:
-    """The Day Planner's per-day interests, distinct and in day order."""
-    specs = state.get("day_specs") or []
-    return ", ".join(dict.fromkeys(s["interest"] for s in specs if s.get("interest")))
-
-
 def _synth_purpose(state: TravelState) -> str:
     """사용자가 목적을 적었으면 그 문장, 아니면 다른 슬롯으로 한 문장을 만든다.
 
@@ -1987,7 +2002,6 @@ def _synth_purpose(state: TravelState) -> str:
     days = _parse_num_days(state.get("travel_dates"))
     pace = (state.get("pace") or "").strip().lower()
     companion = (state.get("companion") or "").strip().lower()
-    interest = _trip_interests(state)
 
     pace_word = {"packed": "packed", "relaxed": "relaxed"}.get(pace, "")
     who = {
@@ -1999,8 +2013,6 @@ def _synth_purpose(state: TravelState) -> str:
     if pace_word:
         parts.append(pace_word)
     parts.append(f"{days}-day trip for {who}")
-    if interest:
-        parts.append(f"focused on {interest}")
     return " ".join(parts) + "."
 
 
@@ -2016,21 +2028,28 @@ def make_retrieve_node(api_key: str):
             }
 
         vectors = load_vectors()
-        query_vec = _embed_purpose(_synth_purpose(state)) if vectors else None
+        # 날마다 질의가 다르다: 여행 목적에 그날 메모를 붙인다. 메모가 없는 날은
+        # 여행 목적 벡터를 같이 쓴다. 서로 다른 문장만 한 번에 임베딩한다.
+        trip = _synth_purpose(state)
+        queries = [f"{trip} {s['note']}".strip() if s.get("note") else trip for s in day_specs]
+        unique = list(dict.fromkeys(queries))
+        embedded = _embed_texts(unique) if vectors else None
+        vec_of = dict(zip(unique, embedded)) if embedded else {}
 
         segments, all_courses, used = [], [], set()
         seen_ids: set[str] = set()
-        for spec in day_specs:
+        for spec, query in zip(day_specs, queries):
             sel = select_anchors(
-                {**spec, "purpose_vec": query_vec}, exclude=used, vectors=vectors
+                {**spec, "purpose_vec": vec_of.get(query)}, exclude=used, vectors=vectors
             )
             if sel.relaxed:
-                print(f"[retrieval] day {spec['day']} {spec['region']}/{spec['interest']}: {sel.relaxed}")
+                print(f"[retrieval] day {spec['day']} {spec['region']}: {sel.relaxed}")
             used |= {base_id(c["course_id"]) for c in sel.courses}
             segments.append({
                 "day_numbers": [spec["day"]],
                 "area": spec["region"],
-                "purpose_hint": spec["interest"],
+                "note": spec.get("note") or "",
+                "keywords": spec.get("keywords") or [],
                 "anchor_courses": sel.courses,
             })
             for c in sel.courses:
@@ -2048,8 +2067,8 @@ def make_retrieve_node(api_key: str):
     return retrieve_node
 
 
-def _embed_purpose(text: str):
-    """질의 임베딩. 일정 생성당 1회 — 모든 날이 같은 목적을 쓴다.
+def _embed_texts(texts: list[str]):
+    """질의 임베딩, 한 번의 배치 호출. 입력 순서대로 정규화된 벡터 목록.
 
     실패하면 None 을 돌려 유사도 정렬만 건너뛴다. 예전에는 여기서 예외가 나면
     retrieve_node 가 통째로 죽어 대화가 멈췄다.
@@ -2062,11 +2081,21 @@ def _embed_purpose(text: str):
         client = GoogleGenerativeAIEmbeddings(
             model=EMBEDDING_MODEL, google_api_key=_PLANNER_GEMINI_KEY
         )
-        vec = np.asarray(client.embed_query(text), dtype="float32")
-        return normalize(vec.reshape(1, -1))[0]
+        # embed_documents 의 기본 task 는 문서용이다. 이건 질의라서
+        # embed_query 와 같은 RETRIEVAL_QUERY 로 맞춘다.
+        rows = client.embed_documents(texts, task_type="RETRIEVAL_QUERY")
+        return list(normalize(np.asarray(rows, dtype="float32")))
     except Exception as e:
         print(f"[retrieval] query embedding failed ({type(e).__name__}) — filter-only")
         return None
+
+
+def _day_keywords_by_area(segments: list[dict[str, Any]]) -> dict[str, list[dict[str, str]]]:
+    out: dict[str, list[dict[str, str]]] = {}
+    for seg in segments:
+        if seg.get("area") and seg.get("keywords"):
+            out.setdefault(seg["area"], []).extend(seg["keywords"])
+    return out
 
 
 def _day_num(seg: dict[str, Any]) -> int:
@@ -2174,7 +2203,7 @@ def _trip_lines(state: TravelState) -> str:
     # The traveller's own sentence when they wrote one; it's what the prompt's
     # "fits the traveller's purpose" rules are about. Each day's focus is in
     # its own candidates header.
-    purpose = (state.get("purpose") or "").strip() or _trip_interests(state)
+    purpose = _synth_purpose(state)
     pace_line = _pace_target_line(state)
     return (
         f"Duration: {duration_text}\n"
@@ -2194,7 +2223,7 @@ def plan_node(state: TravelState) -> TravelState:
             "messages": [AIMessage(content="⚠️ No candidate courses found. Try different details.")],
         }
 
-    purpose = _trip_interests(state)
+    purpose = _synth_purpose(state)
     duration = state.get("travel_dates") or ""
     num_days = _resolve_num_days(state)
     pace = state.get("pace")
@@ -2227,6 +2256,8 @@ def plan_node(state: TravelState) -> TravelState:
             keywords=state.get("purpose_keywords") or [],
             api_key=GOOGLE_PLACES_API_KEY,
             day_segments=day_segments,
+            # A day's note keywords are searched only in that day's zone.
+            keywords_by_area=_day_keywords_by_area(day_segments),
         )
     else:
         print("[planner] GOOGLE_PLACES_API_KEY 없음 -- Google Places 보완 생략")
@@ -2382,7 +2413,7 @@ def revise_days(
             requested_areas=[seg["area"]] if seg.get("area") else [],
             day_segments=[seg],
             pace=state.get("pace"),
-            purpose=_trip_interests(state),
+            purpose=_synth_purpose(state),
             locked_meals=_meals_for_day(locked, n),
             locked_lunch_meals=_meals_for_day(locked_lunch, n),
         )["days"][0]
@@ -2420,7 +2451,7 @@ def describe_itinerary(state: TravelState, itinerary: dict[str, Any]) -> None:
         "Write the overview for this finished Seoul itinerary.\n\n"
         f"Traveller: {state.get('companion') or 'unknown'}, "
         f"{state.get('pace') or 'unspecified'} pace\n"
-        f"Purpose: {(state.get('purpose') or '').strip() or _trip_interests(state)}\n\n"
+        f"Purpose: {_synth_purpose(state)}\n\n"
         + "\n".join(lines)
         + "\n\nMention only places listed above. Return ONLY JSON:\n"
         '{"summary": "<2-3 sentences for the whole trip>", '

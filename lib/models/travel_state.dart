@@ -14,56 +14,47 @@ List<Map<String, dynamic>> _asJsonList(Object? raw) {
   ];
 }
 
-/// One day's area and focus, as set on the Day Planner screen.
+/// One day's zone and optional note, as set on the Day Planner screen.
 ///
-/// `region` is a geo.py key (lower case, e.g. 'jongno'), not a label —
-/// the backend filters by exact string, so the two must not drift.
+/// `region` is a zone key (lower case, e.g. 'jongno'), not a label — POST
+/// /day-plan validates it against the backend's zone list. `note` is free
+/// text; blank means the trip purpose from the chat drives that day. The
+/// backend also returns the note's search keywords, which the app never sends
+/// back — they are re-extracted on every POST.
 class DaySpec {
-  const DaySpec({required this.day, required this.region, required this.interest});
+  const DaySpec({required this.day, required this.region, this.note = ''});
 
   final int day;
   final String region;
-  final String interest;
+  final String note;
 
   factory DaySpec.fromJson(Map<String, dynamic> json) => DaySpec(
         day: json['day'] as int,
         region: json['region'] as String? ?? '',
-        interest: json['interest'] as String? ?? '',
+        note: json['note'] as String? ?? '',
       );
 
-  Map<String, dynamic> toJson() =>
-      {'day': day, 'region': region, 'interest': interest};
+  Map<String, dynamic> toJson() => {'day': day, 'region': region, 'note': note};
 
-  DaySpec copyWith({String? region, String? interest}) =>
-      DaySpec(day: day, region: region ?? this.region, interest: interest ?? this.interest);
+  DaySpec copyWith({String? region, String? note}) =>
+      DaySpec(day: day, region: region ?? this.region, note: note ?? this.note);
 }
 
-/// Region keys the app offers, with their display labels. Keys must exist in
-/// geo.SEOUL_AREA_CENTERS or POST /day-plan rejects them with a 400.
+/// The Day Planner's zones, with their display labels. Each key is the zone's
+/// main area; the backend treats its neighbours (Bukchon, Insadong, Sinchon,
+/// Mapo, Apgujeong) as part of it. Must match retrieval.DAY_PLAN_REGION_ORDER
+/// or POST /day-plan rejects the pick with a 400.
 const Map<String, String> kRegionLabels = {
-  'jongno': 'Jongno',
-  'myeongdong': 'Myeongdong',
-  'hongdae': 'Hongdae',
-  'gangnam': 'Gangnam',
-  'seongsu': 'Seongsu',
+  'jongno': 'Jongno · Bukchon · Insadong',
+  'gangnam': 'Gangnam · Apgujeong',
   'itaewon': 'Itaewon',
-  'bukchon': 'Bukchon',
-  'insadong': 'Insadong',
-  'mapo': 'Mapo',
+  'myeongdong': 'Myeongdong',
+  'hongdae': 'Hongdae · Sinchon · Mapo',
+  'yeouido': 'Yeouido',
+  'seongsu': 'Seongsu',
   'dongdaemun': 'Dongdaemun',
-  'sinchon': 'Sinchon',
-  'apgujeong': 'Apgujeong',
+  'jamsil': 'Jamsil',
 };
-
-/// The five interest labels, verbatim. Shared with graph.INTEREST_LABELS and
-/// each course's `interests` — the match is a string compare, not a score.
-const List<String> kInterestLabels = [
-  'Culture & History',
-  'Food & Cafes',
-  'Shopping',
-  'K-POP & Hallyu',
-  'Nature & Relaxation',
-];
 
 /// Mirrors the StateResponse Pydantic model from the FastAPI backend.
 class TravelState {

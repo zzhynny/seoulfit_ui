@@ -81,7 +81,7 @@ def test_expensive_endpoints_are_metered():
 def test_list_requests_are_bounded():
     """/day-plan 은 날마다 앵커 검색을 한다 — 상한이 없으면 한 요청이 워커를
     붙잡는다."""
-    day = {"day": 1, "region": "jongno", "interest": "Shopping"}
+    day = {"day": 1, "region": "jongno"}
     api.DayPlanRequest(thread_id="t" * 16, days=[day] * 30)
     with pytest.raises(ValidationError):
         api.DayPlanRequest(thread_id="t" * 16, days=[day] * 31)

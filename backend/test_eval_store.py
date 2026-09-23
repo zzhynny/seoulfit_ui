@@ -23,8 +23,8 @@ STATE = {
     "companion": "family",
     "purpose": "first time with my parents",
     "day_specs": [
-        {"day": 1, "region": "jongno", "interest": "Culture & History"},
-        {"day": 2, "region": "hongdae", "interest": "Food & Cafes"},
+        {"day": 1, "region": "jongno", "note": ""},
+        {"day": 2, "region": "hongdae", "note": "vintage shops"},
     ],
 }
 ITINERARY = {"days": [{"day": 1}, {"day": 2}]}
@@ -73,7 +73,7 @@ def test_day_specs_are_stored_for_slicing() -> None:
     conn.close()
 
     assert '"jongno"' in regions and '"hongdae"' in regions, regions
-    assert "Food & Cafes" in interests, interests
+    assert "vintage shops" in interests, interests   # the day notes
 
 
 def test_full_reports_survive_for_questions_not_yet_asked() -> None:

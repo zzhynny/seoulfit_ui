@@ -53,13 +53,13 @@ def test_select_anchors_span_omits_the_vector_matrix(spy):
     vectors = load_vectors()
     assert vectors is not None, "course_vectors.npz missing — rebuild to run this"
     select_anchors(
-        {"day": 1, "region": "jongno", "interest": "Culture & History",
+        {"day": 1, "region": "jongno",
          "purpose_vec": vectors[1][0]},
         vectors=vectors,
     )
 
     (run,) = [r for r in spy if r["name"] == "select_anchors"]
-    assert set(run["inputs"]) == {"day", "region", "interest", "has_query_vec", "exclude"}
+    assert set(run["inputs"]) == {"day", "region", "has_query_vec", "exclude"}
     assert run["inputs"]["has_query_vec"] is True
     # 8.7MB untrimmed. The bound is generous; the point is orders of magnitude.
     assert len(json.dumps(run["inputs"], default=str)) < 1000

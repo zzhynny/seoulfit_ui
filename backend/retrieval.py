@@ -28,23 +28,22 @@ VECTORS = _HERE / "dataset" / "course_vectors.npz"
 
 DEFAULT_K = 3
 
-# Day Planner 화면이 여는 기본 지역 순서 -- 코스 풀이 넓은 곳부터 두어 어느
-# 날도 앵커가 비지 않게 하고, 도심에서 시작해 밖으로 나가는 순서로 배열했다.
-# 이 12개가 앱이 실제로 제시하는 전체 지역 어휘이기도 하다 (graph.py의
-# DAY_PLAN_REGIONS와 lib/models/travel_state.dart의 kRegionLabels가 이 목록과
-# 같은 키·순서를 쓴다) -- POST /day-plan은 이 목록으로 region을 검증하므로,
-# 여기 없는 geo.SEOUL_AREA_CENTERS의 나머지 21개 키(코스 풀이 옅은 외곽
-# 자치구 등)는 절대 통과하지 못한다.
+# Day Planner 가 제시하는 9개 구역. 구역은 대표 지역 키 하나이고, 묶인 이웃
+# (jongno ↔ bukchon·insadong, hongdae ↔ sinchon·mapo, gangnam ↔ apgujeong)은
+# geo._ADJACENT_AREAS 가 같은 구역으로 판정한다. 예전 12개 중 bukchon·insadong
+# 의 코스는 전부 jongno 풀 안에 있었다 — 같은 동네를 이틀 고를 수 있었다.
+# 코스 수가 많은 순서라 기본값이 어느 날도 앵커가 비지 않는다. graph.py 의
+# DAY_PLAN_REGIONS 와 lib/models/travel_state.dart 의 kRegionLabels 가 같은
+# 키를 쓰고, POST /day-plan 은 이 목록으로 region 을 검증한다.
 DAY_PLAN_REGION_ORDER = [
-    "jongno", "myeongdong", "hongdae", "gangnam",
-    "seongsu", "itaewon", "bukchon",
-    "insadong", "mapo", "dongdaemun", "sinchon", "apgujeong",
+    "jongno", "gangnam", "itaewon", "myeongdong", "hongdae",
+    "yeouido", "seongsu", "dongdaemun", "jamsil",
 ]
 
 
 class Selection(NamedTuple):
     courses: list[dict[str, Any]]
-    relaxed: str | None       # None | "interest" | "none_available"
+    relaxed: str | None       # None | "none_available"
     sims: dict[str, float]    # course_id -> 코사인. 벡터가 없으면 빈 dict
 
 
@@ -109,17 +108,9 @@ def _dedupe_by_base(courses: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def filter_pool(region: str, interest: str | None = None) -> list[dict[str, Any]]:
-    """The courses that pass the filters, before dedupe, ranking or relaxation.
-
-    select_anchors relaxes the interest filter when the pool cannot fill k, which
-    makes it the wrong place to ask "how many courses match?". This answers that
-    question directly.
-    """
-    in_region = [c for c in load_courses() if _in_region(c, region)]
-    if interest:
-        return [c for c in in_region if interest in c["interests"]]
-    return in_region
+def filter_pool(region: str) -> list[dict[str, Any]]:
+    """The courses in a zone, before dedupe or ranking."""
+    return [c for c in load_courses() if _in_region(c, region)]
 
 
 @traceable(
@@ -130,7 +121,6 @@ def filter_pool(region: str, interest: str | None = None) -> list[dict[str, Any]
     process_inputs=lambda i: {
         "day": (i.get("day_spec") or {}).get("day"),
         "region": (i.get("day_spec") or {}).get("region"),
-        "interest": (i.get("day_spec") or {}).get("interest"),
         "has_query_vec": (i.get("day_spec") or {}).get("purpose_vec") is not None,
         "exclude": sorted(i.get("exclude") or ()),
     },
@@ -152,37 +142,27 @@ def select_anchors(
 ) -> Selection:
     """하루치 앵커 코스를 고른다.
 
-    day_spec = {"day": int, "region": str, "interest": str | None, "purpose_vec": ndarray | None}
+    day_spec = {"day": int, "region": str, "purpose_vec": ndarray | None}
+    purpose_vec 는 그날의 질의(여행 목적 + 그날 메모) 임베딩이다. 관심사 필터는
+    없다 — 메모가 순위를 정하고, 지역만 절대 조건이다.
     exclude  = 앞선 날에 이미 쓴 base course id
     vectors  = (ids, matrix) 또는 None. None 이면 유사도 정렬 없이 필터 결과.
     """
     region = day_spec["region"]
-    interest = day_spec.get("interest")
     excluded = set(exclude)
 
     in_region = filter_pool(region)
     if not in_region:
         return Selection([], "none_available", {})
 
-    def finish(pool, relaxed):
-        pool = _dedupe_by_base(pool)
-        kept = [c for c in pool if base_id(c["course_id"]) not in excluded]
-        # exclude 는 최선 노력이다. 얇은 지역에서는 앞선 날들이 후보를 다 써버릴
-        # 수 있다 — 신촌은 풀이 5개다. k 를 못 채우면 제외를 푼다.
-        if len(kept) < k:
-            kept = pool
-        ranked, sims = _rank(kept, day_spec.get("purpose_vec"), vectors)
-        return Selection(ranked[:k], relaxed, sims)
-
-    if interest:
-        matched = [c for c in in_region if interest in c["interests"]]
-        if len(_dedupe_by_base(matched)) >= k:
-            return finish(matched, None)
-        # 지역은 절대 풀지 않는다. 지역이 틀린 앵커는 하루 동선 전체를 망가뜨린다
-        # — 프롬프트가 앵커 순서를 그날의 뼈대로 쓰라고 지시하기 때문이다.
-        return finish(in_region, "interest")
-
-    return finish(in_region, None)
+    pool = _dedupe_by_base(in_region)
+    kept = [c for c in pool if base_id(c["course_id"]) not in excluded]
+    # exclude 는 최선 노력이다. 얇은 구역에서는 앞선 날들이 후보를 다 써버릴
+    # 수 있다 — 잠실은 풀이 11개다. k 를 못 채우면 제외를 푼다.
+    if len(kept) < k:
+        kept = pool
+    ranked, sims = _rank(kept, day_spec.get("purpose_vec"), vectors)
+    return Selection(ranked[:k], None, sims)
 
 
 def _rank(pool, query_vec, vectors):
