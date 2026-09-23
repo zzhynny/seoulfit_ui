@@ -730,123 +730,64 @@ def _format_google_supplement(places: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def _format_requested_area_rules(
-    requested_areas: list[str], duration: str, num_days: int | None = None,
-) -> str:
-    if not requested_areas:
-        return ""
-
-    labels = [_area_label(a) for a in requested_areas]
-
-    lines = [
-        "",
-        "=== REQUESTED AREA COVERAGE RULES ===",
-        f"The user explicitly requested these areas: {', '.join(labels)}.",
-        "You MUST include at least 2 POIs from EACH requested area across the full itinerary.",
-        "Do NOT omit a requested area.",
-        "If candidate course data is weak for an area, use REAL-TIME GOOGLE PLACES DATA for that area.",
-    ]
-
-    # No day->area distribution paragraph here any more: every day's area is
-    # already stated in its own "=== DAY N CANDIDATES: <area> ===" header
-    # (see _format_segment_block), and day_specs lets the traveller repeat a
-    # region across days (e.g. Day 1 & 2 = Hongdae, Day 3 = Gangnam) -- a
-    # paragraph re-deriving "Day 1 = X, Days 2-3 = Y" from the deduplicated
-    # requested_areas list would only contradict those headers.
-
-    lines.append(
-        "If you cannot find enough sightseeing POIs for an area, use cafes, restaurants, shops, or cultural spaces from Google Places."
-    )
-
-    return "\n".join(lines)
-
-
 # ---------------------------------------------------------------------------
 # Generation prompt
 # ---------------------------------------------------------------------------
 
-ITINERARY_PROMPT = """Generate a personalized Seoul travel itinerary for foreign tourists.
+DAY_PROMPT = """Plan ONE day of a Seoul trip for a foreign tourist.
 
-    You are given:
-    1. the user's trip details,
-    2. a shortlist of candidate courses from Visit Seoul / Visit Korea,
-    3. real-time Google Places data for requested neighborhoods.
-
-    Build a realistic day-by-day itinerary following ALL rules below.
+    You are given the traveller's trip details, the day's area and focus, the
+    anchor courses for that day (Visit Seoul / Visit Korea), and real-time Google
+    Places data for that area. Other days are planned separately.
 
     STRUCTURE RULES:
-    - One day entry per requested trip duration day.
-    - Each day MUST have 5–8 POIs. Never fewer than 5.
-    - Do NOT add your own restaurant POI for any day's lunch or dinner -- the
-      system supplies each day's lunch and dinner separately (see "LOCKED
-      MEAL RESERVATIONS" below if present for this trip) and will insert them
-      itself. Adding your own restaurant on top of that creates a duplicate
-      meal stop. You may still include a cafe POI for a daytime break if it
-      fits the day.
-    - Arrange POIs in chronological visit order starting around 09:00–10:00.
-    - Total planned activity + travel time per day should be 7–10 hours.
-
-    REQUESTED AREA RULES:
-    - If the user mentions multiple neighborhoods, cover ALL requested neighborhoods.
-    - Include at least 2 POIs from EACH requested neighborhood across the itinerary.
-    - For a 2-day trip with Hongdae and Seongsu, Day 1 can focus on Hongdae/Mangwon and Day 2 MUST focus on Seongsu.
-    - Do not say "no relevant POI data was available" if Google Places data is provided for that area.
-    - If candidate course data lacks a requested area, use Google Places supplement for that requested area.
+    - Aim for the PACE line's stop count if one is given, otherwise 5-8 stops.
+      Lunch and dinner are added separately and don't count.
+    - Do NOT add a restaurant for lunch or dinner -- the system inserts the
+      day's meals itself (see "LOCKED MEAL RESERVATIONS" if present). A cafe
+      for a daytime break is fine.
+    - Arrange POIs in visit order starting around 09:00-10:00, ordered to
+      minimise backtracking. Planned activity + travel should be 7-10 hours.
 
     ANCHOR COURSE RULES:
-    - Sections marked `=== DAY M–N CANDIDATES ===` define which days that group belongs to.
-    - Sections marked `[ANCHOR COURSE]` are editorially curated sequences from Visit Seoul / Visit Korea.
-    - Use the anchor course's POI order as the backbone for that day's itinerary.
-    - You may drop POIs from an anchor course if they are irrelevant to the user's purpose.
-    - You may insert Google Places POIs into the sequence at appropriate positions.
-    - Do NOT reorder anchor course POIs unless geography requires it.
-    - When a section spans multiple days (e.g. DAY 1–2), distribute its anchor courses across those days; do not put all POIs into one day.
+    - `[ANCHOR COURSE]` sections are editorially curated sequences. Use one as
+      the backbone of the day, in its order unless geography requires otherwise.
+    - You may drop anchor POIs that don't fit the purpose, and insert Google
+      Places POIs where they fit.
+    - If no anchor course is available, build the day from Google Places data.
 
     CONTENT RULES:
-    - Prioritize POIs that match the user's purpose.
-      * cafe or coffee -> include cafes from Google Places
-      * shopping -> include markets, streets, malls, fashion shops
-      * K-POP, kpop, BTS, BLACKPINK, idol -> include kpop_landmark POIs and Google Places K-POP spots
-      * local culture -> include markets, streets, local neighborhoods, cultural spaces
-      * relaxing -> include parks, riverside spots, cafes, healing spaces
-    - Honor dietary restrictions strictly.
-    - Stay within the user's budget.
-    - Notes must explain why the POI fits the user's purpose and include practical/cultural tips when relevant.
-
-    GEOGRAPHY RULES:
-    - Each day should stay within 1–2 adjacent neighborhoods.
-    - Good pairs: Hongdae+Mangwon, Hongdae+Hapjeong, Seongsu+Wangsimni, Gangnam+Sinsa, Jongno+Insadong.
-    - Do NOT mix distant areas in one day unless unavoidable.
-    - Order POIs geographically to minimize backtracking.
+    - Prioritise POIs that match the traveller's purpose and the day's focus.
+    - Honour dietary restrictions strictly.
+    - Notes must say why the POI fits the traveller's purpose and add
+      practical/cultural tips where relevant.
+    - Give each POI a priority for THIS traveller: 1 = core to their purpose,
+      2 = good fit, 3 = nice-to-have filler. If the day runs long, 3s are
+      dropped first.
 
     DATA INTEGRITY RULES:
-    - Use ONLY POIs that appear in candidate_courses or REAL-TIME GOOGLE PLACES DATA.
-    - Do NOT invent generic POIs such as "Hongdae Nightlife", "Street Food Stalls", or "Seongsu Cafe Street" unless they appear exactly in the data.
-    - Copy name, lat, lng, and address from the provided data.
-    - For cafes, restaurants, shopping, and K-POP, prefer Google Places because it provides real current places.
-    - Only list a course in sources if you used at least one POI from that course.
+    - Use ONLY POIs that appear in the anchor courses or the Google Places data.
+      Do not invent generic POIs ("Street Food Stalls", "Seongsu Cafe Street").
+    - Copy name, lat, lng and address exactly from the provided data.
+    - List a course in sources only if you used at least one of its POIs.
 
     Return ONLY valid JSON with no markdown fences:
     {
-      "summary": "<2-3 sentence overview mentioning all requested neighborhoods>",
-      "days": [
+      "theme": "<short day theme>",
+      "summary": "<one sentence describing this day>",
+      "pois": [
         {
-          "day": 1,
-          "theme": "<short day theme>",
-          "pois": [
-            {
-              "name": "<POI name exactly as provided>",
-              "type": "<poi_type>",
-              "address": "<address from provided data>",
-              "lat": <number>,
-              "lng": <number>,
-              "stay_minutes": <integer>,
-              "notes": "<purpose fit + cultural/practical tips>"
-            }
-          ],
-          "estimated_cost": "<realistic day cost>"
+          "name": "<POI name exactly as provided>",
+          "type": "<poi_type>",
+          "address": "<address from provided data>",
+          "lat": <number>,
+          "lng": <number>,
+          "stay_minutes": <integer>,
+          "notes": "<purpose fit + cultural/practical tips>",
+          "priority": <1, 2 or 3>
         }
       ],
+      "estimated_cost": "<realistic day cost>",
       "sources": [
         {
           "course_id": "<exact course_id>",
@@ -948,32 +889,6 @@ def _format_segment_block(seg: dict[str, Any]) -> str:
         lines.append("[ANCHOR COURSE — none available; rely on Google Places]")
 
     return "\n".join(lines)
-
-
-def _format_courses_for_prompt(
-    courses: list[dict[str, Any]],
-    google_supplement: list[dict[str, Any]] | None = None,
-    requested_areas: list[str] | None = None,
-    duration: str = "",
-    num_days: int | None = None,
-    day_segments: list[dict[str, Any]] | None = None,
-) -> str:
-    requested_areas = requested_areas or []
-
-    if day_segments:
-        blocks = [b for b in (_format_segment_block(s) for s in day_segments) if b]
-        result = "\n\n".join(blocks)
-    else:
-        # Legacy flat format — kept so callers without segments still work.
-        blocks = [_format_one_course(c, i) for i, c in enumerate(courses, start=1)]
-        result = "\n\n".join(blocks)
-
-    result += _format_requested_area_rules(requested_areas, duration, num_days=num_days)
-
-    if google_supplement:
-        result += _format_google_supplement(google_supplement)
-
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1391,6 +1306,8 @@ def _validate_and_repair_itinerary(
                 # Preserve the model's note if useful.
                 if poi.get("notes"):
                     out["notes"] = poi.get("notes")
+                if poi.get("priority") in (1, 2, 3):
+                    out["priority"] = poi["priority"]
                 valid_pois.append(out)
                 used_names.add(name_key)
             else:
@@ -1491,14 +1408,15 @@ def _validate_and_repair_itinerary(
                 f"(tier={meal.get('source_tier')})"
             )
 
-    # 4. Fill under-populated days up to the pace's minimum POI count. The
-    # count is non-meal POIs only -- the guaranteed meal slot from step 3 is
-    # a bonus on top of the sightseeing target, not part of it, so it can't
-    # let this step under-fill a day by one.
+    # 4. Fill under-populated days up to the pace's minimum stop count.
+    # Steps 4 and 4b count the same thing -- every POI except a locked meal
+    # slot, cafes included. They used to disagree (4 skipped cafes, 4b counted
+    # the meals), so a day that followed the prompt's "5-6" came out over the
+    # max and lost its own picks.
     for day in days:
         pois = day.setdefault("pois", [])
-        non_meal_count = sum(1 for p in pois if not _is_meal_poi(p))
-        if non_meal_count >= poi_min:
+        stop_count = sum(1 for p in pois if not _is_locked_meal(p))
+        if stop_count >= poi_min:
             continue
 
         target_area = _primary_area_for_day(day, day_segments)
@@ -1520,22 +1438,22 @@ def _validate_and_repair_itinerary(
                 )
             ]
 
-        while non_meal_count < poi_min and candidates:
+        while stop_count < poi_min and candidates:
             item = candidates.pop(0)
             out = _as_output_poi(item, extra_note="Added to make the day sufficiently complete.")
             pois.append(out)
             used_names.add(_normalize_text(out.get("name")))
-            if not _is_meal_poi(out):
-                non_meal_count += 1
+            stop_count += 1
             print(f"[Validator] Day {day.get('day')} POI 수 보완: {out.get('name')}")
 
-    # 4b. Trim over-populated days down to the pace's maximum POI count. Runs
+    # 4b. Trim over-populated days down to the pace's maximum stop count
+    # (locked meals not counted, same as step 4). Runs
     # after area coverage (2) and the meal slot (3) so trimming never has to
     # undo what those steps just added, and after the min-fill (4) since
     # trimming first would be pointless when a day is still under min.
     #
-    # Always protects: every meal-slot POI (the same _is_meal_poi check step 3
-    # uses) and at least one POI per requested area already present in the
+    # Always protects: every locked meal-slot POI and at least one POI per
+    # requested area already present in the
     # day (so the day keeps the area coverage step 2 just secured). If the
     # protected set alone is already at or over the max, coverage wins --
     # nothing is cut, only logged.
@@ -1546,7 +1464,8 @@ def _validate_and_repair_itinerary(
     # day's POI list.
     for day in days:
         pois = day.get("pois") or []
-        if len(pois) <= poi_max:
+        stop_count = sum(1 for p in pois if not _is_locked_meal(p))
+        if stop_count <= poi_max:
             continue
 
         protected_idx: set[int] = {i for i, p in enumerate(pois) if _is_locked_meal(p)}
@@ -1560,7 +1479,7 @@ def _validate_and_repair_itinerary(
                 protected_idx.add(i)
                 protected_areas.add(matched_req)
 
-        excess = len(pois) - poi_max
+        excess = stop_count - poi_max
         removable = [i for i in range(len(pois)) if i not in protected_idx]
         if len(removable) < excess:
             print(
@@ -1689,7 +1608,8 @@ def _parse_itinerary_json(raw: str, *, use_llm_fallback: bool = True) -> dict[st
 
     try:
         return json.loads(isolated)
-    except json.JSONDecodeError as first_err:
+    except json.JSONDecodeError as e:
+        first_err = e
         repaired = _simple_repair(isolated)
 
     try:
@@ -1809,12 +1729,124 @@ def _pace_bounds(state: TravelState) -> tuple[int, int]:
     return (6, 7)  # no pace on record -- a middling default, not a guess at either extreme
 
 
+# A day's end time by pace, in minutes after midnight. Relaxed means done by
+# the end of the dinner window. fit_day_to_time drops stops until the day fits.
+_DAY_START = 10 * 60
+_DAY_END = {"relaxed": 20 * 60, "packed": 22 * 60}
+_DAY_END_DEFAULT = 21 * 60
+_MIN_STOPS_AFTER_FIT = 3
+
+
+def _hhmm(text: str) -> int:
+    h, m = text.split(":")
+    return int(h) * 60 + int(m)
+
+
+def _leg_minutes(a: dict[str, Any], b: dict[str, Any]) -> int:
+    """Travel time between two stops, without calling any API.
+
+    ponytail: straight-line distance -- a short hop is walked, anything longer
+    is a ride plus 10 minutes of waiting/transfers. Swap in ODsay durations if
+    trims look wrong; compute_transit_legs already fetches them for the final day.
+    """
+    import odsay
+    try:
+        dist = _haversine_km(float(a["lat"]), float(a["lng"]), float(b["lat"]), float(b["lng"]))
+    except (KeyError, TypeError, ValueError):
+        return 15
+    if dist < odsay.WALKABLE_KM:
+        return round(dist / WALK_KMH * 60)
+    return round(dist / CAR_KMH * 60) + 10
+
+
+def _day_schedule(pois: list[dict[str, Any]]) -> tuple[int, dict[str, int]]:
+    """(end minute of the day, {meal_slot: start minute}).
+
+    A locked meal can't start before its window opens -- arriving early waits.
+    """
+    t, meal_starts = _DAY_START, {}
+    for i, p in enumerate(pois):
+        if i:
+            t += _leg_minutes(pois[i - 1], p)
+        if _is_locked_meal(p):
+            window = meal_slots.MEAL_SLOTS.get(p["meal_slot"])
+            if window:
+                t = max(t, _hhmm(window[0]))
+            meal_starts[p["meal_slot"]] = t
+        t += int(float(p.get("stay_minutes") or 60))
+    return t, meal_starts
+
+
+def _pull_evening_forward(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Move stops from after dinner to before it, while dinner can still start
+    an hour before its window closes. Afternoons often idle until 18:00."""
+    d = next((i for i, p in enumerate(pois) if p.get("meal_slot") == "dinner"), None)
+    if d is None:
+        return pois
+    latest = _hhmm(meal_slots.MEAL_SLOTS["dinner"][1]) - 60
+    while d + 1 < len(pois):
+        trial = pois[:d] + [pois[d + 1], pois[d]] + pois[d + 2:]
+        if _day_schedule(trial)[1].get("dinner", 0) > latest:
+            break
+        pois, d = trial, d + 1
+    return pois
+
+
+def _priority(poi: dict[str, Any]) -> int:
+    """Gemini's 1 (core to the purpose) .. 3 (filler). Stops the code added
+    itself were chosen for nobody, so they count as 3."""
+    p = poi.get("priority")
+    return p if p in (1, 2, 3) else 3
+
+
+def fit_day_to_time(
+    pois: list[dict[str, Any]],
+    pace: str | None,
+    requested_areas: list[str] | tuple[str, ...] = (),
+) -> tuple[list[dict[str, Any]], list[tuple[str, int]]]:
+    """Make a day end by its pace's end time, dropping the least relevant stops.
+
+    First evening stops move into idle time before dinner; then, while still
+    late, the lowest-priority stop goes (ties: the later one). Locked meals and
+    the first stop covering each requested area are never dropped, and a day
+    keeps at least _MIN_STOPS_AFTER_FIT stops even if that leaves it late.
+    Returns (pois, [(dropped name, priority), ...]); a day that fits comes
+    back as the same list.
+    """
+    deadline = _DAY_END.get((pace or "").strip().lower(), _DAY_END_DEFAULT)
+    if _day_schedule(pois)[0] <= deadline:
+        return pois, []
+
+    protected = {id(p) for p in pois if _is_locked_meal(p)}
+    covered: set[str] = set()
+    for p in pois:
+        area = _poi_area(p)
+        req = next((r for r in requested_areas if _area_matches_requested(area, r)), None) if area else None
+        if req and req not in covered:
+            covered.add(req)
+            protected.add(id(p))
+
+    out = _pull_evening_forward(list(pois))
+    dropped: list[tuple[str, int]] = []
+    while _day_schedule(out)[0] > deadline:
+        if sum(1 for p in out if not _is_locked_meal(p)) <= _MIN_STOPS_AFTER_FIT:
+            print(f"[fit_day] still past {deadline // 60}:00 at {_MIN_STOPS_AFTER_FIT} stops; keeping them")
+            break
+        candidates = [(i, p) for i, p in enumerate(out) if id(p) not in protected]
+        if not candidates:
+            break
+        i, victim = max(candidates, key=lambda ip: (_priority(ip[1]), ip[0]))
+        dropped.append((str(victim.get("name")), _priority(victim)))
+        out = _pull_evening_forward(out[:i] + out[i + 1:])
+    return out, dropped
+
+
 _PACE_LABELS: dict[str, str] = {"packed": "packed schedule", "relaxed": "relaxed pace"}
 
 
 def _pace_target_line(state: TravelState) -> str:
     """Extra prompt line steering the LLM's per-day POI count toward the
-    user's trip_style. Kept out of ITINERARY_PROMPT (which is
+    user's trip_style. Kept out of DAY_PROMPT (which is
     shared/static across every call) since the target varies per request.
     Silent (no line) when pace is unset/unrecognized -- the LLM falls back to
     the docstring's plain 5-8 rule, and the validator's default bounds (6-7,
@@ -1824,8 +1856,9 @@ def _pace_target_line(state: TravelState) -> str:
         return ""
     lo, hi = _pace_bounds(state)
     return (
-        f"PACE: {_PACE_LABELS[pace]} -- aim for {lo}-{hi} POIs per day "
-        f"(never fewer than {lo}, never more than {hi})."
+        f"PACE: {_PACE_LABELS[pace]} -- aim for {lo}-{hi} stops per day, not "
+        f"counting the lunch and dinner the system adds (never fewer than {lo}, "
+        f"never more than {hi})."
     )
 
 
@@ -1864,7 +1897,7 @@ def _resolve_locked_meals(
 
     slot_start, slot_end = meal_slots.MEAL_SLOTS[meal_type]
 
-    def _fill_one(day_num: int) -> tuple[int, dict[str, Any] | None]:
+    def _fill_one(day_num: int, taken: tuple[str, ...] = ()) -> tuple[int, dict[str, Any] | None]:
         """One day's lookup. None means 'no slot to resolve', not 'unfilled'."""
         day_area = _primary_area_for_day({"day": day_num}, day_segments)
         if not day_area:
@@ -1875,7 +1908,7 @@ def _resolve_locked_meals(
             return day_num, None
         return day_num, meal_slots.fill_meal_slot(
             area=day_area, weekday=weekday, slot_start=slot_start, slot_end=slot_end,
-            exclude_names=(exclude_by_day or {}).get(day_num, ()),
+            exclude_names=(*(exclude_by_day or {}).get(day_num, ()), *taken),
         )
 
     # Days are independent *within* one meal_type: exclude_by_day is computed by
@@ -1895,11 +1928,20 @@ def _resolve_locked_meals(
     ) as pool:
         results = list(pool.map(_fill_one_traced, range(1, expected_days + 1)))
 
+    # Parallel days can't see each other's picks, so two days in one area lock
+    # the same restaurant. Re-resolve just the collisions, in day order, with
+    # every earlier pick excluded.
+    taken: list[str] = []
     for day_num, result in results:
         if result is None:
             continue
+        if result["status"] == "filled" and result.get("name") in taken:
+            _, result = _fill_one(day_num, tuple(taken))
+            if result is None:
+                continue
         if result["status"] == "filled":
             locked[day_num] = result
+            taken.append(result.get("name"))
         else:
             print(f"[Validator] Day {day_num} {meal_type} 3층(unfilled): {result.get('reason')}")
 
@@ -1915,9 +1957,8 @@ def _locked_meals_prompt_lines(locked_meals: dict[int, dict[str, Any]]) -> str:
         name = meal.get("name")
         slot = meal.get("meal_slot") or "meal"
         lines.append(
-            f"Day {day_num} {slot} is already locked to '{name}'. Include it in Day "
-            f"{day_num}'s itinerary exactly as named; do not substitute a different "
-            f"restaurant for that day's {slot} slot."
+            f"Day {day_num} {slot} is already scheduled at '{name}'. The system "
+            f"inserts it; do not add another restaurant for that {slot}."
         )
     return "\n".join(lines) + "\n"
 
@@ -2028,10 +2069,125 @@ def _embed_purpose(text: str):
         return None
 
 
+def _day_num(seg: dict[str, Any]) -> int:
+    return int((seg.get("day_numbers") or [0])[0])
+
+
+def _supplement_for_area(
+    supplement: list[dict[str, Any]], area: str | None,
+) -> list[dict[str, Any]]:
+    """The Google Places rows a day in `area` may use (all of them if no area)."""
+    if not area:
+        return list(supplement)
+    return [p for p in supplement if _area_matches_requested(p.get("area"), area)]
+
+
+def _meals_for_day(locked: dict[int, dict[str, Any]], day_num: int) -> dict[int, dict[str, Any]]:
+    return {day_num: locked[day_num]} if day_num in locked else {}
+
+
+@traceable(run_type="chain", name="day_generation")
+def _generate_day(
+    seg: dict[str, Any],
+    *,
+    trip_lines: str,
+    supplement: list[dict[str, Any]],
+    locked_lines: str,
+    extra: str = "",
+) -> dict[str, Any]:
+    """One Gemini call for one day. Raises on a failed call or unparseable JSON.
+
+    `extra` is appended after the candidates -- revise_days uses it to hand the
+    model its previous attempt and the critic's problems with it.
+    """
+    prompt = (
+        f"{DAY_PROMPT}\n\n{trip_lines}{locked_lines}\n"
+        f"{_format_segment_block(seg)}"
+        f"{_format_google_supplement(supplement)}\n"
+        f"{extra}"
+    )
+    day = _parse_itinerary_json(_gemini_text(prompt))
+    if not isinstance(day, dict):
+        raise ValueError(f"day {_day_num(seg)}: expected a JSON object")
+    day["day"] = _day_num(seg)
+    return day
+
+
+def _generate_days(
+    segments: list[dict[str, Any]],
+    make_kwargs,
+) -> list[dict[str, Any] | None]:
+    """_generate_day for every segment at once, results in segment order.
+
+    A day whose call fails comes back as None -- the caller decides what that
+    means. Same thread-boundary tracing fix as build_google_supplement_by_areas.
+    """
+    _parent_run = get_current_run_tree()
+
+    def _one(seg: dict[str, Any], _parent=_parent_run) -> dict[str, Any] | None:
+        with tracing_context(parent=_parent):
+            try:
+                return _generate_day(seg, **make_kwargs(seg))
+            except Exception as e:
+                print(f"[planner] day {_day_num(seg)} generation failed: {type(e).__name__}: {e}")
+                return None
+
+    if not segments:
+        return []
+    with ThreadPoolExecutor(max_workers=min(len(segments), _FANOUT_WORKERS)) as pool:
+        return list(pool.map(_one, segments))
+
+
+def _merge_days(days: list[dict[str, Any]]) -> dict[str, Any]:
+    """Per-day results -> one itinerary.
+
+    Two days in the same region see the same Google supplement, so the same
+    place can come back twice. The earlier day keeps it; the validator's
+    min-fill backfills the later one from what's left.
+    """
+    seen: set[str] = set()
+    merged_days, summaries, sources = [], [], []
+    for day in sorted(days, key=lambda d: d["day"]):
+        pois = []
+        for poi in day.get("pois") or []:
+            key = _normalize_text(poi.get("name")) if isinstance(poi, dict) else ""
+            if key and key not in seen:
+                seen.add(key)
+                pois.append(poi)
+        merged_days.append({
+            "day": day["day"],
+            "theme": day.get("theme") or f"Day {day['day']}",
+            "pois": pois,
+            "estimated_cost": day.get("estimated_cost") or "",
+        })
+        if day.get("summary"):
+            summaries.append(str(day["summary"]).strip())
+        sources.extend(s for s in day.get("sources") or [] if isinstance(s, dict))
+    return {"summary": " ".join(summaries), "days": merged_days, "sources": sources}
+
+
+def _trip_lines(state: TravelState) -> str:
+    """The trip-wide facts every day's prompt carries."""
+    duration = state.get("travel_dates") or ""
+    num_days = _resolve_num_days(state)
+    duration_text = duration or (f"{num_days} days" if num_days else "")
+    # The traveller's own sentence when they wrote one; it's what the prompt's
+    # "fits the traveller's purpose" rules are about. Each day's focus is in
+    # its own candidates header.
+    purpose = (state.get("purpose") or "").strip() or _trip_interests(state)
+    pace_line = _pace_target_line(state)
+    return (
+        f"Duration: {duration_text}\n"
+        f"Dietary: {state.get('restrictions') or 'none'}\n"
+        f"Purpose: {purpose}\n"
+        + (f"{pace_line}\n" if pace_line else "")
+    )
+
+
 def plan_node(state: TravelState) -> TravelState:
     courses = state.get("retrieved_courses") or []
-    day_segments = state.get("day_segments")
-    if not courses:
+    day_segments = state.get("day_segments") or []
+    if not courses or not day_segments:
         return {
             **state,
             "current_step": "done",
@@ -2042,16 +2198,6 @@ def plan_node(state: TravelState) -> TravelState:
     duration = state.get("travel_dates") or ""
     num_days = _resolve_num_days(state)
     pace = state.get("pace")
-    budget = ""
-    dietary = state.get("restrictions") or "none"
-
-    # Only matters if num_days is ever set (see _resolve_num_days) while
-    # travel_dates text is empty/stale -- surfaces the day count to the LLM
-    # explicitly instead of letting it guess from blank duration text. In
-    # today's flow duration is always the picker's own "... (N days)" string
-    # by the time plan_node runs, so this is a no-op fallback, not the
-    # common path.
-    duration_text = duration or (f"{num_days} days" if num_days else "")
 
     # 날짜별 지역의 합집합. 예전에는 region 문자열에서 추출했는데, 이제 사용자가
     # 날마다 지정하므로 추측이 없다.
@@ -2064,12 +2210,10 @@ def plan_node(state: TravelState) -> TravelState:
     locked_meals = _resolve_locked_meals(
         state.get("trip_start_date"), day_segments, expected_days, meal_type="dinner",
     )
-    # Lunch excludes each day's already-locked dinner pick, so the same
-    # restaurant never gets locked into both meals on one day -- reuses
-    # fill_meal_slot's existing exclude_names, no new dedup logic.
-    dinner_names_by_day = {
-        day_num: (meal["name"],) for day_num, meal in locked_meals.items() if meal.get("name")
-    }
+    # Lunch excludes every dinner on the trip, so no restaurant is locked twice
+    # anywhere -- reuses fill_meal_slot's existing exclude_names.
+    dinner_names = tuple(m["name"] for m in locked_meals.values() if m.get("name"))
+    dinner_names_by_day = {day_num: dinner_names for day_num in range(1, expected_days + 1)}
     locked_lunch_meals = _resolve_locked_meals(
         state.get("trip_start_date"), day_segments, expected_days, meal_type="lunch",
         exclude_by_day=dinner_names_by_day,
@@ -2087,36 +2231,25 @@ def plan_node(state: TravelState) -> TravelState:
     else:
         print("[planner] GOOGLE_PLACES_API_KEY 없음 -- Google Places 보완 생략")
 
-    prompt_context = _format_courses_for_prompt(
-        courses,
-        google_supplement=google_supplement,
-        requested_areas=requested_areas,
-        duration=duration,
-        num_days=num_days,
-        day_segments=day_segments,
-    )
+    trip_lines = _trip_lines(state)
+
+    def day_inputs(seg: dict[str, Any]) -> dict[str, Any]:
+        n = _day_num(seg)
+        return {
+            "trip_lines": trip_lines,
+            "supplement": _supplement_for_area(google_supplement, seg.get("area")),
+            "locked_lines": _locked_meals_prompt_lines(_meals_for_day(locked_meals, n))
+                            + _locked_meals_prompt_lines(_meals_for_day(locked_lunch_meals, n)),
+        }
 
     try:
-        system_prompt = ITINERARY_PROMPT
-        pace_line = _pace_target_line(state)
-        locked_meals_lines = (
-            _locked_meals_prompt_lines(locked_meals)
-            + _locked_meals_prompt_lines(locked_lunch_meals)
-        )
-        user_prompt = (
-            f"{system_prompt}\n\n"
-            f"Duration: {duration_text}\n"
-            f"Location: {location}\n"
-            f"Budget: {budget}\n"
-            f"Dietary: {dietary}\n"
-            f"Purpose: {purpose}\n"
-            + (f"{pace_line}\n" if pace_line else "")
-            + locked_meals_lines
-            + f"Candidate Courses:\n{prompt_context}"
-        )
-        raw_json = _gemini_text(user_prompt)
+        generated = [d for d in _generate_days(day_segments, day_inputs) if d]
+        if not generated:
+            raise RuntimeError("every day's generation failed")
 
-        itinerary = _parse_itinerary_json(raw_json)
+        # A day that failed is simply absent here: the validator's step 0 adds
+        # it back empty and step 4 fills it from that day's area candidates.
+        itinerary = _merge_days(generated)
 
         itinerary = _validate_and_repair_itinerary(
             itinerary,
@@ -2167,7 +2300,143 @@ def plan_node(state: TravelState) -> TravelState:
         "planning_context": {
             "requested_areas": requested_areas,
             "google_supplement": google_supplement,
+            # revise_days rebuilds a single day's prompt from these.
+            "locked_meals": locked_meals,
+            "locked_lunch_meals": locked_lunch_meals,
         },
         "current_step": "critic",
         "messages": [AIMessage(content=ack)],
     }
+
+
+def _revision_note(day: dict[str, Any], problems: list[str], used_elsewhere: set[str]) -> str:
+    previous = [{"name": p.get("name"), "type": p.get("type")} for p in day.get("pois") or []]
+    return (
+        "=== REVISION ===\n"
+        f"Your previous plan for this day was:\n{json.dumps(previous, ensure_ascii=False)}\n"
+        "A reviewer found these problems with it:\n"
+        + "".join(f"- {p}\n" for p in problems)
+        + (f"Already used on other days, do not reuse: {', '.join(sorted(used_elsewhere))}\n"
+           if used_elsewhere else "")
+        + "Return the whole day again with these problems fixed, changing as little "
+          "else as possible. Use only the candidates above.\n"
+    )
+
+
+@traceable(run_type="chain", name="revise_days")
+def revise_days(
+    state: TravelState,
+    itinerary: dict[str, Any],
+    issues_by_day: dict[int, list[str]],
+) -> dict[str, Any]:
+    """Regenerate the flagged days once, with the critic's problems as feedback.
+
+    Called by critic_repair_node when a high-severity issue survives the code
+    repairer. Mutates and returns `itinerary` -- the caller passes a copy, and
+    keeps it only if the critic scores it no worse. A day whose revision call
+    fails keeps its previous version.
+    """
+    ctx = state.get("planning_context") or {}
+    supplement = ctx.get("google_supplement") or []
+    locked = ctx.get("locked_meals") or {}
+    locked_lunch = ctx.get("locked_lunch_meals") or {}
+    segments = [s for s in state.get("day_segments") or [] if _day_num(s) in issues_by_day]
+    days = itinerary.get("days") or []
+    by_num = {int(d.get("day") or 0): d for d in days}
+
+    def names_outside(n: int) -> set[str]:
+        return {_normalize_text(p.get("name")) for d in days if int(d.get("day") or 0) != n
+                for p in d.get("pois") or []} - {""}
+
+    trip_lines = _trip_lines(state)
+
+    def day_inputs(seg: dict[str, Any]) -> dict[str, Any]:
+        n = _day_num(seg)
+        used = names_outside(n)
+        return {
+            "trip_lines": trip_lines,
+            "supplement": [p for p in _supplement_for_area(supplement, seg.get("area"))
+                           if _normalize_text(p.get("poi_name")) not in used],
+            "locked_lines": _locked_meals_prompt_lines(_meals_for_day(locked, n))
+                            + _locked_meals_prompt_lines(_meals_for_day(locked_lunch, n)),
+            "extra": _revision_note(by_num.get(n, {}), issues_by_day[n], used),
+        }
+
+    for seg, day in zip(segments, _generate_days(segments, day_inputs)):
+        n = _day_num(seg)
+        if not day or n not in by_num:
+            continue
+        used = names_outside(n)
+        # Same validator as a first-time day, over a pool without the other
+        # days' places, so neither the model nor the min-fill can reuse one.
+        courses = [
+            {**c, "sequence": [p for p in c.get("sequence") or []
+                               if _normalize_text(p.get("poi_name")) not in used]}
+            for c in seg.get("anchor_courses") or []
+        ]
+        fixed = _validate_and_repair_itinerary(
+            _merge_days([day]),
+            courses=courses,
+            google_supplement=[p for p in supplement
+                               if _normalize_text(p.get("poi_name")) not in used],
+            requested_areas=[seg["area"]] if seg.get("area") else [],
+            day_segments=[seg],
+            pace=state.get("pace"),
+            purpose=_trip_interests(state),
+            locked_meals=_meals_for_day(locked, n),
+            locked_lunch_meals=_meals_for_day(locked_lunch, n),
+        )["days"][0]
+        by_num[n].clear()
+        by_num[n].update(fixed)
+
+    return itinerary
+
+
+@traceable(run_type="chain", name="describe_itinerary")
+def describe_itinerary(state: TravelState, itinerary: dict[str, Any]) -> None:
+    """Rewrite the trip summary and day themes from the stops that actually ship.
+
+    Both are first written by the per-day generation calls, before validation,
+    critic repair and revision add, drop or swap stops -- so they can name a
+    place that's gone. One call over the final days fixes both. On any failure
+    the generated text stays: stale-but-present beats blank.
+    """
+    days = itinerary.get("days") or []
+    if not days:
+        return
+    area_by_day = {int(s["day"]): s.get("region") for s in state.get("day_specs") or []}
+
+    lines = []
+    for d in days:
+        n = int(d.get("day") or 0)
+        stops = [p.get("name") for p in d.get("pois") or [] if not _is_locked_meal(p)]
+        meals = [f"{p.get('meal_slot')}: {p.get('name')}"
+                 for p in d.get("pois") or [] if _is_locked_meal(p)]
+        area = _area_label(area_by_day[n]) if area_by_day.get(n) else "Seoul"
+        lines.append(f"Day {n} ({area}): {', '.join(stops)}"
+                     + (f" ({'; '.join(meals)})" if meals else ""))
+
+    prompt = (
+        "Write the overview for this finished Seoul itinerary.\n\n"
+        f"Traveller: {state.get('companion') or 'unknown'}, "
+        f"{state.get('pace') or 'unspecified'} pace\n"
+        f"Purpose: {(state.get('purpose') or '').strip() or _trip_interests(state)}\n\n"
+        + "\n".join(lines)
+        + "\n\nMention only places listed above. Return ONLY JSON:\n"
+        '{"summary": "<2-3 sentences for the whole trip>", '
+        '"themes": {"<day number>": "<short day theme, under 60 characters>"}}'
+    )
+    try:
+        out = _parse_itinerary_json(_gemini_text(prompt))
+    except Exception as e:
+        print(f"[planner] describe_itinerary failed, keeping generated text: {type(e).__name__}: {e}")
+        return
+
+    summary = str(out.get("summary") or "").strip()
+    if summary:
+        itinerary["summary"] = summary
+    themes = out.get("themes") if isinstance(out.get("themes"), dict) else {}
+    for d in days:
+        theme = str(themes.get(str(d.get("day"))) or "").strip()
+        if theme:
+            d["theme"] = theme[:80]

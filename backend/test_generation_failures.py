@@ -82,9 +82,10 @@ def test_a_failed_plan_can_be_regenerated_and_leaks_nothing(monkeypatch):
         raise RuntimeError("SECRET request URL and module path")
 
     monkeypatch.setattr(planner, "_gemini_text", boom)
-    monkeypatch.setattr(planner, "_format_courses_for_prompt", lambda *a, **k: "")
+    monkeypatch.setattr(planner, "GOOGLE_PLACES_API_KEY", "")
     state = {
         "retrieved_courses": [{"course_id": "c1", "sequence": []}],
+        "day_segments": [{"day_numbers": [1], "area": "jongno", "anchor_courses": []}],
         "day_specs": [{"day": 1, "region": "jongno", "interest": "Shopping"}],
         "travel_dates": "x (1 day)",
         "messages": [],

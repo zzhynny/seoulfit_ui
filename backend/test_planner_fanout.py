@@ -149,3 +149,23 @@ if __name__ == "__main__":
     test_meal_days_keep_their_own_day_number_and_exclusions()
     test_unresolvable_day_is_absent_not_crashing()
     print("all planner fan-out self-checks passed")
+
+
+def test_two_days_in_one_area_never_lock_the_same_restaurant() -> None:
+    """Days resolve in parallel, so both Hongdae days used to pick Damtaek.
+    The later day is re-resolved with the earlier day's pick excluded."""
+    def fake_area(spec, day_segments):
+        return "hongdae"
+
+    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=()):
+        name = next(n for n in ("Damtaek", "Hapjeongok", "Third") if n not in exclude_names)
+        return {"status": "filled", "name": name, "area": area}
+
+    orig_area, orig_fill = planner._primary_area_for_day, meal_slots.fill_meal_slot
+    planner._primary_area_for_day, meal_slots.fill_meal_slot = fake_area, fake_fill
+    try:
+        locked = planner._resolve_locked_meals("2026-10-06", None, 3, meal_type="dinner")
+    finally:
+        planner._primary_area_for_day, meal_slots.fill_meal_slot = orig_area, orig_fill
+
+    assert [locked[d]["name"] for d in (1, 2, 3)] == ["Damtaek", "Hapjeongok", "Third"]

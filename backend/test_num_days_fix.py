@@ -74,19 +74,6 @@ def test_primary_area_for_day_reads_day_segments_not_deduped_position():
     print("OK - _primary_area_for_day reads day_segments by day number")
 
 
-def test_format_requested_area_rules_drops_the_contradicting_distribution_paragraph():
-    """The removed 'Distribute them across the days as follows' paragraph
-    re-derived a day->area split from the deduplicated requested_areas list
-    -- for a repeated region that split contradicts the per-day
-    '=== DAY N CANDIDATES: <area> ===' headers the prompt already has."""
-    text = planner._format_requested_area_rules(["hongdae", "gangnam"], "", num_days=3)
-    assert "Distribute them across the days" not in text
-    assert "Day 1 = " not in text and "Days 2" not in text
-    # The rest of the section is untouched.
-    assert "The user explicitly requested these areas: Hongdae, Gangnam." in text
-    print("OK - _format_requested_area_rules no longer distributes areas by position")
-
-
 def test_pace_bounds():
     assert planner._pace_bounds({"pace": "relaxed"}) == (5, 6)
     assert planner._pace_bounds({"pace": "packed"}) == (7, 8)
@@ -218,7 +205,9 @@ def test_trim_over_max_keeps_meal_and_area_coverage():
         out_days = result["days"]
         assert len(out_days) == 1, len(out_days)
         pois = out_days[0]["pois"]
-        assert len(pois) == expected_max, (pace, len(pois))  # trimmed exactly to the pace max
+        stops = [p for p in pois if not planner._is_locked_meal(p)]
+        # The pace max counts stops; the locked meal rides on top of it.
+        assert len(stops) == expected_max, (pace, len(stops))
         locked_poi = next((p for p in pois if planner._is_locked_meal(p)), None)
         assert locked_poi is not None, (pace, "locked meal POI lost")
         assert locked_poi.get("name") == "Locked Test Restaurant", (pace, "wrong POI survived as locked meal")
@@ -233,15 +222,15 @@ def test_trim_backs_off_when_protected_set_alone_exceeds_max():
     # Real Seoul area names -- _poi_area/_infer_area_from_text_or_coords only
     # recognizes these (via alias-pattern matching on name/address text), not
     # arbitrary made-up labels.
-    requested_areas = ["hongdae", "seongsu", "gangnam", "itaewon", "myeongdong", "jongno"]
-    # One non-meal POI per requested area (6 protected-by-area) + one locked
-    # meal POI in an unrelated area (protected-by-meal, see locked_meals
-    # below) = 7 protected already, which alone exceeds relaxed's max of 6.
+    requested_areas = ["hongdae", "seongsu", "gangnam", "itaewon", "myeongdong", "jongno", "sinchon"]
+    # One stop per requested area = 7 protected stops, which alone exceeds
+    # relaxed's max of 6. The locked meal below is protected too but, like
+    # every locked meal, doesn't count toward the max.
     pois = [_poi_typed(f"spot {a}", "tourist_spot", a) for a in requested_areas]
     # Two removable filler POIs duplicating an already-protected area.
     pois.append(_poi_typed("extra 1", "tourist_spot", "hongdae"))
     pois.append(_poi_typed("extra 2", "tourist_spot", "hongdae"))
-    assert len(pois) == 8
+    assert len(pois) == 9
 
     itinerary = {"days": [{"day": 1, "pois": pois}]}
     courses = [{"sequence": [
@@ -265,9 +254,9 @@ def test_trim_backs_off_when_protected_set_alone_exceeds_max():
         locked_meals=locked_meals,
     )
     out_pois = result["days"][0]["pois"]
-    # 7 protected > relaxed max (6), and only 2 removable < needed excess (3)
-    # -- not enough to cut down to 6, so nothing is removed at all.
-    assert len(out_pois) == 9, len(out_pois)
+    # 7 protected stops > relaxed max (6), and only 2 removable < needed excess
+    # (3) -- not enough to cut down to 6, so nothing is removed at all.
+    assert len(out_pois) == 10, len(out_pois)
     print("OK - trim backs off (coverage wins) when protected set alone exceeds the pace max")
 
 
@@ -286,23 +275,17 @@ def test_plan_node_end_to_end_with_structured_num_days():
         ],
     }]
 
-    # LLM over-produces 6 days instead of the requested 4, skewed toward day 1.
-    fake_llm_days = [
-        {"day": 1, "theme": "Day 1", "pois": [{"name": pool_names[i]} for i in range(0, 4)]},
-        {"day": 2, "theme": "Day 2", "pois": [{"name": pool_names[i]} for i in range(4, 6)]},
-        {"day": 3, "theme": "Day 3", "pois": [{"name": pool_names[i]} for i in range(6, 8)]},
-        {"day": 4, "theme": "Day 4", "pois": []},
-        {"day": 5, "theme": "Day 5", "pois": [{"name": pool_names[i]} for i in range(8, 10)]},
-        {"day": 6, "theme": "Day 6", "pois": [{"name": pool_names[i]} for i in range(10, 12)]},
-    ]
-    fake_response = json.dumps({"summary": "test trip", "days": fake_llm_days})
+    # One call per day; each returns three of the pool's POIs.
+    segments = [{"day_numbers": [d], "area": None, "anchor_courses": courses} for d in range(1, 5)]
 
     captured_prompts = []
     original_gemini_text = planner._gemini_text
 
     def fake_gemini_text(prompt: str) -> str:
         captured_prompts.append(prompt)
-        return fake_response
+        day = int(prompt.split("=== DAY ", 1)[1].split(" ", 1)[0])
+        return json.dumps({"pois": [{"name": pool_names[i]}
+                                    for i in range(3 * (day - 1), 3 * day)]})
 
     planner._gemini_text = fake_gemini_text
     original_google_key = planner.GOOGLE_PLACES_API_KEY
@@ -313,7 +296,7 @@ def test_plan_node_end_to_end_with_structured_num_days():
     try:
         state = {
             "retrieved_courses": courses,
-            "day_segments": None,
+            "day_segments": segments,
             "region": "",
             "category": "",
             "travel_dates": "",       # deliberately empty/stale -- structured field must carry it
@@ -339,7 +322,7 @@ def test_plan_node_end_to_end_with_structured_num_days():
     # should end up with anywhere near all 12.
     assert max(counts) <= 6, counts
 
-    assert len(captured_prompts) == 1
+    assert len(captured_prompts) == 4
     prompt = captured_prompts[0]
     assert "Duration: 4 days" in prompt, prompt.splitlines()[:6]
     assert "PACE: packed schedule" in prompt, prompt
@@ -367,16 +350,8 @@ def test_plan_node_with_origin_date_picker_format():
             for n in pool_names
         ],
     }]
-    # LLM over-produces 6 days instead of the requested 4, skewed toward day 1.
-    fake_llm_days = [
-        {"day": 1, "theme": "Day 1", "pois": [{"name": pool_names[i]} for i in range(0, 4)]},
-        {"day": 2, "theme": "Day 2", "pois": [{"name": pool_names[i]} for i in range(4, 6)]},
-        {"day": 3, "theme": "Day 3", "pois": [{"name": pool_names[i]} for i in range(6, 8)]},
-        {"day": 4, "theme": "Day 4", "pois": []},
-        {"day": 5, "theme": "Day 5", "pois": [{"name": pool_names[i]} for i in range(8, 10)]},
-        {"day": 6, "theme": "Day 6", "pois": [{"name": pool_names[i]} for i in range(10, 12)]},
-    ]
-    fake_response = json.dumps({"summary": "test trip", "days": fake_llm_days})
+    # One call per day; each returns three of the pool's POIs.
+    segments = [{"day_numbers": [d], "area": None, "anchor_courses": courses} for d in range(1, 5)]
 
     captured_prompts = []
     original_gemini_text = planner._gemini_text
@@ -384,14 +359,16 @@ def test_plan_node_with_origin_date_picker_format():
 
     def fake_gemini_text(prompt: str) -> str:
         captured_prompts.append(prompt)
-        return fake_response
+        day = int(prompt.split("=== DAY ", 1)[1].split(" ", 1)[0])
+        return json.dumps({"pois": [{"name": pool_names[i]}
+                                    for i in range(3 * (day - 1), 3 * day)]})
 
     planner._gemini_text = fake_gemini_text
     planner.GOOGLE_PLACES_API_KEY = ""  # no live network in this fast check
     try:
         state = {
             "retrieved_courses": courses,
-            "day_segments": None,
+            "day_segments": segments,
             "region": "",
             "category": "",
             "travel_dates": travel_dates_label,   # exactly what collect_node would store
@@ -415,7 +392,7 @@ def test_plan_node_with_origin_date_picker_format():
     assert sum(counts) == 12, counts
     assert max(counts) <= 6, counts  # overflow didn't pile onto one day
 
-    assert len(captured_prompts) == 1
+    assert len(captured_prompts) == 4
     prompt = captured_prompts[0]
     assert f"Duration: {travel_dates_label}" in prompt, prompt.splitlines()[:6]
     assert "PACE: relaxed pace" in prompt, prompt
@@ -427,7 +404,6 @@ if __name__ == "__main__":
     test_parse_num_days_override()
     test_resolve_num_days()
     test_primary_area_for_day_reads_day_segments_not_deduped_position()
-    test_format_requested_area_rules_drops_the_contradicting_distribution_paragraph()
     test_pace_bounds()
     test_pace_target_line()
     test_fold_least_filled_not_round_robin()
