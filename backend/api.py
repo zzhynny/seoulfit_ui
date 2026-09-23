@@ -1190,6 +1190,23 @@ def _itinerary_poi(state: dict, day_num: int, slot_index: int, name: str) -> Opt
     return pois[slot_index] if 0 <= slot_index < len(pois) else None
 
 
+def _leave_on_thread(thread_id: str, state: dict, candidates: list[dict]) -> None:
+    """Park offered candidates on the thread so /revalidate can swap them in.
+
+    apply_slot_edits looks the traveller's pick up in build_candidate_pool(state)
+    -- retrieved_courses + planning_context.google_supplement -- and silently
+    keeps the original stop when it misses. Candidates from Google's fallback
+    and from restaurant.json are in neither, so both paths have to leave their
+    offer here first. candidate_from_google reads poi_name/name either way, so
+    response-shaped and pool-shaped rows both survive the round trip.
+    """
+    ctx = state.get("planning_context") or {}
+    _graph.update_state(_config(thread_id), {"planning_context": {
+        **ctx,
+        "google_supplement": [*(ctx.get("google_supplement") or []), *candidates],
+    }})
+
+
 @app.post("/swap-candidates")
 @_one_turn_per_session
 def swap_candidates(req: SwapCandidatesRequest):
@@ -1256,7 +1273,7 @@ def swap_candidates(req: SwapCandidatesRequest):
                     ),
                 )
                 if hits:
-                    return {"candidates": [{
+                    michelin = [{
                         "poi_name": r.get("name"),
                         "poi_type": "restaurant",
                         "address": r.get("street"),
@@ -1272,7 +1289,9 @@ def swap_candidates(req: SwapCandidatesRequest):
                             ["Opening hours unknown — worth checking before you go"]
                             if r.get("closed") is None else []
                         ),
-                    } for r in hits]}
+                    } for r in hits]
+                    _leave_on_thread(thread_id, state, michelin)
+                    return {"candidates": michelin}
                 print(f"[swap michelin] no Michelin within "
                       f"{meal_slots.SWAP_RADIUS_KM}km of {req.current_poi!r} -- pool path")
 
@@ -1312,15 +1331,7 @@ def swap_candidates(req: SwapCandidatesRequest):
                     exclude=exclude, api_key=GOOGLE_PLACES_API_KEY,
                 )
                 if filtered:
-                    # /revalidate only swaps in names it finds in
-                    # build_candidate_pool(state). Google-only candidates have
-                    # to be on the thread, or picking one silently keeps the
-                    # original stop.
-                    ctx = state.get("planning_context") or {}
-                    _graph.update_state(_config(thread_id), {"planning_context": {
-                        **ctx,
-                        "google_supplement": [*(ctx.get("google_supplement") or []), *filtered],
-                    }})
+                    _leave_on_thread(thread_id, state, filtered)
 
         rated = sorted(
             (i for i in filtered if i.get("rating") is not None),
