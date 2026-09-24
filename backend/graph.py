@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from state import TravelState
-from planner import make_retrieve_node, plan_node
+from planner import _record_usage, make_retrieve_node, plan_node
 from critic_repair import make_critic_repair_node
 from retrieval import DAY_PLAN_REGION_ORDER
 from langsmith import traceable
@@ -37,6 +37,7 @@ def _gemini_raw(prompt: str) -> str:
         contents=prompt,
         config={"response_mime_type": "application/json"},
     )
+    _record_usage(response, "gemini-2.5-flash")
     return response.text or ""
 
 

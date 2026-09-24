@@ -439,7 +439,10 @@ class SwapCandidatesRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _config(thread_id: str) -> dict:
-    return {"configurable": {"thread_id": thread_id}}
+    # metadata.thread_id is the key LangSmith groups a conversation's traces by,
+    # and the join key back to evals.db.
+    return {"configurable": {"thread_id": thread_id},
+            "metadata": {"thread_id": thread_id}}
 
 
 def _get_state(thread_id: str) -> dict:

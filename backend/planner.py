@@ -69,6 +69,24 @@ _GEMINI_RETRY_DELAYS = (2.0, 6.0)
 _GEMINI_RETRYABLE = {429, 500, 503}
 
 
+def _record_usage(response, model: str) -> None:
+    """Hand Gemini's token counts to the enclosing llm span.
+
+    @traceable can't read them off a raw google-genai response, so without this
+    every span says 0 tokens and LangSmith can't price a trace.
+    """
+    rt = get_current_run_tree()
+    u = getattr(response, "usage_metadata", None)
+    if rt is None or u is None:
+        return
+    rt.metadata.update(ls_provider="google_genai", ls_model_name=model)
+    rt.set(usage_metadata={
+        "input_tokens": u.prompt_token_count or 0,
+        "output_tokens": u.candidates_token_count or 0,
+        "total_tokens": u.total_token_count or 0,
+    })
+
+
 @traceable(run_type="llm", name="itinerary_generation")
 def _gemini_text(prompt: str) -> str:
     """Call Gemini and return raw text (JSON expected from caller)."""
@@ -82,6 +100,7 @@ def _gemini_text(prompt: str) -> str:
                 contents=prompt,
                 config={"response_mime_type": "application/json"},
             )
+            _record_usage(response, "gemini-3.8-flash")
             return response.text or ""
         except _errors.APIError as e:
             if delay is None or e.code not in _GEMINI_RETRYABLE:

@@ -1520,7 +1520,7 @@ def make_critic_repair_node():
             # the only place the score can be banked. save_eval swallows its own
             # failures and returns None -- a logging table must never be able to
             # fail a traveller's itinerary.
-            eval_store.save_eval(
+            eval_id = eval_store.save_eval(
                 state=state,
                 itinerary=repaired_itinerary,
                 before=before_report,
@@ -1528,6 +1528,7 @@ def make_critic_repair_node():
                 repair_logs=repair_logs,
                 thread_id=((config or {}).get("configurable") or {}).get("thread_id"),
             )
+            eval_store.score_trace(before_report, after_report, eval_id)
 
             requested = after_report.get("requested_areas") or []
             coverage = after_report.get("area_coverage") or {}
