@@ -98,7 +98,7 @@ def test_meal_days_keep_their_own_day_number_and_exclusions() -> None:
     def fake_area(spec, day_segments):
         return f"area{spec['day']}"
 
-    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=()):
+    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=(), diet=None):
         time.sleep(0.05)
         day = int(area.removeprefix("area"))
         seen[day] = tuple(exclude_names)
@@ -127,7 +127,7 @@ def test_unresolvable_day_is_absent_not_crashing() -> None:
     def fake_area(spec, day_segments):
         return None if spec["day"] == 2 else f"area{spec['day']}"
 
-    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=()):
+    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=(), diet=None):
         day = int(area.removeprefix("area"))
         return {"status": "filled" if day != 3 else "unfilled",
                 "name": f"Restaurant {day}", "reason": "no tier match"}
@@ -149,3 +149,49 @@ if __name__ == "__main__":
     test_meal_days_keep_their_own_day_number_and_exclusions()
     test_unresolvable_day_is_absent_not_crashing()
     print("all planner fan-out self-checks passed")
+
+
+def test_two_days_in_one_area_never_lock_the_same_restaurant() -> None:
+    """Days resolve in parallel, so both Hongdae days used to pick Damtaek.
+    The later day is re-resolved with the earlier day's pick excluded."""
+    def fake_area(spec, day_segments):
+        return "hongdae"
+
+    def fake_fill(*, area, weekday, slot_start, slot_end, exclude_names=(), diet=None):
+        name = next(n for n in ("Damtaek", "Hapjeongok", "Third") if n not in exclude_names)
+        return {"status": "filled", "name": name, "area": area}
+
+    orig_area, orig_fill = planner._primary_area_for_day, meal_slots.fill_meal_slot
+    planner._primary_area_for_day, meal_slots.fill_meal_slot = fake_area, fake_fill
+    try:
+        locked = planner._resolve_locked_meals("2026-10-06", None, 3, meal_type="dinner")
+    finally:
+        planner._primary_area_for_day, meal_slots.fill_meal_slot = orig_area, orig_fill
+
+    assert [locked[d]["name"] for d in (1, 2, 3)] == ["Damtaek", "Hapjeongok", "Third"]
+
+
+def test_a_days_note_keywords_are_searched_only_in_its_zone() -> None:
+    """Trip keywords run everywhere; a day's own run only in its zone, once,
+    and a zone's list is capped."""
+    got: dict[str, list[str]] = {}
+
+    def fake(*, area, keywords, api_key, day_segments):
+        got[area] = [k["phrase"] for k in keywords]
+        return []
+
+    kw = lambda *ps: [{"phrase": p, "poi_type": "tourist_spot"} for p in ps]  # noqa: E731
+    original = planner.build_google_supplement_for_area
+    planner.build_google_supplement_for_area = fake
+    try:
+        planner.build_google_supplement_by_areas(
+            requested_areas=["jongno", "seongsu"], location="", keywords=kw("tea house"),
+            api_key="k", day_segments=None,
+            keywords_by_area={"seongsu": kw("birthday cake", "Tea House", "a", "b", "c")},
+        )
+    finally:
+        planner.build_google_supplement_for_area = original
+
+    assert got["jongno"] == ["tea house"]
+    # Trip keyword first, the case-insensitive repeat dropped, capped at 4.
+    assert got["seongsu"] == ["tea house", "birthday cake", "a", "b"]

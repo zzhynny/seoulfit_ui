@@ -103,7 +103,8 @@ DEFAULT_CENTER: tuple[float, float] = (37.5665, 126.9780)
 
 # Walkably adjacent neighborhoods — "this counts as the same trip area".
 _ADJACENT_AREAS: dict[str, set[str]] = {
-    "hongdae": {"hongdae", "hapjeong", "mangwon", "yeonnam", "mapo"},
+    # sinchon 은 Day Planner 의 "Hongdae · Sinchon · Mapo" 구역에 속한다.
+    "hongdae": {"hongdae", "hapjeong", "mangwon", "yeonnam", "mapo", "sinchon"},
     "seongsu": {"seongsu", "wangsimni"},
     # bukchon / apgujeong 을 센터 목록에 넣으면 좌표 폴백의 최근접 중심이 바뀌어,
     # 그동안 jongno / insadong / gangnam 으로 잡히던 POI 34행이 새 키로 이동한다.

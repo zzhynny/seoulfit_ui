@@ -127,7 +127,7 @@ class _ConfirmSlotsScreenState extends State<ConfirmSlotsScreen> {
                   ),
                   _SummaryRow(icon: Icons.calendar_today_outlined, label: 'Travel Dates', value: preferences.dateRange),
                   _SummaryRow(icon: Icons.place_outlined, label: 'Region', value: preferences.region),
-                  _SummaryRow(icon: Icons.explore_outlined, label: 'Travel Style', value: preferences.travelStyle),
+                  _SummaryRow(icon: Icons.explore_outlined, label: 'Day notes', value: preferences.travelStyle),
                   _SummaryRow(icon: Icons.people_outline, label: 'Group Size', value: preferences.groupSize),
                   _SummaryRow(icon: Icons.eco_outlined, label: 'Dietary Notes', value: preferences.dietaryNotes),
                   _SummaryRow(icon: Icons.speed_outlined, label: 'Pace', value: preferences.pace, isLast: true),

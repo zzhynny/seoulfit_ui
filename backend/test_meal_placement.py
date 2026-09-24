@@ -90,7 +90,7 @@ def test_repair_pass_separates_the_two_meals() -> None:
         google_supplement=[],
         requested_areas=["hongdae"],
         day_segments=[{"day_numbers": [1], "area": "hongdae",
-                       "purpose_hint": None, "anchor_courses": [course]}],
+                       "note": "", "anchor_courses": [course]}],
         duration="1 day",
         num_days=1,
         pace="relaxed",
@@ -162,7 +162,7 @@ def test_backfill_fills_a_short_day_with_sights_not_more_restaurants() -> None:
         google_supplement=google,
         requested_areas=["hongdae"],
         day_segments=[{"day_numbers": [1], "area": "hongdae",
-                       "purpose_hint": "Culture & History", "anchor_courses": [course]}],
+                       "note": "", "anchor_courses": [course]}],
         duration="1 day",
         num_days=1,
         pace="relaxed",
@@ -201,11 +201,58 @@ def test_a_restaurant_search_only_runs_when_the_purpose_names_food() -> None:
         planner.fetch_nearby_places, planner.fetch_text_places = orig_nearby, orig_text
 
 
+def test_a_day_that_follows_the_pace_keeps_every_stop() -> None:
+    """Walkthrough 2026-09-24, day 1: Gemini returned 5 stops for a relaxed day
+    (then 5-6; 3-4 now, so this runs on 4) including a tea house. The fill step counted the cafe as a meal and
+    added a stop; the trim step counted both locked meals against the max of 6
+    and then cut two -- one of them Changdeokgung, the model's own pick."""
+    course = _course(8)
+    picked = course["sequence"][:3]
+    day = [{"name": p["poi_name"], "type": "tourist_spot", "address": p["address_en"],
+            "lat": p["lat"], "lng": p["lng"], "stay_minutes": 60, "notes": ""} for p in picked]
+    tea = {"poi_name": "Tea House", "poi_type": "cafe", "area": "hongdae",
+           "lat": 37.5570, "lng": 126.9240, "address_en": "Mapo-gu, Seoul",
+           "estimated_stay_time": 60, "source": "Google Places (Hongdae)"}
+    day.append({"name": "Tea House", "type": "cafe", "address": "Mapo-gu, Seoul",
+                "lat": tea["lat"], "lng": tea["lng"], "stay_minutes": 60, "notes": ""})
+
+    out = _validate_and_repair_itinerary(
+        {"days": [{"day": 1, "theme": "T", "estimated_cost": "", "pois": day}]},
+        courses=[course],
+        google_supplement=[tea],
+        requested_areas=["hongdae"],
+        day_segments=[{"day_numbers": [1], "area": "hongdae",
+                       "note": "", "anchor_courses": [course]}],
+        duration="1 day",
+        num_days=1,
+        pace="relaxed",
+        locked_meals={1: _meal("DinnerPick", "dinner")},
+        locked_lunch_meals={1: _meal("LunchPick", "lunch")},
+    )
+
+    names = [p["name"] for p in out["days"][0]["pois"]]
+    assert set(names) == {p["poi_name"] for p in picked} | {"Tea House", "LunchPick", "DinnerPick"}, names
+
+
 if __name__ == "__main__":
     test_indices_always_leave_a_gap()
     test_lunch_comes_before_dinner_and_is_not_last()
     test_repair_pass_separates_the_two_meals()
     test_route_tidy_does_not_pull_the_meals_back_together()
     test_backfill_fills_a_short_day_with_sights_not_more_restaurants()
+    test_a_day_that_follows_the_pace_keeps_every_stop()
     test_a_restaurant_search_only_runs_when_the_purpose_names_food()
     print("all meal placement self-checks passed")
+
+
+def test_a_locked_meals_own_warnings_reach_the_itinerary() -> None:
+    course = _course(6)
+    meal = {**_meal("DinnerPick", "dinner"), "warnings": ["You mentioned: nut allergy — check with the restaurant"]}
+    out = _validate_and_repair_itinerary(
+        {"days": [{"day": 1, "theme": "T", "estimated_cost": "", "pois": []}]},
+        courses=[course], google_supplement=[], requested_areas=["hongdae"],
+        day_segments=[{"day_numbers": [1], "area": "hongdae", "note": "", "anchor_courses": [course]}],
+        duration="1 day", num_days=1, pace="relaxed", locked_meals={1: meal},
+    )
+    dinner = next(p for p in out["days"][0]["pois"] if p["name"] == "DinnerPick")
+    assert dinner["warnings"] == ["You mentioned: nut allergy — check with the restaurant"]

@@ -32,57 +32,21 @@ except Exception:
 
 import eval_store
 from date_utils import weekday_for_day
+import planner
 from planner import compute_transit_legs, _google_get
 from langsmith import traceable
 
 
-# ---------------------------------------------------------------------------
-# Area configuration
-# ---------------------------------------------------------------------------
-
-SEOUL_AREA_CENTERS: dict[str, tuple[float, float]] = {
-    "hongdae": (37.5563, 126.9227),
-    "hapjeong": (37.5499, 126.9143),
-    "mangwon": (37.5530, 126.9028),
-    "yeonnam": (37.5663, 126.9236),
-    "seongsu": (37.5447, 127.0558),
-    "wangsimni": (37.5612, 127.0371),
-    "gangnam": (37.4979, 127.0276),
-    "sinsa": (37.5196, 127.0228),
-    "garosu-gil": (37.5207, 127.0227),
-    "jongno": (37.5729, 126.9794),
-    "insadong": (37.5741, 126.9861),
-    "myeongdong": (37.5636, 126.9857),
-    "itaewon": (37.5347, 126.9946),
-    "sinchon": (37.5596, 126.9373),
-    "dongdaemun": (37.5666, 127.0097),
-    "yeouido": (37.5217, 126.9244),
-    "mapo": (37.5479, 126.9130),
-    "jamsil": (37.5133, 127.1028),
-    "dmc": (37.5770, 126.8902),
-}
-
-AREA_ALIASES: dict[str, list[str]] = {
-    "hongdae": ["hongdae", "hongik", "hongik univ", "홍대", "hongik university"],
-    "hapjeong": ["hapjeong", "합정"],
-    "mangwon": ["mangwon", "망원"],
-    "yeonnam": ["yeonnam", "연남"],
-    "seongsu": ["seongsu", "성수", "seongsu-dong", "성수동"],
-    "wangsimni": ["wangsimni", "왕십리"],
-    "gangnam": ["gangnam", "강남"],
-    "sinsa": ["sinsa", "신사"],
-    "garosu-gil": ["garosu", "garosu-gil", "가로수길"],
-    "jongno": ["jongno", "종로"],
-    "insadong": ["insadong", "인사동"],
-    "myeongdong": ["myeongdong", "명동"],
-    "itaewon": ["itaewon", "이태원"],
-    "sinchon": ["sinchon", "신촌"],
-    "dongdaemun": ["dongdaemun", "동대문"],
-    "yeouido": ["yeouido", "여의도"],
-    "mapo": ["mapo", "마포"],
-    "jamsil": ["jamsil", "잠실"],
-    "dmc": ["digital media city", "dmc", "상암", "디지털미디어시티"],
-}
+# Area tables live in geo.py. This module used to keep its own copy, which fell
+# behind (no bukchon/apgujeong), so RepairAgent added Bukchon stops that the
+# critic then counted as zero.
+from geo import (  # noqa: E402
+    SEOUL_AREA_CENTERS,
+    area_label as _geo_area_label,
+    area_matches_requested,
+    haversine_km,
+    infer_area,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -136,30 +100,7 @@ def safe_int(value: Any, default: int = 0) -> int:
 
 
 def area_label(area: str | None) -> str:
-    if not area:
-        return "Unknown"
-    labels = {
-        "hongdae": "Hongdae",
-        "hapjeong": "Hapjeong",
-        "mangwon": "Mangwon",
-        "yeonnam": "Yeonnam",
-        "seongsu": "Seongsu",
-        "wangsimni": "Wangsimni",
-        "gangnam": "Gangnam",
-        "sinsa": "Sinsa",
-        "garosu-gil": "Garosu-gil",
-        "jongno": "Jongno",
-        "insadong": "Insadong",
-        "myeongdong": "Myeongdong",
-        "itaewon": "Itaewon",
-        "sinchon": "Sinchon",
-        "dongdaemun": "Dongdaemun",
-        "yeouido": "Yeouido",
-        "mapo": "Mapo",
-        "jamsil": "Jamsil",
-        "dmc": "Digital Media City",
-    }
-    return labels.get(area, area.title())
+    return _geo_area_label(area) if area else "Unknown"
 
 
 def _areas_from_day_specs(state: dict[str, Any]) -> list[str]:
@@ -172,69 +113,13 @@ def _areas_from_day_specs(state: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(s["region"] for s in (state.get("day_specs") or [])))
 
 
-def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    r = 6371.0
-    p1 = math.radians(lat1)
-    p2 = math.radians(lat2)
-    d_phi = math.radians(lat2 - lat1)
-    d_lam = math.radians(lng2 - lng1)
-    a = (
-        math.sin(d_phi / 2) ** 2
-        + math.cos(p1) * math.cos(p2) * math.sin(d_lam / 2) ** 2
-    )
-    return 2 * r * math.asin(math.sqrt(a))
-
-
 def infer_area_from_poi(poi: dict[str, Any]) -> str | None:
-    if poi.get("area"):
-        area = normalize_text(poi.get("area"))
-        if area in SEOUL_AREA_CENTERS:
-            return area
-
-    text = f"{poi.get('name', '')} {poi.get('address', '')} {poi.get('poi_name', '')} {poi.get('address_en', '')} {poi.get('address_ko', '')}".lower()
-
-    for area, aliases in AREA_ALIASES.items():
-        if area in text or any(alias.lower() in text for alias in aliases):
-            return area
-
-    lat = safe_float(poi.get("lat"))
-    lng = safe_float(poi.get("lng"))
-    if lat is None or lng is None:
-        return None
-
-    nearest_area = None
-    nearest_dist = 9999.0
-
-    for area, (center_lat, center_lng) in SEOUL_AREA_CENTERS.items():
-        dist = haversine_km(lat, lng, center_lat, center_lng)
-        if dist < nearest_dist:
-            nearest_area = area
-            nearest_dist = dist
-
-    if nearest_dist <= 3.2:
-        return nearest_area
-
-    return None
-
-
-def area_matches_requested(area: str | None, requested: str) -> bool:
-    if not area:
-        return False
-
-    area = normalize_text(area)
-    requested = normalize_text(requested)
-
-    if area == requested:
-        return True
-
-    adjacent = {
-        "hongdae": {"hongdae", "hapjeong", "mangwon", "yeonnam", "mapo"},
-        "seongsu": {"seongsu", "wangsimni"},
-        "gangnam": {"gangnam", "sinsa", "garosu-gil"},
-        "jongno": {"jongno", "insadong", "myeongdong"},
-    }
-
-    return area in adjacent.get(requested, {requested})
+    area = normalize_text(poi.get("area"))
+    if area in SEOUL_AREA_CENTERS:
+        return area
+    text = " ".join(str(poi.get(k) or "") for k in
+                    ("name", "poi_name", "address", "address_en", "address_ko"))
+    return infer_area(text=text, lat=poi.get("lat"), lng=poi.get("lng"))
 
 
 def belongs_to_other_requested_area(
@@ -271,6 +156,11 @@ def is_meal_poi(poi: dict[str, Any]) -> bool:
         or "coffee" in name
         or "market" in ptype
     )
+
+
+def _non_meal_count(pois: list[dict[str, Any]]) -> int:
+    """Stops that count toward the pace target: everything but the locked meals."""
+    return sum(1 for p in pois if not p.get("meal_slot"))
 
 
 def poi_name(poi: dict[str, Any]) -> str:
@@ -712,7 +602,9 @@ class CriticAgent:
         issues: list[CriticIssue] = []
 
         area_report = self._evaluate_area_coverage(itinerary, requested_areas, issues)
-        day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues)
+        day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues,
+                                         diet=state.get("diet"),
+                                         min_stops=planner._pace_bounds(state)[0])
         duplicate_report = self._evaluate_duplicates(itinerary, issues)
         foreigner_report = self._evaluate_foreigner_readiness(itinerary, issues)
 
@@ -799,6 +691,8 @@ class CriticAgent:
         pool: dict[str, dict[str, Any]],
         trip_start_date: str | None,
         issues: list[CriticIssue],
+        diet: str | None = None,
+        min_stops: int = 5,
     ) -> dict[str, Any]:
         days = itinerary.get("days") or []
         if not days:
@@ -816,13 +710,17 @@ class CriticAgent:
             day_num = safe_int(day.get("day"), 0)
             pois = day.get("pois") or []
 
+            # Sights only, against the same pace target the prompt and the
+            # validator use -- the locked lunch and dinner come on top.
+            stops = _non_meal_count(pois)
             checks += 1
-            if len(pois) < 5:
+            if stops < min_stops:
                 penalties += 0.35
                 issues.append(CriticIssue(
                     code="TOO_FEW_POIS",
                     severity="medium",
-                    message=f"Day {day_num} has only {len(pois)} POIs; at least 5 are recommended.",
+                    message=f"Day {day_num} has only {stops} stops besides meals; "
+                            f"at least {min_stops} are recommended.",
                     day=day_num,
                 ))
 
@@ -850,11 +748,40 @@ class CriticAgent:
             if self._day_has_closed_poi(pois, pool, trip_start_date, day_num, issues):
                 penalties += 0.30
 
+            if diet:
+                checks += 1
+                penalties += self._diet_meal_penalty(pois, diet, day_num, issues)
+
         if checks == 0:
             return {"score": 0.0}
 
         score = max(0.0, 1.0 - penalties / max(len(days), 1))
         return {"score": round(score, 3)}
+
+    def _diet_meal_penalty(
+        self, pois: list[dict[str, Any]], diet: str, day_num: int, issues: list[CriticIssue],
+    ) -> float:
+        """Medium, not high: a high issue sends the day back to Gemini, which
+        can't change locked meals. The point is that a diet trip with an open
+        or unverified meal can't score 1.0."""
+        meals = {p.get("meal_slot"): p for p in pois if p.get("meal_slot")}
+        penalty = 0.0
+        for slot in ("lunch", "dinner"):
+            meal = meals.get(slot)
+            if meal is None:
+                penalty += 0.15
+                issues.append(CriticIssue(
+                    code="DIET_MEAL_OPEN", severity="medium", day=day_num,
+                    message=f"Day {day_num} {slot}: no {diet} restaurant was found nearby.",
+                ))
+            elif meal.get("source_tier") != "michelin":
+                penalty += 0.10
+                issues.append(CriticIssue(
+                    code="DIET_MEAL_UNVERIFIED", severity="medium", day=day_num,
+                    message=(f"Day {day_num} {slot} at {poi_name(meal)} was found by search; "
+                             f"its menu isn't verified for a {diet} diet."),
+                ))
+        return penalty
 
     def _day_is_geographically_scattered(self, pois: list[dict[str, Any]]) -> bool:
         coords: list[tuple[float, float]] = []
@@ -1046,6 +973,7 @@ class RepairAgent:
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+            diet=state.get("diet"),
         )
 
         itinerary = self._repair_underfilled_days(
@@ -1053,6 +981,7 @@ class RepairAgent:
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+            min_stops=planner._pace_bounds(state)[0],
         )
 
         itinerary = self._remove_duplicates(
@@ -1191,6 +1120,11 @@ class RepairAgent:
                             f"regularly closed on {weekday}s."
                         ),
                     )
+                    # Same slot, same kind of place: it's as relevant to the
+                    # traveller as the stop it replaces, so fit_day_to_time
+                    # mustn't treat it as filler.
+                    if poi.get("priority") in (1, 2, 3):
+                        new_poi["priority"] = poi["priority"]
                     kept.append(new_poi)
                     used.discard(name_key)
                     used.add(normalize_text(repl.get("name")))
@@ -1257,8 +1191,12 @@ class RepairAgent:
         pool: dict[str, dict[str, Any]],
         requested_areas: list[str],
         logs: list[str],
+        diet: str | None = None,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
+        # A pool restaurant is unverified for a diet -- it could be a gomtang
+        # place for a vegetarian. A cafe is the safe filler.
+        eat_types = {"cafe"} if diet else {"restaurant", "cafe"}
 
         for idx, day in enumerate(itinerary.get("days") or []):
             pois = day.setdefault("pois", [])
@@ -1272,14 +1210,14 @@ class RepairAgent:
                     pool,
                     target_area,
                     exclude=used,
-                    preferred_types={"restaurant", "cafe"},
+                    preferred_types=eat_types,
                 )
 
             if not candidates:
                 candidates = [
                     item for item in pool.values()
                     if normalize_text(item.get("name")) not in used
-                    and normalize_text(item.get("type")) in {"restaurant", "cafe"}
+                    and normalize_text(item.get("type")) in eat_types
                     and not belongs_to_other_requested_area(
                         item.get("area"), target_area, requested_areas
                     )
@@ -1305,12 +1243,13 @@ class RepairAgent:
         pool: dict[str, dict[str, Any]],
         requested_areas: list[str],
         logs: list[str],
+        min_stops: int = 5,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
 
         for idx, day in enumerate(itinerary.get("days") or []):
             pois = day.setdefault("pois", [])
-            if len(pois) >= 5:
+            if _non_meal_count(pois) >= min_stops:
                 continue
 
             target_area = self._target_area_for_day(day, requested_areas, idx)
@@ -1333,7 +1272,7 @@ class RepairAgent:
                 ]
 
             added = 0
-            while len(pois) < 5 and candidates:
+            while _non_meal_count(pois) < min_stops and candidates:
                 item = candidates.pop(0)
                 poi = as_output_poi(
                     item,
@@ -1462,9 +1401,20 @@ def reorder_supplements(
         return pois
     extra_ids = {id(p) for p in extras}
     route = [p for p in pois if id(p) not in extra_ids]  # backbone, original order
+
+    # Pinning the meals themselves isn't enough: a supplement slotted in ahead
+    # of lunch pushes lunch later, and on a nightlife day every bar clusters
+    # near the morning stops -- lunch landed after the club. So a supplement
+    # stays between the same two meals it started between.
+    def _meals_before(seq: list[dict[str, Any]], i: int) -> int:
+        return sum(1 for q in seq[:i] if q.get("meal_slot"))
+
+    segment = {id(p): _meals_before(pois, i) for i, p in enumerate(pois)}
     for p in extras:
         best_i, best_cost = len(route), float("inf")
         for i in range(len(route) + 1):
+            if _meals_before(route, i) != segment[id(p)]:
+                continue
             a = route[i - 1] if i > 0 else None
             b = route[i] if i < len(route) else None
             cost = _leg_km(a, p) + _leg_km(p, b) - _leg_km(a, b)
@@ -1472,6 +1422,58 @@ def reorder_supplements(
                 best_cost, best_i = cost, i
         route.insert(best_i, p)
     return route
+
+
+_REVISE_SEVERITIES = {"high", "critical"}
+
+
+def _flagged_days(report: dict[str, Any], state: dict[str, Any]) -> dict[int, list[str]]:
+    """{day: [problem, ...]} for the high/critical issues left in `report`.
+
+    An issue names its day directly (CLOSED_ON_ASSIGNED_DAY) or only its area
+    (REQUESTED_AREA_UNDER_COVERED), which maps to the days the traveller gave
+    that region. NO_DAYS has neither -- there's no day to revise.
+    """
+    region_by_day = {s["day"]: s["region"] for s in state.get("day_specs") or []}
+    out: dict[int, list[str]] = {}
+    for issue in report.get("issues") or []:
+        if issue.get("severity") not in _REVISE_SEVERITIES:
+            continue
+        if issue.get("day"):
+            days = [issue["day"]]
+        else:
+            days = [d for d, r in region_by_day.items() if r and r == issue.get("area")]
+        for d in days:
+            out.setdefault(int(d), []).append(issue["message"])
+    return out
+
+
+def _revise_once(state, itinerary, after_report, flagged, repair_and_tidy):
+    """One LLM revision round. Returns (itinerary, report, log line).
+
+    The revision runs on a deep copy (RepairAgent edits in place) and is kept
+    only if the critic scores it no worse -- otherwise the trip we already had
+    ships. Any failure keeps it too.
+    """
+    import copy
+
+    days = ", ".join(str(d) for d in sorted(flagged))
+    before = after_report.get("overall_score") or 0
+    try:
+        revised = planner.revise_days(state, copy.deepcopy(itinerary), flagged)
+        revised, _, report = repair_and_tidy(revised, critic_report_for(state, revised))
+    except Exception as e:
+        print(f"[critic] revision of day {days} failed: {type(e).__name__}: {e}")
+        return itinerary, after_report, f"Revised day {days} via LLM: failed, kept original."
+
+    score = report.get("overall_score") or 0
+    if score >= before:
+        return revised, report, f"Revised day {days} via LLM: accepted, {before} -> {score}."
+    return itinerary, after_report, f"Revised day {days} via LLM: rejected, {before} -> {score}."
+
+
+def critic_report_for(state: dict[str, Any], itinerary: dict[str, Any]) -> dict[str, Any]:
+    return CriticAgent().evaluate({**state, "itinerary": itinerary})
 
 
 def make_critic_repair_node():
@@ -1492,25 +1494,45 @@ def make_critic_repair_node():
                 ],
             }
 
-        try:
-            before_report = critic.evaluate(state)
-
-            repaired_itinerary, repair_logs = repairer.repair(
-                state={**state, "itinerary": itinerary},
-                report=before_report,
-            )
-
+        def repair_and_tidy(itin: dict[str, Any], report: dict[str, Any]):
+            repaired, logs = repairer.repair(state={**state, "itinerary": itin}, report=report)
             # Google-sourced POIs lose their source_kind by the time they land in
             # a day (both as_output_poi helpers strip it), so recover it from the
             # candidate pool — the only surviving record — and tidy each day's route.
             pool = build_candidate_pool(state)
             movable_names = {n for n, it in pool.items() if it.get("source_kind") == "google"}
-            for day in repaired_itinerary.get("days") or []:
+            areas = _areas_from_day_specs(state)
+            for day in repaired.get("days") or []:
                 day["pois"] = reorder_supplements(day.get("pois") or [], movable_names)
+                # After the order is final, before the (API-backed) legs: a day
+                # past its pace's end time loses its least relevant stops.
+                day["pois"], dropped = planner.fit_day_to_time(
+                    day["pois"], state.get("pace"), areas, purpose=state.get("purpose"))
+                logs.extend(f"Day {day.get('day')}: dropped {name} (priority {prio}) "
+                            "so the day ends on time." for name, prio in dropped)
                 day["transit_legs"] = compute_transit_legs(day.get("pois") or [])
+            return repaired, logs, critic.evaluate({**state, "itinerary": repaired})
 
-            after_state = {**state, "itinerary": repaired_itinerary}
-            after_report = critic.evaluate(after_state)
+        try:
+            before_report = critic.evaluate(state)
+            repaired_itinerary, repair_logs, after_report = repair_and_tidy(itinerary, before_report)
+
+            # Draft -> critique -> revise: problems the code repairer couldn't
+            # fix go back to the LLM once, for just the days they're on.
+            flagged = _flagged_days(after_report, state)
+            if flagged:
+                repaired_itinerary, after_report, line = _revise_once(
+                    state, repaired_itinerary, after_report, flagged, repair_and_tidy,
+                )
+                repair_logs.append(line)
+
+            # Summary and themes were written before any of the above changed
+            # the stops; rewrite them from what actually ships. Its own guard:
+            # a failure here must not turn into "final check hit a problem".
+            try:
+                planner.describe_itinerary(state, repaired_itinerary)
+            except Exception as e:
+                print(f"[critic] describe_itinerary failed: {type(e).__name__}: {e}")
 
             repaired_itinerary["critic_report"] = {
                 "before": before_report,
@@ -1523,7 +1545,7 @@ def make_critic_repair_node():
             # the only place the score can be banked. save_eval swallows its own
             # failures and returns None -- a logging table must never be able to
             # fail a traveller's itinerary.
-            eval_store.save_eval(
+            eval_id = eval_store.save_eval(
                 state=state,
                 itinerary=repaired_itinerary,
                 before=before_report,
@@ -1531,6 +1553,7 @@ def make_critic_repair_node():
                 repair_logs=repair_logs,
                 thread_id=((config or {}).get("configurable") or {}).get("thread_id"),
             )
+            eval_store.score_trace(before_report, after_report, eval_id)
 
             requested = after_report.get("requested_areas") or []
             coverage = after_report.get("area_coverage") or {}

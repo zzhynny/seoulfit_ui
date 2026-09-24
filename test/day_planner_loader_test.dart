@@ -15,7 +15,7 @@ class _ThrowingApi extends ApiService {
 
   @override
   Future<TravelState> getState() async => const TravelState(
-        daySpecs: [DaySpec(day: 1, region: 'jongno', interest: 'Shopping')],
+        daySpecs: [DaySpec(day: 1, region: 'jongno')],
       );
 
   @override

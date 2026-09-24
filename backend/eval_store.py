@@ -123,7 +123,10 @@ def save_eval(
             state.get("companion"),
             state.get("purpose"),
             json.dumps([s.get("region") for s in day_specs], ensure_ascii=False),
-            json.dumps([s.get("interest") for s in day_specs], ensure_ascii=False),
+            # The Day Planner's per-day notes. This column held the per-day
+            # interest before notes replaced it; the name stayed so the table
+            # needs no migration.
+            json.dumps([s.get("note") or "" for s in day_specs], ensure_ascii=False),
             _f(before, "overall_score"),
             _f(after, "overall_score"),
             _f(after, "feasibility_score"),
@@ -148,6 +151,32 @@ def save_eval(
     except Exception:
         logger.exception("eval_store: save_eval failed")
         return None
+
+
+def score_trace(before: dict, after: dict, eval_id: str | None) -> None:
+    """Pin the critic's verdict onto the current LangSmith trace as feedback.
+
+    evals.db answers "how are we doing"; this makes the bad runs filterable in
+    LangSmith (feedback critic_after < x) so the trace behind a bad score is one
+    click away. No-op when tracing is off. Never raises, same reason as save_eval.
+    """
+    try:
+        from langsmith.run_helpers import get_current_run_tree
+
+        rt = get_current_run_tree()
+        if rt is None:
+            return
+        scores = {
+            "critic_before": _f(before, "overall_score"),
+            "critic_after": _f(after, "overall_score"),
+            "critic_issues": float(len(after.get("issues") or [])),
+        }
+        for key, score in scores.items():
+            if score is not None:
+                rt.client.create_feedback(rt.trace_id, key=key, score=score,
+                                          comment=eval_id)
+    except Exception:
+        logger.exception("eval_store: score_trace failed")
 
 
 def worst(limit: int = 20, db_path: str | None = None) -> list[dict]:

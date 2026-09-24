@@ -163,3 +163,34 @@ if __name__ == "__main__":
     test_restaurant_swap_offers_michelin_nearest_first()
     test_restaurant_swap_falls_back_when_nothing_michelin_is_near()
     print("swap_candidates: all checks passed")
+
+
+def test_a_vegetarians_restaurant_swap_offers_only_vegetarian_michelin():
+    import meal_slots
+
+    # At a Vegan Michelin restaurant, so the sheet has one to offer.
+    veg = [r for r in meal_slots.load_restaurants() if r["cuisine"] in ("Vegan", "Vegetarian")]
+    lat, lng = float(veg[0]["lat"]), float(veg[0]["lon"])
+    graph = _FakeGraph({
+        "itinerary": {"days": [{"day": 1, "pois": [
+            {"name": "Locked Dinner Pick", "type": "restaurant",
+             "lat": lat, "lng": lng, "meal_slot": "dinner"},
+        ]}]},
+        "retrieved_courses": [], "trip_start_date": "2026-10-05",
+        "planning_context": {}, "diet": "vegetarian",
+    })
+    orig = api._graph
+    api._graph = graph
+    try:
+        got = TestClient(api.app).post("/swap-candidates", json={
+            "thread_id": "trip-test-swap-0004", "day": 1, "slot_index": 0,
+            "current_poi": "Locked Dinner Pick", "day_area": "gangnam",
+            "current_poi_type": "restaurant",
+        }).json()["candidates"]
+    finally:
+        api._graph = orig
+
+    cuisine = {r["name"]: r["cuisine"] for r in meal_slots.load_restaurants()}
+    michelin_rows = [c for c in got if c["poi_name"] in cuisine]
+    assert michelin_rows, got
+    assert all(cuisine[c["poi_name"]] in ("Vegan", "Vegetarian") for c in michelin_rows), got

@@ -155,18 +155,18 @@ def test_each_purpose_keyword_is_one_search_with_its_own_poi_type() -> None:
 
 
 def test_a_sweep_cannot_stamp_an_out_of_area_place_with_the_requested_area() -> None:
-    """Sinchon is not in hongdae's adjacency set, so a Sinchon hit from a Hongdae
+    """Itaewon is not in the Hongdae zone, so an Itaewon hit from a Hongdae
     sweep must be dropped -- not relabelled 'hongdae' and handed to the validator,
     which trusts the stamp while the critic re-infers from coordinates."""
     places = [
         {"poi_name": "In Hongdae", "address_en": "", "lat": 37.5563, "lng": 126.9236},
-        {"poi_name": "Really In Sinchon", "address_en": "", "lat": 37.5598, "lng": 126.9425},
+        {"poi_name": "Really In Itaewon", "address_en": "", "lat": 37.5347, "lng": 126.9946},
         {"poi_name": "Nowhere", "address_en": "", "lat": None, "lng": None},
     ]
     kept = planner._stamp_true_area([dict(p) for p in places], "hongdae")
     names = [p["poi_name"] for p in kept]
 
-    assert "Really In Sinchon" not in names
+    assert "Really In Itaewon" not in names
     assert "In Hongdae" in names
     # Un-inferable POIs keep the benefit of the doubt.
     assert "Nowhere" in names

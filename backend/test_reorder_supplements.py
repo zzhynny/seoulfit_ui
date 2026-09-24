@@ -100,3 +100,24 @@ if __name__ == "__main__":
         test_benchmark_plans_lose_walking()
     else:
         print("SKIP benchmark plans (not in this repo)")
+
+
+def test_supplements_never_cross_a_meal():
+    """Day 2 of a real 'parties, clubs, bars' trip, validator order: the three
+    Google bars/clubs sat around lunch and dinner. Cheapest-insertion put all of
+    them before lunch -- the traveller got lunch after the club."""
+    lunch = {"name": "Table for Four", "lat": 37.53468, "lng": 127.00523, "meal_slot": "lunch"}
+    dinner = {"name": "Mosu", "lat": 37.54115, "lng": 126.99615, "meal_slot": "dinner"}
+    day = [
+        {"name": "Leeum", "lat": 37.53856, "lng": 126.99881},
+        {"name": "Gyeongnidan Street", "lat": 37.54001, "lng": 126.99239},
+        lunch,
+        {"name": "Day and Night", "lat": 37.53504, "lng": 126.99383},
+        {"name": "APT SEOUL", "lat": 37.53184, "lng": 126.99467},
+        dinner,
+        {"name": "Soap Seoul", "lat": 37.53420, "lng": 126.99090},
+    ]
+    movable = {normalize_text(n) for n in ("Day and Night", "APT SEOUL", "Soap Seoul")}
+    names = [p["name"] for p in reorder_supplements(day, movable)]
+    assert names.index("Table for Four") < names.index("Day and Night") < names.index("Mosu")
+    assert names.index("APT SEOUL") < names.index("Mosu") < names.index("Soap Seoul")

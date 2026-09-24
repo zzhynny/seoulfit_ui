@@ -438,8 +438,14 @@ class SwapCandidatesRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _trace_meta(thread_id: str) -> dict:
+    # metadata.thread_id is the key LangSmith groups a conversation's traces by,
+    # and the join key back to evals.db.
+    return {"metadata": {"thread_id": thread_id}}
+
+
 def _config(thread_id: str) -> dict:
-    return {"configurable": {"thread_id": thread_id}}
+    return {"configurable": {"thread_id": thread_id}, **_trace_meta(thread_id)}
 
 
 def _get_state(thread_id: str) -> dict:
@@ -504,7 +510,8 @@ def chat(req: ChatRequest):
     # dietary or physical restrictions?" blocked it as chit-chat.
     state = _get_state(req.thread_id)
     pending_question = FIELD_QUESTIONS.get(state.get("pending") or "")
-    if req.message and is_blocked(req.message, pending_question):
+    if req.message and is_blocked(req.message, pending_question,
+                                  langsmith_extra=_trace_meta(req.thread_id)):
         return _state_response(state, reply=_BLOCKED_REPLY)
 
     try:
@@ -535,7 +542,29 @@ def reset(thread_id: str):
 class DaySpec(BaseModel):
     day: int
     region: str
-    interest: str
+    # 선택 메모. 그날의 검색 질의와 프롬프트에 들어가므로 길이를 막는다.
+    note: str = Field("", max_length=200)
+
+
+# The question the note field answers -- handed to the input rail so it judges
+# a short note ("mom's birthday") as an answer, not as chit-chat.
+_NOTE_QUESTION = "Anything special you want from this day of your Seoul trip?"
+
+
+def _read_note(note: str, thread_id: str) -> tuple[str, list[dict[str, str]]]:
+    """(note to keep, its search keywords). A blocked note is dropped, not
+    rejected: it's optional, and a 400 here reaches the traveller only as a
+    generic failure. Neither call raises -- the rail fails open, extraction
+    returns []."""
+    from graph import _extract_purpose_keywords
+
+    note = note.strip()
+    if not note:
+        return "", []
+    if is_blocked(note, _NOTE_QUESTION, langsmith_extra=_trace_meta(thread_id)):
+        print(f"[day-plan] note blocked by input rail, dropped: {note[:60]!r}")
+        return "", []
+    return note, _extract_purpose_keywords(note)
 
 
 class DayPlanRequest(BaseModel):
@@ -546,12 +575,15 @@ class DayPlanRequest(BaseModel):
 @app.post("/day-plan", response_model=StateResponse)
 @_one_turn_per_session
 def day_plan(req: DayPlanRequest):
-    """Day Planner 화면이 정한 날짜별 지역·관심사를 저장하고 confirm 으로 넘긴다.
+    """Day Planner 화면이 정한 날짜별 구역·메모를 저장하고 confirm 으로 넘긴다.
 
-    어휘가 어긋나면 400 으로 시끄럽게 실패한다. retrieval 의 필터는 문자열
-    비교라서, 통과시키면 조용히 0개를 반환하고 그날 앵커가 사라진다.
+    구역이 어긋나면 400 으로 시끄럽게 실패한다. 통과시키면 retrieval 이 조용히
+    0개를 반환하고 그날 앵커가 사라진다. 메모마다 검색어를 여기서 뽑는다 —
+    인테이크의 여행 목적과 같은 이유로, 일정 생성 시간에 얹지 않으려고.
     """
-    from graph import DAY_PLAN_REGIONS, INTEREST_LABELS
+    from concurrent.futures import ThreadPoolExecutor
+
+    from graph import DAY_PLAN_REGIONS
     from rag import _parse_num_days
 
     thread_id = _require_thread_id(req.thread_id)
@@ -575,8 +607,10 @@ def day_plan(req: DayPlanRequest):
     for d in days:
         if d["region"] not in DAY_PLAN_REGIONS:
             raise HTTPException(status_code=400, detail=f"unknown region: {d['region']}")
-        if d["interest"] not in INTEREST_LABELS:
-            raise HTTPException(status_code=400, detail=f"unknown interest: {d['interest']}")
+
+    with ThreadPoolExecutor(max_workers=len(days)) as pool:
+        for d, (note, keywords) in zip(days, pool.map(_read_note, [d["note"] for d in days], [thread_id] * len(days))):
+            d["note"], d["keywords"] = note, keywords
 
     days.sort(key=lambda d: d["day"])
     _graph.update_state(_config(thread_id), {"day_specs": days, "current_step": "confirm"})
@@ -1260,7 +1294,12 @@ def swap_candidates(req: SwapCandidatesRequest):
         # Michelin is within SWAP_RADIUS_KM, so the sheet is never empty.
         here = _itinerary_poi(state, req.day, req.slot_index, req.current_poi) or current or {}
 
-        if normalize_text(req.current_poi_type or (current or {}).get("type")) == "restaurant":
+        # A diet traveller only sees Michelin rows of that diet's cuisines. Halal
+        # has none verified, so its sheet goes straight to the pool/Google path.
+        diet = state.get("diet")
+        cuisines = meal_slots.DIET_RULES[diet]["cuisines"] if diet else None
+        if (normalize_text(req.current_poi_type or (current or {}).get("type")) == "restaurant"
+                and cuisines != ()):
             lat, lng = here.get("lat"), here.get("lng")
             if lat is None or lng is None:
                 print(f"[swap michelin] {req.current_poi!r} has no coordinates -- pool path")
@@ -1271,6 +1310,7 @@ def swap_candidates(req: SwapCandidatesRequest):
                     exclude_names=tuple(
                         [req.current_poi, *req.excluded_ids]
                     ),
+                    cuisines=cuisines,
                 )
                 if hits:
                     michelin = [{

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -43,6 +44,37 @@ MEAL_AREA_CENTERS: dict[str, tuple[float, float]] = {
 _missing_areas = set(geo.SEOUL_AREA_CENTERS) - set(MEAL_AREA_CENTERS)
 if _missing_areas:
     raise ValueError(f"MEAL_AREA_CENTERS missing areas from geo.SEOUL_AREA_CENTERS: {sorted(_missing_areas)}")
+
+
+# Diets that decide which restaurant a meal may be locked to. Cuisine families
+# can't express this -- "korean" is both gomtang and dubu -- so a Michelin pick
+# must have one of these exact cuisines; only 4 of 180 do, so most diet meals
+# come from a Google search for the diet instead, flagged as unverified.
+# Halal has no verified Michelin source at all.
+DIET_RULES: dict[str, dict[str, Any]] = {
+    "vegan": {"cuisines": ("Vegan",), "search": "vegan restaurant"},
+    "vegetarian": {"cuisines": ("Vegan", "Vegetarian"), "search": "vegetarian restaurant"},
+    "halal": {"cuisines": (), "search": "halal restaurant"},
+}
+
+# Order matters: "vegan" is checked before "vegetarian".
+_DIET_PATTERNS = [
+    ("vegan", re.compile(r"vegan|비건|plant[- ]based", re.I)),
+    ("vegetarian", re.compile(r"vegetarian|veggie|no meat|채식", re.I)),
+    ("halal", re.compile(r"halal|할랄|muslim", re.I)),
+]
+
+
+def parse_diet(restrictions: str | None) -> str | None:
+    """The DIET_RULES key a free-text restriction names, or None.
+
+    A regex, not a model: the phrasings are few and a missed "vegetarian" is
+    worse than a slow one. Anything else (allergies, no pork) stays prompt-only.
+    """
+    for diet, pattern in _DIET_PATTERNS:
+        if pattern.search(restrictions or ""):
+            return diet
+    return None
 
 
 def _to_minutes(hhmm: str) -> int:
@@ -134,7 +166,7 @@ def matches_area(restaurant: dict[str, Any], area: str) -> bool:
     return geo.area_matches_requested(inferred, area)
 
 
-DEFAULT_AREA_RADIUS_KM = 1.5
+DEFAULT_AREA_RADIUS_KM = 1.0
 
 
 def distance_to_area_km(restaurant: dict[str, Any], area: str) -> float | None:
@@ -204,8 +236,11 @@ def nearest_michelin(
     radius_km: float = SWAP_RADIUS_KM,
     limit: int = 3,
     restaurants: list[dict[str, Any]] | None = None,
+    cuisines: tuple[str, ...] | None = None,
 ) -> list[dict[str, Any]]:
     """Michelin restaurants nearest (lat, lng), closest first.
+
+    `cuisines`, when given, keeps only those cuisines -- a diet's whitelist.
 
     Deliberately not filter_candidates: that one fills a locked meal slot, so it
     filters on opening hours and ranks by Michelin grade. A swap sheet is the
@@ -219,6 +254,8 @@ def nearest_michelin(
         restaurants = load_restaurants()
 
     excluded = {n.strip().lower() for n in exclude_names if n}
+    if cuisines is not None:
+        restaurants = [r for r in restaurants if r.get("cuisine") in cuisines]
 
     out: list[dict[str, Any]] = []
     for r in restaurants:
@@ -253,7 +290,7 @@ def filter_candidates(
 ) -> FilterResult:
     """지역 -> 영업시간 -> family 제외 -> 이름 제외 순서로 적용.
 
-    기본 경로는 area_radius_km(기본 1.5km) 기반 matches_area_within_radius —
+    기본 경로는 area_radius_km(기본 1km) 기반 matches_area_within_radius —
     MEAL_AREA_CENTERS 좌표에서 반경 안이면 후보. area_radius_km=None을 명시하면
     옛 alias/인접목록 기반 matches_area로 폴백한다(하위호환용).
 
@@ -330,6 +367,32 @@ def _fetch_google_restaurants_cached(area: str) -> list[dict[str, Any]]:
     return results
 
 
+def _fetch_diet_restaurants_raw(area: str, search: str) -> list[dict[str, Any]]:
+    """Network seam for a diet's Google Text Search, e.g. "vegetarian restaurant
+    in Jongno Seoul". Tests stub this."""
+    import planner
+
+    return planner.fetch_text_places(
+        area=area,
+        query=f"{search} in {geo.area_label(area)} Seoul",
+        api_key=planner.GOOGLE_PLACES_API_KEY,
+        poi_type="restaurant",
+        max_results=5,
+    )
+
+
+def _fetch_diet_restaurants_cached(area: str, diet: str) -> list[dict[str, Any]]:
+    cache_key = (area, f"diet:{diet}")
+    if cache_key not in _GOOGLE_PLACES_CACHE:
+        try:
+            _GOOGLE_PLACES_CACHE[cache_key] = _fetch_diet_restaurants_raw(
+                area, DIET_RULES[diet]["search"])
+        except Exception as e:
+            print(f"[meal_slots] {diet} search failed for area={area!r}: {type(e).__name__}: {e}")
+            _GOOGLE_PLACES_CACHE[cache_key] = []
+    return _GOOGLE_PLACES_CACHE[cache_key]
+
+
 def _slot_name_for(slot_start: str, slot_end: str) -> str | None:
     for name, (s, e) in MEAL_SLOTS.items():
         if s == slot_start and e == slot_end:
@@ -369,8 +432,13 @@ def fill_meal_slot(
     exclude_reason: str = "cuisine_avoidance",
     allow_google: bool = True,
     restaurants: list[dict[str, Any]] | None = None,
+    diet: str | None = None,
 ) -> dict[str, Any]:
     """식사 슬롯 하나를 1층(미쉐린) -> 2층(Google Places) -> 3층(unfilled) 순으로 채운다.
+
+    diet (DIET_RULES 키): 1층은 그 식단의 요리만, 2층은 "근처 평점 최고 식당"
+    대신 그 식단 검색 결과만 쓴다. 둘 다 없으면 슬롯을 비운다 — 채식하는
+    사람에게 곰탕집을 잡아 주느니 빈 끼니가 낫다.
 
     exclude_reason: exclude_families가 무슨 종류의 제약인지 구분해두는 자리다.
     2층(Google)은 cuisine 정보가 아예 없어서 "검증은 못 했지만 후보는 반환한다"는
@@ -386,6 +454,8 @@ def fill_meal_slot(
 
     if restaurants is None:
         restaurants = load_restaurants()
+    if diet:
+        restaurants = [r for r in restaurants if r.get("cuisine") in DIET_RULES[diet]["cuisines"]]
 
     slot_name = _slot_name_for(slot_start, slot_end)
     slot_time = f"{slot_start}-{slot_end}"
@@ -431,6 +501,12 @@ def fill_meal_slot(
             f"no michelin candidates in {area} ({weekday} {slot_time}); google fallback disabled",
         )
 
+    if diet:
+        return _fill_from_diet_search(
+            area=area, diet=diet, slot_name=slot_name, slot_start=slot_start,
+            slot_end=slot_end, exclude_names=exclude_names,
+        )
+
     google_results = _fetch_google_restaurants_cached(area)
     if exclude_names:
         google_results = [g for g in google_results if g.get("poi_name") not in exclude_names]
@@ -461,3 +537,33 @@ def fill_meal_slot(
         f"no michelin candidates in {area} ({weekday} {slot_time}) and "
         "google places returned no results (missing api key, zero results, or request failure)",
     )
+
+
+def _fill_from_diet_search(
+    *, area: str, diet: str, slot_name: str | None, slot_start: str, slot_end: str,
+    exclude_names: tuple[str, ...],
+) -> dict[str, Any]:
+    """2층 for a diet: the best-rated hit of a search for that diet, or open."""
+    search = DIET_RULES[diet]["search"]
+    found = [g for g in _fetch_diet_restaurants_cached(area, diet)
+             if g.get("poi_name") not in exclude_names]
+    if not found:
+        return _unfilled(slot_start, slot_end, f"no {diet} restaurant found in {area}")
+    best = max(found, key=lambda g: g.get("rating") or 0)
+    return {
+        "name": best.get("poi_name"),
+        "type": "restaurant",
+        "lat": best.get("lat"),
+        "lng": best.get("lng"),
+        "address": best.get("address_en"),
+        "meal_slot": slot_name,
+        "slot_time": f"{slot_start}-{slot_end}",
+        "source_tier": "google",
+        "verified": {"opening_hours": False, "cuisine": False},
+        # One warning that covers both unknowns; the planner skips its generic
+        # "from Google" one for these.
+        "diet_search": True,
+        "warnings": [f"Found by a Google search for '{search}' — check the menu suits a "
+                     f"{diet} diet, and the opening hours"],
+        "status": "filled",
+    }

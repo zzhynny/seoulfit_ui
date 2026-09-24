@@ -78,3 +78,9 @@ def test_a_failed_call_means_no_keywords_not_a_failed_turn(monkeypatch):
         raise RuntimeError("429 rate limited")
     monkeypatch.setattr(graph, "_gemini_raw", boom)
     assert graph._extract_purpose_keywords("rooftop bars in Seoul") == []
+
+
+def test_restrictions_carry_the_diet_that_controls_meals():
+    assert graph._store("restrictions", "I'm vegetarian", {}) == {
+        "restrictions": "I'm vegetarian", "diet": "vegetarian"}
+    assert graph._store("restrictions", "nut allergy", {})["diet"] is None

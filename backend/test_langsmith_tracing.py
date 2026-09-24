@@ -53,13 +53,13 @@ def test_select_anchors_span_omits_the_vector_matrix(spy):
     vectors = load_vectors()
     assert vectors is not None, "course_vectors.npz missing — rebuild to run this"
     select_anchors(
-        {"day": 1, "region": "jongno", "interest": "Culture & History",
+        {"day": 1, "region": "jongno",
          "purpose_vec": vectors[1][0]},
         vectors=vectors,
     )
 
     (run,) = [r for r in spy if r["name"] == "select_anchors"]
-    assert set(run["inputs"]) == {"day", "region", "interest", "has_query_vec", "exclude"}
+    assert set(run["inputs"]) == {"day", "region", "has_query_vec", "exclude"}
     assert run["inputs"]["has_query_vec"] is True
     # 8.7MB untrimmed. The bound is generous; the point is orders of magnitude.
     assert len(json.dumps(run["inputs"], default=str)) < 1000
@@ -111,3 +111,47 @@ def test_thread_fanout_spans_stay_attached_to_the_parent_run(spy, monkeypatch):
     for run in places:
         assert run["parent"] is not None, f"{run['name']} orphaned out of its trace"
         assert run["parent"] in known, f"{run['name']} parented to an unknown run"
+
+
+def test_input_rail_llm_call_stays_under_the_rail_span(spy, monkeypatch):
+    """The rail's LLM call runs on guardrail_gate's own loop thread; contextvars
+    don't follow, so without an explicit parent it becomes its own root trace."""
+    import guardrail_gate
+    from langsmith.run_helpers import traceable
+    from nemoguardrails.rails.llm.options import RailStatus
+
+    @traceable(run_type="llm", name="rail_llm")
+    async def rail_llm():
+        return "ok"
+
+    class FakeRails:
+        async def check_async(self, messages, rail_types=None):
+            await rail_llm()
+            return type("R", (), {"status": RailStatus.PASSED})()
+
+    monkeypatch.setattr(guardrail_gate, "_get_rails", lambda: FakeRails())
+    guardrail_gate.is_blocked("no pork please",
+                              langsmith_extra={"metadata": {"thread_id": "t-1"}})
+
+    (rail,) = [r for r in spy if r["name"] == "input_rail"]
+    (llm,) = [r for r in spy if r["name"] == "rail_llm"]
+    assert llm["parent"] == rail["id"], "rail LLM call orphaned out of input_rail"
+
+
+def test_thinking_tokens_are_billed_as_output(monkeypatch):
+    """google-genai 1.2 reports thinking only inside total_token_count. Left out
+    of output_tokens, LangSmith priced a day at a fraction of the real bill."""
+    from types import SimpleNamespace
+    import planner
+
+    rt = SimpleNamespace(metadata={}, usage=None)
+    rt.set = lambda usage_metadata: setattr(rt, "usage", usage_metadata)
+    monkeypatch.setattr(planner, "get_current_run_tree", lambda: rt)
+
+    usage = SimpleNamespace(prompt_token_count=2354, candidates_token_count=949,
+                            total_token_count=12102)
+    planner._record_usage(SimpleNamespace(usage_metadata=usage), "gemini-3.8-flash")
+
+    assert rt.usage["output_tokens"] == 949 + 8799
+    assert rt.usage["output_token_details"] == {"reasoning": 8799}
+    assert rt.usage["total_tokens"] == 12102
