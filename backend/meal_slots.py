@@ -166,7 +166,7 @@ def matches_area(restaurant: dict[str, Any], area: str) -> bool:
     return geo.area_matches_requested(inferred, area)
 
 
-DEFAULT_AREA_RADIUS_KM = 1.5
+DEFAULT_AREA_RADIUS_KM = 1.0
 
 
 def distance_to_area_km(restaurant: dict[str, Any], area: str) -> float | None:
@@ -290,7 +290,7 @@ def filter_candidates(
 ) -> FilterResult:
     """지역 -> 영업시간 -> family 제외 -> 이름 제외 순서로 적용.
 
-    기본 경로는 area_radius_km(기본 1.5km) 기반 matches_area_within_radius —
+    기본 경로는 area_radius_km(기본 1km) 기반 matches_area_within_radius —
     MEAL_AREA_CENTERS 좌표에서 반경 안이면 후보. area_radius_km=None을 명시하면
     옛 alias/인접목록 기반 matches_area로 폴백한다(하위호환용).
 

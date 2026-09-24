@@ -91,7 +91,7 @@ FIELD_QUESTIONS = {
     # rule rejects, so the question must not invite one.
     "travel_dates": "When are you travelling? Tap the calendar to pick your dates "
                     "(up to 7 days).",
-    "restrictions": "Any dietary or physical restrictions? (or 'none')",
+    "restrictions": "Any dietary restrictions? (or 'none')",
     "companion":    "Who are you traveling with? (solo/couple/friends/family)",
     "pace":         "Packed schedule or relaxed pace?",
     # 자유 서술이다. 라벨로 정규화하지 않는다 — 뭉개면 임베딩할 게 없어진다.
@@ -115,9 +115,9 @@ FIELD_EXTRACT = {
                     'not answer the question.',
     "pace":         'pace: "packed" for busy or "relaxed" for slow pace. "MISSING" if the '
                     'reply does not answer the question.',
-    "restrictions": 'restrictions: dietary or physical restrictions. "none" if the user '
-                    'says they have no restrictions. "MISSING" if the reply does not '
-                    'answer the question.',
+    "restrictions": 'restrictions: dietary restrictions. "none" if the user says they '
+                    'have no restrictions. "MISSING" if the reply does not answer the '
+                    'question.',
     "purpose":      'purpose: the traveller\'s own words for what this trip is for, '
                     'copied verbatim and translated to English if needed. Do NOT '
                     'summarise into a category. "MISSING" if they skipped, declined, '
