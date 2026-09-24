@@ -80,10 +80,17 @@ def _record_usage(response, model: str) -> None:
     if rt is None or u is None:
         return
     rt.metadata.update(ls_provider="google_genai", ls_model_name=model)
+    # Thinking is billed as output, and on day generation it is 3-8x the
+    # visible answer -- left out, the trace's cost reads a fraction of the bill.
+    # Derived rather than read: google-genai 1.2 has no thoughts_token_count.
+    prompt, answer = u.prompt_token_count or 0, u.candidates_token_count or 0
+    total = u.total_token_count or prompt + answer
+    thoughts = max(total - prompt - answer, 0)
     rt.set(usage_metadata={
-        "input_tokens": u.prompt_token_count or 0,
-        "output_tokens": u.candidates_token_count or 0,
-        "total_tokens": u.total_token_count or 0,
+        "input_tokens": prompt,
+        "output_tokens": answer + thoughts,
+        "total_tokens": total,
+        "output_token_details": {"reasoning": thoughts},
     })
 
 

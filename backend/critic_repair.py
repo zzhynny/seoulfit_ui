@@ -1388,9 +1388,20 @@ def reorder_supplements(
         return pois
     extra_ids = {id(p) for p in extras}
     route = [p for p in pois if id(p) not in extra_ids]  # backbone, original order
+
+    # Pinning the meals themselves isn't enough: a supplement slotted in ahead
+    # of lunch pushes lunch later, and on a nightlife day every bar clusters
+    # near the morning stops -- lunch landed after the club. So a supplement
+    # stays between the same two meals it started between.
+    def _meals_before(seq: list[dict[str, Any]], i: int) -> int:
+        return sum(1 for q in seq[:i] if q.get("meal_slot"))
+
+    segment = {id(p): _meals_before(pois, i) for i, p in enumerate(pois)}
     for p in extras:
         best_i, best_cost = len(route), float("inf")
         for i in range(len(route) + 1):
+            if _meals_before(route, i) != segment[id(p)]:
+                continue
             a = route[i - 1] if i > 0 else None
             b = route[i] if i < len(route) else None
             cost = _leg_km(a, p) + _leg_km(p, b) - _leg_km(a, b)

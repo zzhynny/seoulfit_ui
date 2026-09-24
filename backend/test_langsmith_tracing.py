@@ -136,3 +136,22 @@ def test_input_rail_llm_call_stays_under_the_rail_span(spy, monkeypatch):
     (rail,) = [r for r in spy if r["name"] == "input_rail"]
     (llm,) = [r for r in spy if r["name"] == "rail_llm"]
     assert llm["parent"] == rail["id"], "rail LLM call orphaned out of input_rail"
+
+
+def test_thinking_tokens_are_billed_as_output(monkeypatch):
+    """google-genai 1.2 reports thinking only inside total_token_count. Left out
+    of output_tokens, LangSmith priced a day at a fraction of the real bill."""
+    from types import SimpleNamespace
+    import planner
+
+    rt = SimpleNamespace(metadata={}, usage=None)
+    rt.set = lambda usage_metadata: setattr(rt, "usage", usage_metadata)
+    monkeypatch.setattr(planner, "get_current_run_tree", lambda: rt)
+
+    usage = SimpleNamespace(prompt_token_count=2354, candidates_token_count=949,
+                            total_token_count=12102)
+    planner._record_usage(SimpleNamespace(usage_metadata=usage), "gemini-3.8-flash")
+
+    assert rt.usage["output_tokens"] == 949 + 8799
+    assert rt.usage["output_token_details"] == {"reasoning": 8799}
+    assert rt.usage["total_tokens"] == 12102
