@@ -203,11 +203,11 @@ def test_a_restaurant_search_only_runs_when_the_purpose_names_food() -> None:
 
 def test_a_day_that_follows_the_pace_keeps_every_stop() -> None:
     """Walkthrough 2026-09-24, day 1: Gemini returned 5 stops for a relaxed day
-    (5-6) including a tea house. The fill step counted the cafe as a meal and
+    (then 5-6; 3-4 now, so this runs on 4) including a tea house. The fill step counted the cafe as a meal and
     added a stop; the trim step counted both locked meals against the max of 6
     and then cut two -- one of them Changdeokgung, the model's own pick."""
     course = _course(8)
-    picked = course["sequence"][:4]
+    picked = course["sequence"][:3]
     day = [{"name": p["poi_name"], "type": "tourist_spot", "address": p["address_en"],
             "lat": p["lat"], "lng": p["lng"], "stay_minutes": 60, "notes": ""} for p in picked]
     tea = {"poi_name": "Tea House", "poi_type": "cafe", "area": "hongdae",

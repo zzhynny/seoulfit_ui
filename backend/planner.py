@@ -1777,17 +1777,37 @@ def _pace_bounds(state: TravelState) -> tuple[int, int]:
     never end up quoting different numbers."""
     pace = (state.get("pace") or "").strip().lower()
     if pace == "relaxed":
-        return (5, 6)
+        # Relaxed means fewer places, not an early night: 3-4 sights plus the
+        # locked lunch and dinner is 5-6 stops in all.
+        return (3, 4)
     if pace == "packed":
         return (7, 8)
     return (6, 7)  # no pace on record -- a middling default, not a guess at either extreme
 
 
-# A day's end time by pace, in minutes after midnight. Relaxed means done by
-# the end of the dinner window. fit_day_to_time drops stops until the day fits.
+# A day's end time by pace, in minutes after midnight. fit_day_to_time drops
+# stops until the day fits. Relaxed has no entry: it already means fewer stops
+# (_pace_bounds), and ending it at 20:00 on top pulled a nightlife trip's clubs
+# in ahead of dinner.
 _DAY_START = 10 * 60
-_DAY_END = {"relaxed": 20 * 60, "packed": 22 * 60}
+_DAY_END = {"packed": 22 * 60}
 _DAY_END_DEFAULT = 21 * 60
+_DAY_END_NIGHTLIFE = 24 * 60
+
+# ponytail: keyword match on the traveller's own purpose text. Misses
+# paraphrases ("dance till late"); give purpose keywords a nightlife poi_type
+# if that starts to matter.
+_NIGHTLIFE_RE = re.compile(
+    r"night ?life|club|\bbars?\b|\bpubs?\b|part(y|ies)|clubbing|cocktail|"
+    r"클럽|술집|바\b|펍|포차|파티|나이트",
+    re.IGNORECASE,
+)
+
+
+def _day_end(pace: str | None, purpose: str | None) -> int:
+    if _NIGHTLIFE_RE.search(purpose or ""):
+        return _DAY_END_NIGHTLIFE
+    return _DAY_END.get((pace or "").strip().lower(), _DAY_END_DEFAULT)
 _MIN_STOPS_AFTER_FIT = 3
 
 
@@ -1857,6 +1877,7 @@ def fit_day_to_time(
     pois: list[dict[str, Any]],
     pace: str | None,
     requested_areas: list[str] | tuple[str, ...] = (),
+    purpose: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[tuple[str, int]]]:
     """Make a day end by its pace's end time, dropping the least relevant stops.
 
@@ -1867,7 +1888,7 @@ def fit_day_to_time(
     Returns (pois, [(dropped name, priority), ...]); a day that fits comes
     back as the same list.
     """
-    deadline = _DAY_END.get((pace or "").strip().lower(), _DAY_END_DEFAULT)
+    deadline = _day_end(pace, purpose)
     if _day_schedule(pois)[0] <= deadline:
         return pois, []
 

@@ -1,5 +1,6 @@
-"""fit_day_to_time: a day that runs past its pace's end time loses its
-least relevant stops, and evening stops move into idle time before dinner.
+"""fit_day_to_time: a day that runs past its end time (21:00 unless packed or
+a nightlife trip) loses its least relevant stops, and evening stops move into
+idle time before dinner.
 
 Every POI sits on the same point, so travel is 0 and each timeline is just
 the stays plus waiting for a meal window. The day starts at 10:00.
@@ -25,9 +26,9 @@ def names(pois):
 
 
 def test_evening_stops_move_into_the_afternoon_or_go():
-    # 10:00 A, 12:00 lunch, B C D until 16:30, wait, dinner 18:00, E F -> 22:00.
+    # 10:00 A, 12:00 lunch, B C D until 16:30, wait, dinner 18:00, E F -> 22:30.
     day = [stop("A", 120, 1), meal("lunch"), stop("B", 90, 1), stop("C", 60, 2),
-           stop("D", 60, 1), meal("dinner"), stop("E", 90, 2), stop("F", 90, 3)]
+           stop("D", 60, 1), meal("dinner"), stop("E", 90, 2), stop("F", 150, 3)]
     out, dropped = fit_day_to_time(day, "relaxed")
     # E fits in the 16:30-18:00 gap; F (the filler) doesn't fit anywhere.
     assert names(out) == ["A", "Lunch", "B", "C", "D", "E", "Dinner"]
@@ -35,9 +36,9 @@ def test_evening_stops_move_into_the_afternoon_or_go():
 
 
 def test_the_least_relevant_stop_goes_even_when_it_is_early():
-    # X (filler) is in the morning; the priority-1 E after dinner runs to 20:30.
+    # X (filler) is in the morning; the priority-1 E after dinner runs to 21:30.
     day = [stop("A", 90, 1), meal("lunch"), stop("X", 120, 3), stop("B", 120, 1),
-           stop("C", 90, 1), meal("dinner"), stop("E", 90, 1)]
+           stop("C", 90, 1), meal("dinner"), stop("E", 150, 1)]
     out, dropped = fit_day_to_time(day, "relaxed")
     assert dropped == [("X", 3)]
     assert "E" in names(out) and names(out).index("E") < names(out).index("Dinner")
@@ -76,3 +77,16 @@ def test_a_day_that_fits_is_untouched():
     day = [stop("A", 60, 1), meal("lunch"), stop("B", 60, 3), meal("dinner")]
     out, dropped = fit_day_to_time(day, "relaxed")
     assert dropped == [] and out == day and all(a is b for a, b in zip(out, day))
+
+
+def test_a_nightlife_trip_keeps_its_clubs_after_dinner():
+    # Dinner 18:00, then two clubs to 22:00 -- late for a plain day, but the
+    # night out is what this trip is for: nothing moves ahead of dinner.
+    day = [stop("A", 120, 1), meal("lunch"), stop("B", 120, 1), meal("dinner"),
+           stop("Club", 120, 1), stop("Bar", 60, 1)]
+    out, dropped = fit_day_to_time(day, "relaxed", purpose="going to parties, clubs, and bars")
+    assert dropped == [] and names(out) == names(day)
+    # Same day on a plain trip ends 22:00, past 21:00: the clubs get pulled
+    # into the idle afternoon ahead of dinner.
+    out, _ = fit_day_to_time(day, "relaxed", purpose="first time with my parents")
+    assert names(out).index("Club") < names(out).index("Dinner")

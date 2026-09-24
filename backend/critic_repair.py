@@ -158,6 +158,11 @@ def is_meal_poi(poi: dict[str, Any]) -> bool:
     )
 
 
+def _non_meal_count(pois: list[dict[str, Any]]) -> int:
+    """Stops that count toward the pace target: everything but the locked meals."""
+    return sum(1 for p in pois if not p.get("meal_slot"))
+
+
 def poi_name(poi: dict[str, Any]) -> str:
     return safe_str(poi.get("name") or poi.get("poi_name"))
 
@@ -598,7 +603,8 @@ class CriticAgent:
 
         area_report = self._evaluate_area_coverage(itinerary, requested_areas, issues)
         day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues,
-                                         diet=state.get("diet"))
+                                         diet=state.get("diet"),
+                                         min_stops=planner._pace_bounds(state)[0])
         duplicate_report = self._evaluate_duplicates(itinerary, issues)
         foreigner_report = self._evaluate_foreigner_readiness(itinerary, issues)
 
@@ -686,6 +692,7 @@ class CriticAgent:
         trip_start_date: str | None,
         issues: list[CriticIssue],
         diet: str | None = None,
+        min_stops: int = 5,
     ) -> dict[str, Any]:
         days = itinerary.get("days") or []
         if not days:
@@ -703,13 +710,17 @@ class CriticAgent:
             day_num = safe_int(day.get("day"), 0)
             pois = day.get("pois") or []
 
+            # Sights only, against the same pace target the prompt and the
+            # validator use -- the locked lunch and dinner come on top.
+            stops = _non_meal_count(pois)
             checks += 1
-            if len(pois) < 5:
+            if stops < min_stops:
                 penalties += 0.35
                 issues.append(CriticIssue(
                     code="TOO_FEW_POIS",
                     severity="medium",
-                    message=f"Day {day_num} has only {len(pois)} POIs; at least 5 are recommended.",
+                    message=f"Day {day_num} has only {stops} stops besides meals; "
+                            f"at least {min_stops} are recommended.",
                     day=day_num,
                 ))
 
@@ -970,6 +981,7 @@ class RepairAgent:
             pool=pool,
             requested_areas=requested_areas,
             logs=logs,
+            min_stops=planner._pace_bounds(state)[0],
         )
 
         itinerary = self._remove_duplicates(
@@ -1231,12 +1243,13 @@ class RepairAgent:
         pool: dict[str, dict[str, Any]],
         requested_areas: list[str],
         logs: list[str],
+        min_stops: int = 5,
     ) -> dict[str, Any]:
         used = used_name_set(itinerary)
 
         for idx, day in enumerate(itinerary.get("days") or []):
             pois = day.setdefault("pois", [])
-            if len(pois) >= 5:
+            if _non_meal_count(pois) >= min_stops:
                 continue
 
             target_area = self._target_area_for_day(day, requested_areas, idx)
@@ -1259,7 +1272,7 @@ class RepairAgent:
                 ]
 
             added = 0
-            while len(pois) < 5 and candidates:
+            while _non_meal_count(pois) < min_stops and candidates:
                 item = candidates.pop(0)
                 poi = as_output_poi(
                     item,
@@ -1493,7 +1506,8 @@ def make_critic_repair_node():
                 day["pois"] = reorder_supplements(day.get("pois") or [], movable_names)
                 # After the order is final, before the (API-backed) legs: a day
                 # past its pace's end time loses its least relevant stops.
-                day["pois"], dropped = planner.fit_day_to_time(day["pois"], state.get("pace"), areas)
+                day["pois"], dropped = planner.fit_day_to_time(
+                    day["pois"], state.get("pace"), areas, purpose=state.get("purpose"))
                 logs.extend(f"Day {day.get('day')}: dropped {name} (priority {prio}) "
                             "so the day ends on time." for name, prio in dropped)
                 day["transit_legs"] = compute_transit_legs(day.get("pois") or [])

@@ -53,14 +53,14 @@ def _names(day):
 
 def test_one_call_per_day_merged_in_order(llm):
     calls, answers = llm
-    answers.update({1: POOL[0:5], 2: POOL[5:10]})
+    answers.update({1: POOL[0:4], 2: POOL[5:9]})
     out = planner.plan_node(_state(days=2))
 
     assert out["current_step"] == "critic", out["messages"]
     assert len(calls) == 2
     it = out["itinerary"]
     assert [d["day"] for d in it["days"]] == [1, 2]
-    assert _names(it["days"][0])[:5] == POOL[0:5]
+    assert _names(it["days"][0])[:4] == POOL[0:4]
     assert it["summary"] == "Day 1 sentence. Day 2 sentence."
     assert [s["course_id"] for s in it["sources"]] == ["c1"]
     assert "PACE: relaxed pace" in calls[0]
@@ -73,20 +73,20 @@ def test_one_call_per_day_merged_in_order(llm):
 
 def test_a_place_on_two_days_stays_on_the_first(llm):
     _, answers = llm
-    answers.update({1: POOL[0:5], 2: [POOL[0]] + POOL[5:9]})
+    answers.update({1: POOL[0:4], 2: [POOL[0]] + POOL[5:7]})
     it = planner.plan_node(_state(days=2))["itinerary"]
     d1, d2 = (_names(d) for d in it["days"])
     assert POOL[0] in d1 and POOL[0] not in d2
-    assert len(d2) >= 5  # the validator backfilled the dropped slot
+    assert len(d2) >= 3  # the validator backfilled the dropped slot to relaxed's minimum
 
 
 def test_one_failed_day_is_rebuilt_from_candidates(llm):
     _, answers = llm
-    answers.update({1: POOL[0:5], 2: RuntimeError("503")})
+    answers.update({1: POOL[0:4], 2: RuntimeError("503")})
     out = planner.plan_node(_state(days=2))
     assert out["current_step"] == "critic"
     day2 = out["itinerary"]["days"][1]
-    assert day2["day"] == 2 and len(day2["pois"]) >= 5
+    assert day2["day"] == 2 and len(day2["pois"]) >= 3
 
 
 def test_every_day_failing_is_a_generation_error(llm):
@@ -114,7 +114,7 @@ def test_revise_days_redoes_only_the_flagged_day_without_reusing_places(llm):
     assert _names(out["days"][0]) == POOL[0:5]           # untouched
     day2 = _names(out["days"][1])
     assert POOL[0] not in day2 and POOL[10] in day2
-    assert len(day2) >= 5
+    assert len(day2) >= 3
 
 
 def test_unrepairable_json_raises_the_json_error():

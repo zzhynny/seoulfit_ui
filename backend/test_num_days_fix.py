@@ -75,7 +75,7 @@ def test_primary_area_for_day_reads_day_segments_not_deduped_position():
 
 
 def test_pace_bounds():
-    assert planner._pace_bounds({"pace": "relaxed"}) == (5, 6)
+    assert planner._pace_bounds({"pace": "relaxed"}) == (3, 4)
     assert planner._pace_bounds({"pace": "packed"}) == (7, 8)
     assert planner._pace_bounds({"pace": None}) == (6, 7)   # no pace on record -- middling default
     assert planner._pace_bounds({}) == (6, 7)
@@ -188,7 +188,7 @@ def test_trim_over_max_keeps_meal_and_area_coverage():
     so this simulates a real locked pick via locked_meals (the same path
     plan_node uses) rather than just tagging a random simulated POI
     restaurant-shaped and hoping _is_meal_poi would have protected it."""
-    for pace, expected_max in [("packed", 8), ("relaxed", 6)]:
+    for pace, expected_max in [("packed", 8), ("relaxed", 4)]:
         courses, itinerary = _bloated_one_day_courses_and_itinerary()
         locked_meals = {1: {
             "name": "Locked Test Restaurant", "type": "restaurant",
