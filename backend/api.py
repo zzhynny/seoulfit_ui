@@ -438,11 +438,14 @@ class SwapCandidatesRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _config(thread_id: str) -> dict:
+def _trace_meta(thread_id: str) -> dict:
     # metadata.thread_id is the key LangSmith groups a conversation's traces by,
     # and the join key back to evals.db.
-    return {"configurable": {"thread_id": thread_id},
-            "metadata": {"thread_id": thread_id}}
+    return {"metadata": {"thread_id": thread_id}}
+
+
+def _config(thread_id: str) -> dict:
+    return {"configurable": {"thread_id": thread_id}, **_trace_meta(thread_id)}
 
 
 def _get_state(thread_id: str) -> dict:
@@ -507,7 +510,8 @@ def chat(req: ChatRequest):
     # dietary or physical restrictions?" blocked it as chit-chat.
     state = _get_state(req.thread_id)
     pending_question = FIELD_QUESTIONS.get(state.get("pending") or "")
-    if req.message and is_blocked(req.message, pending_question):
+    if req.message and is_blocked(req.message, pending_question,
+                                  langsmith_extra=_trace_meta(req.thread_id)):
         return _state_response(state, reply=_BLOCKED_REPLY)
 
     try:
@@ -547,7 +551,7 @@ class DaySpec(BaseModel):
 _NOTE_QUESTION = "Anything special you want from this day of your Seoul trip?"
 
 
-def _read_note(note: str) -> tuple[str, list[dict[str, str]]]:
+def _read_note(note: str, thread_id: str) -> tuple[str, list[dict[str, str]]]:
     """(note to keep, its search keywords). A blocked note is dropped, not
     rejected: it's optional, and a 400 here reaches the traveller only as a
     generic failure. Neither call raises -- the rail fails open, extraction
@@ -557,7 +561,7 @@ def _read_note(note: str) -> tuple[str, list[dict[str, str]]]:
     note = note.strip()
     if not note:
         return "", []
-    if is_blocked(note, _NOTE_QUESTION):
+    if is_blocked(note, _NOTE_QUESTION, langsmith_extra=_trace_meta(thread_id)):
         print(f"[day-plan] note blocked by input rail, dropped: {note[:60]!r}")
         return "", []
     return note, _extract_purpose_keywords(note)
@@ -605,7 +609,7 @@ def day_plan(req: DayPlanRequest):
             raise HTTPException(status_code=400, detail=f"unknown region: {d['region']}")
 
     with ThreadPoolExecutor(max_workers=len(days)) as pool:
-        for d, (note, keywords) in zip(days, pool.map(_read_note, [d["note"] for d in days])):
+        for d, (note, keywords) in zip(days, pool.map(_read_note, [d["note"] for d in days], [thread_id] * len(days))):
             d["note"], d["keywords"] = note, keywords
 
     days.sort(key=lambda d: d["day"])

@@ -111,3 +111,28 @@ def test_thread_fanout_spans_stay_attached_to_the_parent_run(spy, monkeypatch):
     for run in places:
         assert run["parent"] is not None, f"{run['name']} orphaned out of its trace"
         assert run["parent"] in known, f"{run['name']} parented to an unknown run"
+
+
+def test_input_rail_llm_call_stays_under_the_rail_span(spy, monkeypatch):
+    """The rail's LLM call runs on guardrail_gate's own loop thread; contextvars
+    don't follow, so without an explicit parent it becomes its own root trace."""
+    import guardrail_gate
+    from langsmith.run_helpers import traceable
+    from nemoguardrails.rails.llm.options import RailStatus
+
+    @traceable(run_type="llm", name="rail_llm")
+    async def rail_llm():
+        return "ok"
+
+    class FakeRails:
+        async def check_async(self, messages, rail_types=None):
+            await rail_llm()
+            return type("R", (), {"status": RailStatus.PASSED})()
+
+    monkeypatch.setattr(guardrail_gate, "_get_rails", lambda: FakeRails())
+    guardrail_gate.is_blocked("no pork please",
+                              langsmith_extra={"metadata": {"thread_id": "t-1"}})
+
+    (rail,) = [r for r in spy if r["name"] == "input_rail"]
+    (llm,) = [r for r in spy if r["name"] == "rail_llm"]
+    assert llm["parent"] == rail["id"], "rail LLM call orphaned out of input_rail"

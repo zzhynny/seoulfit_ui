@@ -55,7 +55,7 @@ def notes(monkeypatch):
     """No live Gemini: the rail blocks notes containing "IGNORE", and each
     note's one keyword is the note itself."""
     import api
-    monkeypatch.setattr(api, "is_blocked", lambda text, q=None: "IGNORE" in text)
+    monkeypatch.setattr(api, "is_blocked", lambda text, q=None, **_: "IGNORE" in text)
     monkeypatch.setattr(graph, "_extract_purpose_keywords",
                         lambda note: [{"phrase": note, "poi_type": "tourist_spot"}])
 

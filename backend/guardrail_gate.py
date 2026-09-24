@@ -21,6 +21,8 @@ os.environ.setdefault("NEMOGUARDRAILS_LLM_FRAMEWORK", "langchain")
 if os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
 
+from langsmith import traceable
+from langsmith.run_helpers import get_current_run_tree, tracing_context
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.rails.llm.options import RailStatus, RailType
 
@@ -54,6 +56,7 @@ def _get_rails() -> LLMRails:
     return _rails
 
 
+@traceable(run_type="chain", name="input_rail")
 def is_blocked(text: str | None, question: str | None = None) -> bool:
     """True if the user message should be blocked by the input rail.
 
@@ -77,12 +80,17 @@ def is_blocked(text: str | None, question: str | None = None) -> bool:
         # from their reply — and so an injection can't fake the prefix and claim
         # the app sanctioned it.
         content = f'[SeoulFit Buddy asked: "{question}"]\n{text}'
+    # langsmith: the check runs on _loop's thread, which contextvars don't reach,
+    # so the rail's Gemini call would orphan into its own root trace. Hand it
+    # this span as parent explicitly.
+    parent = get_current_run_tree()
     try:
         async def check():
-            return await _get_rails().check_async(
-                [{"role": "user", "content": content}],
-                rail_types=[RailType.INPUT],
-            )
+            with tracing_context(parent=parent):
+                return await _get_rails().check_async(
+                    [{"role": "user", "content": content}],
+                    rail_types=[RailType.INPUT],
+                )
 
         result = asyncio.run_coroutine_threadsafe(check(), _rails_loop()).result(
             timeout=_CHECK_TIMEOUT_S

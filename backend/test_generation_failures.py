@@ -123,7 +123,7 @@ def test_a_retry_waits_for_the_generation_in_flight(monkeypatch):
         return {"current_step": "done", "confirmed": True, "messages": []}
 
     monkeypatch.setattr(api, "_run", slow_run)
-    monkeypatch.setattr(api, "is_blocked", lambda *a: False)
+    monkeypatch.setattr(api, "is_blocked", lambda *a, **_: False)
     client = TestClient(api.app)
 
     def run_together(ids):
