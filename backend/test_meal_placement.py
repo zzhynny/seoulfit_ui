@@ -256,3 +256,72 @@ def test_a_locked_meals_own_warnings_reach_the_itinerary() -> None:
     )
     dinner = next(p for p in out["days"][0]["pois"] if p["name"] == "DinnerPick")
     assert dinner["warnings"] == ["You mentioned: nut allergy — check with the restaurant"]
+
+
+# --- neighbour-based choice ------------------------------------------------
+
+def _at(name: str, slot: str, lat: float, lng: float, **extra) -> dict:
+    return {**_meal(name, slot), "lat": lat, "lng": lng, **extra}
+
+
+def test_a_meal_is_rechosen_for_the_stops_either_side() -> None:
+    prev = {"name": "A", "lat": 37.5560, "lng": 126.9230}
+    nxt = {"name": "B", "lat": 37.5590, "lng": 126.9260}
+    between = _at("Between", "lunch", 37.5575, 126.9245)       # on the A->B line
+    beside_a = _at("BesideA", "lunch", 37.5552, 126.9222)      # near A, facing away from B
+    pick = _at("FarPick", "lunch", 37.5700, 126.9400, warnings=["w"],
+               alternatives=[beside_a, between])
+
+    got = planner._choose_for_gap(pick, prev, nxt, set())
+    assert got["name"] == "Between", got["name"]
+    assert got["warnings"] == ["w"], "the pick's own warnings must carry over"
+
+    got = planner._choose_for_gap(pick, prev, nxt, {planner._normalize_text("Between")})
+    assert got["name"] == "BesideA", got["name"]
+
+    # Nothing to measure against: the pick stands.
+    assert planner._choose_for_gap(pick, None, None, set()) is pick
+    assert planner._choose_for_gap(pick, {"name": "no coords"}, None, set()) is pick
+
+
+def test_no_restaurant_is_served_twice_across_the_trip() -> None:
+    """Both days' dinners could re-choose the same nearby place; only the first gets it,
+    and nobody takes another meal's own pick."""
+    course = _course(8)
+    stops = [
+        {"name": p["poi_name"], "type": "tourist_spot", "address": p["address_en"],
+         "lat": p["lat"], "lng": p["lng"], "stay_minutes": 60, "notes": ""}
+        for p in course["sequence"]
+    ]
+    shared = _at("Shared", "dinner", 37.5594, 126.9264)  # beside Stop 2/3
+    d1 = _at("D1", "dinner", 37.6000, 127.0000, alternatives=[shared])
+    d2 = _at("D2", "dinner", 37.6000, 127.0000, alternatives=[shared, _meal("D1", "dinner")])
+    out = _validate_and_repair_itinerary(
+        {"days": [{"day": 1, "theme": "T", "estimated_cost": "", "pois": stops[:4]},
+                  {"day": 2, "theme": "T", "estimated_cost": "", "pois": stops[4:]}]},
+        courses=[course], google_supplement=[], requested_areas=["hongdae"],
+        duration="2 days", num_days=2, pace="relaxed",
+        locked_meals={1: d1, 2: d2},
+    )
+    dinners = [next(p["name"] for p in d["pois"] if p.get("meal_slot") == "dinner")
+               for d in out["days"]]
+    assert dinners == ["Shared", "D2"], dinners
+
+
+def test_revision_cannot_reuse_a_meal_from_another_day() -> None:
+    course = _course(4)
+    stops = [
+        {"name": p["poi_name"], "type": "tourist_spot", "address": p["address_en"],
+         "lat": p["lat"], "lng": p["lng"], "stay_minutes": 60, "notes": ""}
+        for p in course["sequence"]
+    ]
+    pick = _at("Pick", "dinner", 37.6000, 127.0000,
+               alternatives=[_at("ServedOnDay2", "dinner", 37.5594, 126.9264)])
+    out = _validate_and_repair_itinerary(
+        {"days": [{"day": 1, "theme": "T", "estimated_cost": "", "pois": stops}]},
+        courses=[course], google_supplement=[], requested_areas=["hongdae"],
+        duration="1 day", num_days=1, pace="relaxed", locked_meals={1: pick},
+        exclude_meal_names={planner._normalize_text("ServedOnDay2")},
+    )
+    names = [p["name"] for p in out["days"][0]["pois"]]
+    assert "Pick" in names and "ServedOnDay2" not in names, names

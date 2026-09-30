@@ -1253,7 +1253,8 @@ def swap_candidates(req: SwapCandidatesRequest):
     build_candidate_pool 단계에서 이미 후보 풀에 없으므로 여기서 따로 걸러낼
     필요가 없다."""
     from critic_repair import (
-        build_candidate_pool, candidates_for_area, google_fallback_candidates, normalize_text,
+        build_candidate_pool, candidates_for_area, google_fallback_candidates, haversine_km,
+        normalize_text,
     )
     from date_utils import weekday_for_day
     from planner import GOOGLE_PLACES_API_KEY
@@ -1286,12 +1287,13 @@ def swap_candidates(req: SwapCandidatesRequest):
             except (ValueError, TypeError):
                 weekday = None  # 폴백 -- 요일 경고만 생략, 나머지는 계속 진행
 
-        # A restaurant slot swaps to Michelin only, nearest first. The pool's
+        # A restaurant slot swaps to Michelin first, nearest first. The pool's
         # restaurants are Google's prominence ranking of whoever is near the
         # area centre; restaurant.json is the same curated set every locked meal
         # already comes from, so a swap stays within the quality bar the day was
-        # built to. Falls through to the pool/Google path below when nothing
-        # Michelin is within SWAP_RADIUS_KM, so the sheet is never empty.
+        # built to. Fewer than 3 Michelin within SWAP_RADIUS_KM are topped up by
+        # Google around the same stop, also nearest first. Falls through to the
+        # pool/Google path below only when both come up empty.
         here = _itinerary_poi(state, req.day, req.slot_index, req.current_poi) or current or {}
 
         # A diet traveller only sees Michelin rows of that diet's cuisines. Halal
@@ -1312,27 +1314,50 @@ def swap_candidates(req: SwapCandidatesRequest):
                     ),
                     cuisines=cuisines,
                 )
-                if hits:
-                    michelin = [{
-                        "poi_name": r.get("name"),
+                offered = [{
+                    "poi_name": r.get("name"),
+                    "poi_type": "restaurant",
+                    "address": r.get("street"),
+                    "lat": r.get("lat"),
+                    "lng": r.get("lon"),
+                    # Michelin rows carry a grade, not a 5-point score.
+                    "rating": None,
+                    "grade": _MICHELIN_GRADE_EN.get(r.get("grade"), r.get("grade")),
+                    "distance_km": r.get("distance_km"),
+                    "warnings": (
+                        [_closed_warning(weekday, req.day)]
+                        if r.get("closed") else
+                        ["Opening hours unknown — worth checking before you go"]
+                        if r.get("closed") is None else []
+                    ),
+                } for r in hits]
+                if len(offered) < 3 and GOOGLE_PLACES_API_KEY:
+                    taken = exclude | {normalize_text(o["poi_name"]) for o in offered}
+                    near = sorted((
+                        (d, g) for g in google_fallback_candidates(
+                            lat=float(lat), lng=float(lng), place_type="restaurant",
+                            exclude=taken, api_key=GOOGLE_PLACES_API_KEY,
+                        )
+                        if (d := haversine_km(float(lat), float(lng), g["lat"], g["lng"]))
+                        <= meal_slots.SWAP_RADIUS_KM
+                    ), key=lambda x: x[0])
+                    offered += [{
+                        "poi_name": g["name"],
                         "poi_type": "restaurant",
-                        "address": r.get("street"),
-                        "lat": r.get("lat"),
-                        "lng": r.get("lon"),
-                        # Michelin rows carry a grade, not a 5-point score.
-                        "rating": None,
-                        "grade": _MICHELIN_GRADE_EN.get(r.get("grade"), r.get("grade")),
-                        "distance_km": r.get("distance_km"),
-                        "warnings": (
-                            [_closed_warning(weekday, req.day)]
-                            if r.get("closed") else
-                            ["Opening hours unknown — worth checking before you go"]
-                            if r.get("closed") is None else []
-                        ),
-                    } for r in hits]
-                    _leave_on_thread(thread_id, state, michelin)
-                    return {"candidates": michelin}
-                print(f"[swap michelin] no Michelin within "
+                        "address": g["address"],
+                        "lat": g["lat"],
+                        "lng": g["lng"],
+                        "rating": g.get("rating"),
+                        "grade": None,
+                        "distance_km": round(d, 2),
+                        # Google has no cuisine to check a diet against.
+                        "warnings": [f"Not a Michelin pick — check the menu suits a {diet} diet"]
+                                    if diet else [],
+                    } for d, g in near[:3 - len(offered)]]
+                if offered:
+                    _leave_on_thread(thread_id, state, offered)
+                    return {"candidates": offered}
+                print(f"[swap michelin] no Michelin or Google restaurant within "
                       f"{meal_slots.SWAP_RADIUS_KM}km of {req.current_poi!r} -- pool path")
 
         # candidates_for_area's own sort order (source_kind/type) is shared with

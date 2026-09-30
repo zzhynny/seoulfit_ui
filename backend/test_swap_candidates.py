@@ -89,8 +89,9 @@ def test_restaurant_swap_offers_michelin_nearest_first():
         "planning_context": {},
     })
 
-    orig = api._graph
+    orig = (api._graph, critic_repair.google_fallback_candidates)
     api._graph = graph
+    critic_repair.google_fallback_candidates = lambda **kw: []  # no top-up, no network
     try:
         r = TestClient(api.app).post("/swap-candidates", json={
             "thread_id": "trip-test-swap-0002", "day": 1, "slot_index": 0,
@@ -100,7 +101,7 @@ def test_restaurant_swap_offers_michelin_nearest_first():
         assert r.status_code == 200, r.text
         got = r.json()["candidates"]
     finally:
-        api._graph = orig
+        api._graph, critic_repair.google_fallback_candidates = orig
 
     assert got, "restaurant swap returned nothing"
     names = {c["poi_name"] for c in got}
@@ -128,7 +129,7 @@ def test_restaurant_swap_offers_michelin_nearest_first():
 
 
 def test_restaurant_swap_falls_back_when_nothing_michelin_is_near():
-    """Deep in a residential outer district there is no Michelin within 2km, and
+    """Deep in a residential outer district there is no Michelin within 1km, and
     an empty sheet is worse than a Google suggestion."""
     graph = _FakeGraph({
         "itinerary": {"days": [{"day": 1, "pois": [
@@ -179,8 +180,9 @@ def test_a_vegetarians_restaurant_swap_offers_only_vegetarian_michelin():
         "retrieved_courses": [], "trip_start_date": "2026-10-05",
         "planning_context": {}, "diet": "vegetarian",
     })
-    orig = api._graph
+    orig = (api._graph, critic_repair.google_fallback_candidates)
     api._graph = graph
+    critic_repair.google_fallback_candidates = lambda **kw: []  # no top-up, no network
     try:
         got = TestClient(api.app).post("/swap-candidates", json={
             "thread_id": "trip-test-swap-0004", "day": 1, "slot_index": 0,
@@ -188,9 +190,53 @@ def test_a_vegetarians_restaurant_swap_offers_only_vegetarian_michelin():
             "current_poi_type": "restaurant",
         }).json()["candidates"]
     finally:
-        api._graph = orig
+        api._graph, critic_repair.google_fallback_candidates = orig
 
     cuisine = {r["name"]: r["cuisine"] for r in meal_slots.load_restaurants()}
     michelin_rows = [c for c in got if c["poi_name"] in cuisine]
     assert michelin_rows, got
     assert all(cuisine[c["poi_name"]] in ("Vegan", "Vegetarian") for c in michelin_rows), got
+
+
+def test_fewer_than_3_michelin_are_topped_up_by_the_nearest_google():
+    """Michelin first; the gap to 3 is Google around the same stop, nearest first,
+    and nothing past SWAP_RADIUS_KM."""
+    import meal_slots
+
+    lat, lng = 37.5500, 126.9200
+    km = 1 / 111  # degrees of latitude per km
+    graph = _FakeGraph({
+        "itinerary": {"days": [{"day": 1, "pois": [
+            {"name": "Old Lunch", "type": "restaurant", "lat": lat, "lng": lng},
+        ]}]},
+        "retrieved_courses": [], "planning_context": {},
+    })
+
+    def google(name, dist_km):
+        return critic_repair.candidate_from_google({
+            "poi_name": name, "poi_type": "restaurant", "address_en": "x",
+            "lat": lat + dist_km * km, "lng": lng, "rating": 4.0,
+        })
+
+    one_michelin = [{"name": "Star Place", "street": "s", "lat": lat, "lon": lng,
+                     "grade": "1스타", "distance_km": 0.2, "closed": False}]
+    orig = (api._graph, critic_repair.google_fallback_candidates,
+            planner.GOOGLE_PLACES_API_KEY, meal_slots.nearest_michelin)
+    api._graph = graph
+    critic_repair.google_fallback_candidates = lambda **kw: [
+        google("Far G", 1.4), google("Mid G", 0.8), google("Near G", 0.3), google("Close G", 0.5)]
+    planner.GOOGLE_PLACES_API_KEY = "test-key"
+    meal_slots.nearest_michelin = lambda **kw: one_michelin
+    try:
+        got = TestClient(api.app).post("/swap-candidates", json={
+            "thread_id": "trip-test-swap-0005", "day": 1, "slot_index": 0,
+            "current_poi": "Old Lunch", "day_area": "hongdae",
+            "current_poi_type": "restaurant",
+        }).json()["candidates"]
+    finally:
+        (api._graph, critic_repair.google_fallback_candidates,
+         planner.GOOGLE_PLACES_API_KEY, meal_slots.nearest_michelin) = orig
+
+    assert [c["poi_name"] for c in got] == ["Star Place", "Near G", "Close G"], got
+    assert got[1]["grade"] is None and got[1]["rating"] == 4.0, got
+    assert got[1]["distance_km"] < got[2]["distance_km"] <= meal_slots.SWAP_RADIUS_KM, got

@@ -198,10 +198,27 @@ class FilterResult(NamedTuple):
     step_counts: dict[str, int]
 
 
-# A swap candidate the traveller would have to cross town for is not a swap.
+# A locked meal is the open Michelin nearest one of the day's stops, grade aside.
+# Grade-first inside a 1km circle round a fixed area point put picks a median
+# 1.24km from the nearest stop; nearest-first gives 0.44km -- scratchpad
+# measure_rank.py over every course x weekday.
+# Past this from every stop it isn't the day's meal at all; the Google tier takes over.
 # 2km is the range a day already assumes: the anchor sweep caps its own radius at
 # 3km and treats 800m as walkable, so this sits inside both.
-SWAP_RADIUS_KM = 2.0
+MEAL_MAX_FROM_STOP_KM = 2.0
+
+
+def _km_to_stops(restaurant: dict[str, Any], stops: list[tuple[float, float]]) -> float | None:
+    try:
+        lat, lon = float(restaurant["lat"]), float(restaurant["lon"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return min(geo.haversine_km(lat, lon, s_lat, s_lng) for s_lat, s_lng in stops)
+
+
+# A swap candidate should be a short walk from the stop it replaces. Fewer than
+# 3 Michelin rows inside this and /swap-candidates tops up from Google.
+SWAP_RADIUS_KM = 1.0
 
 
 def _closed_for(
@@ -287,10 +304,13 @@ def filter_candidates(
     exclude_families: tuple[str, ...] = (),
     exclude_names: tuple[str, ...] = (),
     area_radius_km: float | None = DEFAULT_AREA_RADIUS_KM,
+    stops: list[tuple[float, float]] | None = None,
 ) -> FilterResult:
     """지역 -> 영업시간 -> family 제외 -> 이름 제외 순서로 적용.
 
-    기본 경로는 area_radius_km(기본 1km) 기반 matches_area_within_radius —
+    stops(그날 앵커 코스 좌표)가 있으면 지역 단계는 "어느 정류지에서든
+    MEAL_MAX_FROM_STOP_KM 안"이다 — 고정 중심점이 아니라 실제로 걷는 곳 기준.
+    없으면 area_radius_km(기본 1km) 기반 matches_area_within_radius —
     MEAL_AREA_CENTERS 좌표에서 반경 안이면 후보. area_radius_km=None을 명시하면
     옛 alias/인접목록 기반 matches_area로 폴백한다(하위호환용).
 
@@ -299,7 +319,10 @@ def filter_candidates(
     없기 때문. 제약이 없는 조회(exclude_families=())에서는 그대로 남는다."""
     step_counts: dict[str, int] = {"initial": len(restaurants)}
 
-    if area_radius_km is not None:
+    if stops:
+        candidates = [r for r in restaurants
+                      if (d := _km_to_stops(r, stops)) is not None and d <= MEAL_MAX_FROM_STOP_KM]
+    elif area_radius_km is not None:
         candidates = [r for r in restaurants if matches_area_within_radius(r, area, area_radius_km)]
     else:
         candidates = [r for r in restaurants if matches_area(r, area)]
@@ -433,8 +456,12 @@ def fill_meal_slot(
     allow_google: bool = True,
     restaurants: list[dict[str, Any]] | None = None,
     diet: str | None = None,
+    stops: list[tuple[float, float]] | None = None,
 ) -> dict[str, Any]:
     """식사 슬롯 하나를 1층(미쉐린) -> 2층(Google Places) -> 3층(unfilled) 순으로 채운다.
+
+    stops: 그날 앵커 코스 정류지 좌표. 있으면 1층은 정류지에서
+    MEAL_MAX_FROM_STOP_KM 안에서 등급과 무관하게 가장 가까운 곳을 고른다.
 
     diet (DIET_RULES 키): 1층은 그 식단의 요리만, 2층은 "근처 평점 최고 식당"
     대신 그 식단 검색 결과만 쓴다. 둘 다 없으면 슬롯을 비운다 — 채식하는
@@ -469,30 +496,42 @@ def fill_meal_slot(
         slot_end=slot_end,
         exclude_families=exclude_families,
         exclude_names=exclude_names,
+        stops=stops,
     )
     if tier1.candidates:
-        best = min(
-            tier1.candidates,
-            key=lambda r: (_MICHELIN_GRADE_RANK.get(r.get("grade"), 99), r.get("name") or ""),
-        )
-        return {
-            "name": best.get("name"),
-            "type": "restaurant",
-            "lat": best.get("lat"),
-            "lng": best.get("lon"),
-            "address": best.get("street"),
-            "meal_slot": slot_name,
-            "slot_time": slot_time,
-            "source_tier": "michelin",
-            "verified": {
-                # 하드코딩 아님 — 실제 필드 유무에서 계산. Places API (New)로
-                # 넘어가서 opening_hours/cuisine을 채워주기 시작하면, 이 두 줄은
-                # 안 고쳐도 그 즉시 True가 나온다(2층 쪽 조건).
-                "opening_hours": bool(best.get("opening_hours")),
-                "cuisine": best.get("cuisine_family") is not None,
-            },
-            "status": "filled",
-        }
+        if stops:
+            best = min(tier1.candidates, key=lambda r: _km_to_stops(r, stops))
+        else:
+            best = min(
+                tier1.candidates,
+                key=lambda r: (_MICHELIN_GRADE_RANK.get(r.get("grade"), 99), r.get("name") or ""),
+            )
+
+        def as_meal(r: dict[str, Any]) -> dict[str, Any]:
+            return {
+                "name": r.get("name"),
+                "type": "restaurant",
+                "lat": r.get("lat"),
+                "lng": r.get("lon"),
+                "address": r.get("street"),
+                "meal_slot": slot_name,
+                "slot_time": slot_time,
+                "source_tier": "michelin",
+                "verified": {
+                    # 하드코딩 아님 — 실제 필드 유무에서 계산. Places API (New)로
+                    # 넘어가서 opening_hours/cuisine을 채워주기 시작하면, 이 두 줄은
+                    # 안 고쳐도 그 즉시 True가 나온다(2층 쪽 조건).
+                    "opening_hours": bool(r.get("opening_hours")),
+                    "cuisine": r.get("cuisine_family") is not None,
+                },
+                "status": "filled",
+            }
+
+        # The rest of tier 1 -- same weekday, slot, diet and exclusions -- so the
+        # validator can re-choose once it knows which two stops the meal sits
+        # between (planner._choose_for_gap). `best` is the fallback.
+        return {**as_meal(best),
+                "alternatives": [as_meal(r) for r in tier1.candidates if r is not best]}
 
     # 2층 — Google Places
     if not allow_google:

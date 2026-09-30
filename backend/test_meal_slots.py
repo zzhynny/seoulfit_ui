@@ -159,9 +159,29 @@ def test_fill_meal_slot() -> None:
     print("all fill_meal_slot self-checks passed")
 
 
+def test_meal_sits_beside_the_days_stops() -> None:
+    stop = (37.5500, 126.9200)
+    km = 1 / 111  # degrees of latitude per km
+
+    def at(name, grade, dlat_km):
+        return {**_michelin_fixture(name, grade), "lat": stop[0] + dlat_km * km, "lon": stop[1]}
+
+    def pick(restaurants):
+        return fill_meal_slot(area="hongdae", weekday="Tuesday", slot_start="11:00", slot_end="13:30",
+                              restaurants=restaurants, stops=[stop], allow_google=False)["name"]
+
+    # Nearest wins; grade plays no part.
+    assert pick([at("NearStar", "3스타", 0.3), at("NearestSelected", "Selected", 0.1),
+                 at("MidOneStar", "1스타", 0.9)]) == "NearestSelected"
+    assert pick([at("FarThreeStar", "3스타", 1.5), at("MidSelected", "Selected", 0.9)]) == "MidSelected"
+    # Past MEAL_MAX_FROM_STOP_KM it isn't a candidate at all.
+    assert pick([at("AcrossTown", "3스타", 3.0)]) is None
+
+
 if __name__ == "__main__":
     demo()
     test_fill_meal_slot()
+    test_meal_sits_beside_the_days_stops()
 
 
 # --- diet -------------------------------------------------------------------
