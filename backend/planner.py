@@ -539,9 +539,9 @@ _ANCHOR_RADIUS_MAX_M = 3000     # past this, fall back: see _anchor_search_origi
 
 
 def _anchor_points_for_area(
-    area: str, day_segments: list[dict[str, Any]] | None,
+    area: str, day_segments: list[dict[str, Any]] | None, day: int | None = None,
 ) -> list[tuple[float, float]]:
-    """Coordinates of the anchor-course POIs planned for `area`.
+    """Coordinates of the anchor-course POIs planned for `area` (and `day`, if given).
 
     Mirrors _format_one_course's restrict_area cut, so a POI dropped from the
     prompt for sitting in the wrong neighbourhood cannot drag the search centre
@@ -550,6 +550,8 @@ def _anchor_points_for_area(
     points: list[tuple[float, float]] = []
     for seg in day_segments or []:
         if seg.get("area") != area:
+            continue
+        if day is not None and day not in (seg.get("day_numbers") or []):
             continue
         for course in seg.get("anchor_courses") or []:
             for p in course.get("sequence") or []:
@@ -1134,6 +1136,41 @@ def _pending_meal(
     return meal
 
 
+def _choose_for_gap(
+    meal: dict[str, Any],
+    prev: dict[str, Any] | None,
+    nxt: dict[str, Any] | None,
+    forbidden: set[str],
+) -> dict[str, Any]:
+    """The locked pick, or one of its alternatives, with the shortest walk from
+    `prev` and on to `nxt` -- the two stops the meal is about to sit between.
+
+    Summing both legs is the detour minus a constant (prev->nxt), so this is
+    cheapest insertion, the same rule critic_repair.reorder_supplements uses.
+    A neighbour without coordinates, or one that is itself a meal, is left out;
+    with neither left the pick stands. `forbidden` holds normalized names already
+    eating elsewhere on the trip. Keeps the pick's own warnings.
+    """
+    ends = [(float(p["lat"]), float(p["lng"])) for p in (prev, nxt)
+            if p and not _is_locked_meal(p) and p.get("lat") is not None and p.get("lng") is not None]
+    if not ends:
+        return meal
+
+    def walk(m: dict[str, Any]) -> float:
+        try:
+            lat, lng = float(m["lat"]), float(m["lng"])
+        except (KeyError, TypeError, ValueError):
+            return float("inf")
+        return sum(_haversine_km(lat, lng, e_lat, e_lng) for e_lat, e_lng in ends)
+
+    options = [m for m in (meal, *(meal.get("alternatives") or []))
+               if _normalize_text(m.get("name")) not in forbidden]
+    if not options:
+        return meal
+    best = min(options, key=walk)
+    return best if best is meal else {**best, "warnings": list(meal.get("warnings") or [])}
+
+
 def _is_meal_poi(poi: dict[str, Any]) -> bool:
     # A meal_slots.fill_meal_slot() result carries this key -- an explicit
     # "this IS the meal slot" marker beats guessing from type/name, so it's
@@ -1281,16 +1318,20 @@ def _validate_and_repair_itinerary(
     purpose: str = "",
     locked_meals: dict[int, dict[str, Any]] | None = None,
     locked_lunch_meals: dict[int, dict[str, Any]] | None = None,
+    exclude_meal_names: set[str] | frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Remove hallucinations and force requested area coverage.
 
     `locked_meals` (dinner) / `locked_lunch_meals` (lunch): {day_num:
     meal_slots.fill_meal_slot() result}, precomputed once by plan_node
-    (before the Gemini call, so the same choice can also be told to the LLM
-    as "don't change this") -- this function only enforces them, it never
-    calls meal_slots.fill_meal_slot() itself. A day missing from one of these
-    dicts (no trip_start_date, no requested area, or tier 3/unfilled) is left
-    without a guaranteed meal slot for that meal, same as always."""
+    before the Gemini call. This function never calls fill_meal_slot() itself;
+    it inserts each pick, or one of the pick's own `alternatives` when that sits
+    nearer the two stops either side (_choose_for_gap). A day missing from one
+    of these dicts (no trip_start_date, no requested area, or tier 3/unfilled)
+    is left without a guaranteed meal slot for that meal, same as always.
+
+    `exclude_meal_names`: normalized names of restaurants already served on
+    days outside this call (revise_days), so a re-choice can't repeat them."""
     poi_min, poi_max = _pace_bounds({"pace": pace})
     pool = _build_candidate_pool(courses, google_supplement)
     valid_names = set(pool.keys())
@@ -1406,62 +1447,6 @@ def _validate_and_repair_itinerary(
             if inserted:
                 print(f"[Validator] {_area_label(area)} 누락 보완: {inserted}개 POI 추가")
 
-    # 3. Ensure each day has its locked meal_slots.py picks (Michelin tier 1
-    # -> Google Places tier 2) present, not just "some restaurant or other".
-    # Runs once per meal (dinner, then lunch) -- same insertion logic reused
-    # for both, not a separate branch per meal.
-    #
-    # The system prompt's own "each day MUST include a restaurant/cafe POI"
-    # rule means the LLM (or step 4's generic filler) has almost always
-    # already put SOME restaurant-type POI in the day by the time this runs
-    # -- so the check here is specifically "is the locked name present",
-    # never "is any meal-type POI present". A generic _is_meal_poi() check
-    # would short-circuit on that ambient restaurant and the verified locked
-    # pick would silently never get inserted at all.
-    for day in days:
-        pois = day.setdefault("pois", [])
-        day_num = int(day.get("day") or 0)
-
-        lunch_idx, dinner_idx = _meal_slot_indices(len(pois))
-        # Dinner goes in first despite sitting later in the day: inserting at the
-        # earlier lunch index first would shift dinner one place right and close
-        # the gap _meal_slot_indices opened.
-        for meal, insert_idx in (
-            (_pending_meal(locked_meals, day_num, pois), dinner_idx),
-            (_pending_meal(locked_lunch_meals, day_num, pois), lunch_idx),
-        ):
-            if not meal:
-                continue
-
-            day_area = _primary_area_for_day(day, day_segments) or meal.get("area")
-            out = {
-                "name": meal.get("name"),
-                "type": meal.get("type", "restaurant"),
-                "address": meal.get("address") or "",
-                "lat": meal.get("lat"),
-                "lng": meal.get("lng"),
-                "stay_minutes": 60,
-                "notes": "",
-                "area": day_area,
-                "meal_slot": meal.get("meal_slot"),
-                "source_tier": meal.get("source_tier"),
-                "verified": meal.get("verified"),
-                # Google tier has no cuisine-family/opening-hours verification --
-                # surfaced as a warning field (same shape as /swap-candidates'
-                # warnings) so the frontend can flag it, rather than silently
-                # presenting it as verified as a Michelin pick would be.
-                "warnings": (
-                    ["From Google, not the Michelin guide — cuisine and opening hours unverified"]
-                    if meal.get("source_tier") == "google" and not meal.get("diet_search") else []
-                ) + list(meal.get("warnings") or []),
-            }
-            pois.insert(insert_idx, out)
-            used_names.add(_normalize_text(out.get("name")))
-            print(
-                f"[Validator] Day {day.get('day')} {meal.get('meal_slot')} 슬롯 추가: {out.get('name')} "
-                f"(tier={meal.get('source_tier')})"
-            )
-
     # 4. Fill under-populated days up to the pace's minimum stop count.
     # Steps 4 and 4b count the same thing -- every POI except a locked meal
     # slot, cafes included. They used to disagree (4 skipped cafes, 4b counted
@@ -1502,9 +1487,9 @@ def _validate_and_repair_itinerary(
 
     # 4b. Trim over-populated days down to the pace's maximum stop count
     # (locked meals not counted, same as step 4). Runs
-    # after area coverage (2) and the meal slot (3) so trimming never has to
-    # undo what those steps just added, and after the min-fill (4) since
-    # trimming first would be pointless when a day is still under min.
+    # after area coverage (2) so trimming never has to undo what that step just
+    # added, and after the min-fill (4) since trimming first would be pointless
+    # when a day is still under min. The meals (3) go in after this.
     #
     # Always protects: every locked meal-slot POI and at least one POI per
     # requested area already present in the
@@ -1563,6 +1548,76 @@ def _validate_and_repair_itinerary(
             f"[Validator] Day {day.get('day')} POI 상한({poi_max}) 초과 -- "
             f"{len(to_remove)}개 제거: {removed_names}"
         )
+
+    # 3. Ensure each day has its locked meal_slots.py picks (Michelin tier 1
+    # -> Google Places tier 2) present, not just "some restaurant or other".
+    # Runs once per meal (dinner, then lunch) -- same insertion logic reused
+    # for both, not a separate branch per meal.
+    #
+    # The system prompt's own "each day MUST include a restaurant/cafe POI"
+    # rule means the LLM (or step 4's generic filler) has almost always
+    # already put SOME restaurant-type POI in the day by the time this runs
+    # -- so the check here is specifically "is the locked name present",
+    # never "is any meal-type POI present". A generic _is_meal_poi() check
+    # would short-circuit on that ambient restaurant and the verified locked
+    # pick would silently never get inserted at all.
+    #
+    # Runs after the fill (4) and trim (4b) so the stops either side of each gap
+    # are the ones that ship: the pick is then re-chosen from its alternatives
+    # for the shortest walk between them (_choose_for_gap). Every other meal's
+    # pick stays off-limits so no restaurant is served twice on the trip.
+    reserved = {_normalize_text(m.get("name"))
+                for src in (locked_meals, locked_lunch_meals) for m in (src or {}).values()}
+    served: set[str] = set(exclude_meal_names)
+    for day in days:
+        pois = day.setdefault("pois", [])
+        day_num = int(day.get("day") or 0)
+
+        lunch_idx, dinner_idx = _meal_slot_indices(len(pois))
+        # Dinner goes in first despite sitting later in the day: inserting at the
+        # earlier lunch index first would shift dinner one place right and close
+        # the gap _meal_slot_indices opened.
+        for source, insert_idx in ((locked_meals, dinner_idx), (locked_lunch_meals, lunch_idx)):
+            meal = _pending_meal(source, day_num, pois)
+            if not meal:
+                continue
+            own = _normalize_text(meal.get("name"))
+            meal = _choose_for_gap(
+                meal,
+                pois[insert_idx - 1] if insert_idx > 0 else None,
+                pois[insert_idx] if insert_idx < len(pois) else None,
+                (reserved - {own}) | served,
+            )
+            served.add(_normalize_text(meal.get("name")))
+
+            day_area = _primary_area_for_day(day, day_segments) or meal.get("area")
+            out = {
+                "name": meal.get("name"),
+                "type": meal.get("type", "restaurant"),
+                "address": meal.get("address") or "",
+                "lat": meal.get("lat"),
+                "lng": meal.get("lng"),
+                "stay_minutes": 60,
+                "notes": "",
+                "area": day_area,
+                "meal_slot": meal.get("meal_slot"),
+                "source_tier": meal.get("source_tier"),
+                "verified": meal.get("verified"),
+                # Google tier has no cuisine-family/opening-hours verification --
+                # surfaced as a warning field (same shape as /swap-candidates'
+                # warnings) so the frontend can flag it, rather than silently
+                # presenting it as verified as a Michelin pick would be.
+                "warnings": (
+                    ["From Google, not the Michelin guide — cuisine and opening hours unverified"]
+                    if meal.get("source_tier") == "google" and not meal.get("diet_search") else []
+                ) + list(meal.get("warnings") or []),
+            }
+            pois.insert(insert_idx, out)
+            used_names.add(_normalize_text(out.get("name")))
+            print(
+                f"[Validator] Day {day.get('day')} {meal.get('meal_slot')} 슬롯 추가: {out.get('name')} "
+                f"(tier={meal.get('source_tier')})"
+            )
 
     # 5. Reorder each day lightly by area grouping, preserving the LLM order mostly.
     for day in days:
@@ -1947,9 +2002,9 @@ def _resolve_locked_meals(
 ) -> dict[int, dict[str, Any]]:
     """Resolve one `meal_type` pick per day via meal_slots.fill_meal_slot()
     (Michelin tier 1 -> Google Places tier 2) BEFORE the Gemini call, so the
-    same choice can be told to the LLM as locked ("don't change this") and
-    later enforced identically by _validate_and_repair_itinerary -- one
-    lookup, not two independent ones that could disagree.
+    LLM knows the slot is taken and a diet day knows whether it is left open.
+    _validate_and_repair_itinerary inserts it, or one of its `alternatives`
+    that sits nearer the stops either side -- still one lookup, re-ranked.
 
     `exclude_by_day`: {day_num: (name, ...)} of restaurants already locked
     for a different meal that day (e.g. dinner's pick, when this call is
@@ -1986,6 +2041,9 @@ def _resolve_locked_meals(
             area=day_area, weekday=weekday, slot_start=slot_start, slot_end=slot_end,
             exclude_names=(*(exclude_by_day or {}).get(day_num, ()), *taken),
             diet=diet,
+            # The day's own anchor stops, so the meal sits beside them rather
+            # than beside the area's fixed centre. None keeps the old lookup.
+            stops=_anchor_points_for_area(day_area, day_segments, day=day_num) or None,
         )
 
     # Days are independent *within* one meal_type: exclude_by_day is computed by
@@ -2029,13 +2087,14 @@ def _locked_meals_prompt_lines(locked_meals: dict[int, dict[str, Any]]) -> str:
     if not locked_meals:
         return ""
     lines = ["", "=== LOCKED MEAL RESERVATIONS (do not change) ==="]
+    # No restaurant name: the validator re-chooses it for the stops it ends up
+    # between, so naming the provisional pick would let notes cite a place
+    # that isn't served.
     for day_num in sorted(locked_meals):
-        meal = locked_meals[day_num]
-        name = meal.get("name")
-        slot = meal.get("meal_slot") or "meal"
+        slot = locked_meals[day_num].get("meal_slot") or "meal"
         lines.append(
-            f"Day {day_num} {slot} is already scheduled at '{name}'. The system "
-            f"inserts it; do not add another restaurant for that {slot}."
+            f"Day {day_num} {slot} is reserved. The system inserts a restaurant near "
+            f"your stops; do not add another restaurant for that {slot}."
         )
     return "\n".join(lines) + "\n"
 
@@ -2519,6 +2578,7 @@ def revise_days(
             purpose=_synth_purpose(state),
             locked_meals=_meals_for_day(locked, n),
             locked_lunch_meals=_meals_for_day(locked_lunch, n),
+            exclude_meal_names=used,
         )["days"][0]
         by_num[n].clear()
         by_num[n].update(fixed)
