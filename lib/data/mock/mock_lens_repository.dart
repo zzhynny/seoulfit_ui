@@ -3,6 +3,9 @@ import '../repositories/lens_repository.dart';
 
 class MockLensRepository implements LensRepository {
   @override
+  Future<String?> narrationAudioUrl(String text) async => null;
+
+  @override
   Future<LensPlaceResult?> scanPlace(LensPhotoSource source) async {
     await Future.delayed(const Duration(milliseconds: 500));
     return const LensPlaceResult(

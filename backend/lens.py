@@ -1,19 +1,25 @@
 """
 lens.py — SeoulFit Lens router (merged from camera_web_app/backend/main.py).
 
-Pipeline: Gemini Vision → seoul.json RAG → Gemini narration.
+Pipeline: Gemini Vision → seoul.json RAG (Tavily web fallback) → Gemini
+podcast narration. /lens/speech turns that narration into an OpenAI TTS mp3.
 Mounted into api.py via app.include_router(router).
 """
 
 from __future__ import annotations
 
+import hashlib
 import os
 import json
 import re
+from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from google import genai
 from google.genai import types
+from pydantic import BaseModel, Field
+
+from poi_text import _web_search
 
 # ──────────────────────────────────────────
 # Gemini client — reuses GEMINI_API_KEY already loaded by api.py
@@ -23,7 +29,14 @@ if not _GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY is required for the lens router")
 
 _gemini_client = genai.Client(api_key=_GEMINI_API_KEY)
-_GEMINI_MODEL = "gemini-2.5-flash"
+_GEMINI_MODEL = "gemini-3.8-flash"
+_TTS_MODEL = "gpt-4o-mini-tts-2025-12-15"
+_TTS_VOICE = "marin"
+
+# api.py serves this dir at /static/lens_audio. Files are named by the text's
+# hash, so replaying or rescanning the same place never pays for TTS twice.
+AUDIO_DIR = Path(__file__).resolve().parent / "lens_audio"
+AUDIO_DIR.mkdir(exist_ok=True)
 
 # ──────────────────────────────────────────
 # Local Seoul RAG dataset
@@ -202,7 +215,8 @@ def _identify_with_gemini(image_bytes: bytes, mime_type: str) -> dict:
             ],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                max_output_tokens=1024,
+                # Thinking tokens count against this budget; 1024 can truncate the JSON.
+                max_output_tokens=4096,
             ),
         )
 
@@ -267,9 +281,17 @@ def _lookup_in_seoul_json(candidates: list[str]) -> tuple[dict | None, bool]:
             if r["_slug_norm"] == key or r["_post_sj_norm"] == key:
                 return r, True
 
-    best = None
-    best_diff = None
+    # Candidate order is priority order: name_korean first, then aliases. The
+    # vision prompt deliberately adds the parent complex as an alias (a photo
+    # of 숭례문 includes 한양도성, the city-wall system it's part of), and that
+    # alias can fuzzy-match some *other* wall landmark more tightly than the
+    # subject's own name matches its own row. Picking one best match across
+    # every candidate let that shorter, wrong-landmark match win. Instead,
+    # score each candidate's own best match separately and take the first
+    # candidate (highest priority) that matches anything at all.
     for _, key in norm_candidates:
+        best = None
+        best_diff = None
         for r in _SEOUL_ROWS:
             for field_name in ("_slug_norm", "_post_sj_norm"):
                 fv = r[field_name]
@@ -280,8 +302,8 @@ def _lookup_in_seoul_json(candidates: list[str]) -> tuple[dict | None, bool]:
                     if best_diff is None or diff < best_diff:
                         best_diff = diff
                         best = r
-    if best is not None:
-        return best, True
+        if best is not None:
+            return best, True
 
     return None, False
 
@@ -371,15 +393,65 @@ def _translate_public_data(public_data: dict, post_sn: int | None) -> dict:
     return merged
 
 
+# ──────────────────────────────────────────
+# No seoul.json match → Tavily web search fills the same fields
+# ──────────────────────────────────────────
+def _web_public_data(landmark_info: dict) -> dict:
+    """English public_info fields from the web; "" for anything it doesn't state."""
+    name_en = landmark_info.get("name_english") or ""
+    if not os.getenv("TAVILY_API_KEY") or not landmark_info.get("confidence") or name_en == "Unknown":
+        return {}
+
+    try:
+        web = _web_search(
+            f"{name_en} {landmark_info.get('name_korean') or ''} Seoul address "
+            "opening hours closed days nearest subway station"
+        )
+        if not web:
+            return {}
+        response = _gemini_client.models.generate_content(
+            model=_GEMINI_MODEL,
+            contents=[
+                f"Web search results about '{name_en}' in Seoul:\n\n{web}\n\n"
+                "Using ONLY those results, return a JSON object with exactly these "
+                f"keys: {', '.join(_TRANSLATABLE_KEYS)}.\n"
+                "- address: street address in English.\n"
+                "- hours: opening hours, e.g. '09:00 ~ 18:00'.\n"
+                "- open_days / closed_days: which days it opens / closes.\n"
+                "- subway: nearest subway line, station and exit.\n"
+                "- tags: 3-6 short comma-separated English keywords.\n"
+                "Use an empty string for any field the results don't clearly state "
+                "for this specific place. Never guess."
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                max_output_tokens=4096,
+            ),
+        )
+        cleaned = re.sub(r"```(?:json)?", "", response.text or "").replace("```", "").strip()
+        raw = json.loads(cleaned)
+    except Exception as e:
+        print(f"[lens] web fallback failed: {e}")
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    facts = {k: str(raw.get(k) or "").strip() for k in _TRANSLATABLE_KEYS}
+    # Gemini sometimes says "N/A" despite being told to leave the field empty.
+    facts = {k: "" if v.lower().rstrip(".") in {"n/a", "na", "none", "unknown", "-"} else v
+             for k, v in facts.items()}
+    return facts if any(facts.values()) else {}
+
+
 # ══════════════════════════════════════════
 # STEP 3 — English narration
 # ══════════════════════════════════════════
 def _generate_english_guide(
     landmark_info: dict,
     public_data: dict,
-    has_public_data: bool,
+    source: str,
 ) -> str:
-    if has_public_data and public_data:
+    """source: "official" (seoul.json), "web" (Tavily) or "none"."""
+    if public_data:
         facts = []
         if public_data.get("address"):
             facts.append(f"Address: {public_data['address']}")
@@ -394,33 +466,39 @@ def _generate_english_guide(
         if public_data.get("tags"):
             facts.append(f"Keywords: {public_data['tags']}")
 
+        label = (
+            "Seoul Official Public Data — Verified Facts" if source == "official"
+            else "Facts Found on the Web"
+        )
         data_context = (
-            "\n\n[Seoul Official Public Data — Verified Facts]\n"
+            f"\n\n[{label}]\n"
             + "\n".join(facts)
-            + "\nWeave these verified facts naturally into your narration."
+            + "\nWeave the useful ones (hours, how to get there) in naturally; skip the rest."
         )
         accuracy_warning = ""
     else:
         data_context = ""
         accuracy_warning = (
-            " (Note: No official public data was found — "
-            "this narration is based on general knowledge and accuracy cannot be fully guaranteed.)"
+            " (Note: no verified data was found — stick to well-known facts and "
+            "don't state hours, prices or addresses.)"
         )
 
     system_prompt = (
-        "You are an expert audio guide narrator for foreign tourists visiting Seoul, South Korea. "
-        "Your mission is to make the city come alive — NOT to list facts.\n\n"
-        "Craft a narration that answers: 'Why does this place matter? Why should I care right now?'\n\n"
-        "Structure:\n"
-        "1. Hook — a vivid moment in history, a surprising fact, or a sensory detail\n"
-        "2. Significance — what happened here, who built this, what it meant to Koreans\n"
-        "3. Present connection — what the visitor can observe right now in front of them\n"
-        "4. Memorable close — one detail that will stick with them\n\n"
+        "You host a short travel podcast for foreign visitors to Seoul, South Korea. "
+        "This episode is a single segment about the place the listener is standing "
+        "in front of right now — make it come alive, don't recite facts.\n\n"
+        "Shape:\n"
+        "1. Cold open — a vivid hook: a moment in history, a surprising fact, a sensory detail\n"
+        "2. The story — what happened here, who built it, why it mattered to Koreans\n"
+        "3. Look around — what the listener can spot in front of them right now\n"
+        "4. Sign-off — one memorable detail or a practical tip to leave them with\n\n"
         "Rules:\n"
-        "- 4 to 5 sentences total — vivid and rich, not dense\n"
-        "- Warm storytelling tone, like a knowledgeable local friend\n"
-        "- No generic openers like 'Welcome to' or 'This place is famous for'\n"
-        "- Natural spoken rhythm — written to be heard while walking"
+        "- 130 to 180 words, one host speaking directly to 'you'\n"
+        "- Conversational podcast voice: warm, curious, a little playful; contractions, "
+        "short sentences, the odd rhetorical question\n"
+        "- It will be read aloud by text-to-speech: plain prose only — no markdown, "
+        "no headings, no emoji, no stage directions or [music] cues, no speaker labels\n"
+        "- No generic openers like 'Welcome to' or 'This place is famous for'"
     )
 
     user_prompt = (
@@ -437,7 +515,7 @@ def _generate_english_guide(
             contents=[user_prompt],
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                max_output_tokens=1024,
+                max_output_tokens=4096,
             ),
         )
         return (response.text or "").strip()
@@ -483,8 +561,8 @@ def analyze_landmark(file: UploadFile = File(...)):
     # call, and cannot hallucinate an address. Translate only the rest.
     en_row = matched_row.get("_en") if matched_row else None
     if not has_public_data:
-        public_data_en = {}
-        en_source = "none"
+        public_data_en = _web_public_data(landmark_info)
+        en_source = "web" if public_data_en else "none"
     elif en_row:
         public_data_en = {**public_data, **_extract_fields(en_row)}
         en_source = "visitseoul-en"
@@ -494,7 +572,9 @@ def analyze_landmark(file: UploadFile = File(...)):
     # Narrate from the English-translated facts, not the raw Korean, so no
     # Korean address/hours/station names leak into the guide text.
     description = _generate_english_guide(
-        landmark_info, public_data_en or public_data, has_public_data
+        landmark_info,
+        public_data_en or public_data,
+        "official" if has_public_data else en_source,
     )
 
     return {
@@ -504,11 +584,63 @@ def analyze_landmark(file: UploadFile = File(...)):
         "category":       landmark_info["category"],
         "description":    description,
         "data_verified":  has_public_data,
-        "data_source":    "seoul.json (korean.visitseoul.net)" if has_public_data else "none",
+        "data_source":    (
+            "seoul.json (korean.visitseoul.net)" if has_public_data
+            else "web (Tavily)" if en_source == "web"
+            else "none"
+        ),
         "en_source":      en_source,
         "public_info":    public_data,
         "public_info_en": public_data_en,
     }
+
+
+class SpeechRequest(BaseModel):
+    # OpenAI's speech input limit.
+    text: str = Field(min_length=1, max_length=4096)
+
+
+def _synthesize(text: str) -> bytes:
+    from openai import OpenAI
+
+    response = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=60).audio.speech.create(
+        model=_TTS_MODEL,
+        voice=_TTS_VOICE,
+        input=text,
+        instructions=(
+            "Speak like a warm, curious travel-podcast host talking to one listener: "
+            "relaxed pace, natural pauses, a smile in your voice."
+        ),
+        response_format="mp3",
+    )
+    return response.content
+
+
+# Seam for tests.
+_tts = _synthesize
+
+
+@router.post("/lens/speech")
+def lens_speech(req: SpeechRequest):
+    """Narration text → mp3 under /static/lens_audio. Sync for the same reason as above."""
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(400, "Empty text")
+    name = hashlib.sha256(text.encode("utf-8")).hexdigest()[:32] + ".mp3"
+    path = AUDIO_DIR / name
+    if not path.exists():
+        if not os.getenv("OPENAI_API_KEY"):
+            raise HTTPException(503, "OPENAI_API_KEY not configured")
+        try:
+            audio = _tts(text)
+        except Exception as e:
+            print(f"[lens] TTS failed: {e}")
+            raise HTTPException(502, "Speech generation failed")
+        print(f"[lens] TTS {_TTS_MODEL}: {len(text)} chars → {len(audio)} bytes")
+        tmp = path.with_suffix(".tmp")
+        tmp.write_bytes(audio)
+        tmp.replace(path)
+    return {"url": f"/static/lens_audio/{name}"}
 
 
 @router.get("/lens/health")

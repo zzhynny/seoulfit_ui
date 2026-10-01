@@ -32,6 +32,9 @@ class ApiLensRepository implements LensRepository {
     final bytes = await file.readAsBytes();
     return _toPlaceResult(await _service.analyze(bytes, file.name), bytes);
   }
+
+  @override
+  Future<String?> narrationAudioUrl(String text) => _service.speechUrl(text);
 }
 
 LensPlaceResult _toPlaceResult(LandmarkAnalysis analysis, Uint8List photo) {

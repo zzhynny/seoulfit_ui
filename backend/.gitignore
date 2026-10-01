@@ -10,3 +10,4 @@ _poi_text_cache.json
 .env
 *.env
 *.bak
+lens_audio/
