@@ -1,4 +1,10 @@
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/repositories/lens_repository.dart';
 import '../../models/lens.dart';
 import '../../theme/theme.dart';
 
@@ -181,20 +187,7 @@ class LensResultScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(result.audioGuideExcerpt, style: AppTextStyles.bodySmall),
                       const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.play_arrow, size: 18, color: Colors.white),
-                          label: Text('Play Audio', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                          ),
-                        ),
-                      ),
+                      _PlayAudioButton(text: result.audioGuideExcerpt),
                     ],
                   ),
                 ),
@@ -241,6 +234,89 @@ class LensResultScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlayAudioButton extends StatefulWidget {
+  const _PlayAudioButton({required this.text});
+
+  final String text;
+
+  @override
+  State<_PlayAudioButton> createState() => _PlayAudioButtonState();
+}
+
+class _PlayAudioButtonState extends State<_PlayAudioButton> {
+  final _player = AudioPlayer();
+  late final StreamSubscription<void> _completion;
+  String? _url;
+  bool _loading = false;
+  bool _playing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _completion = _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playing = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _completion.cancel();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    if (_loading) return;
+    if (_playing) {
+      await _player.stop();
+      setState(() => _playing = false);
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      _url ??= await context.read<LensRepository>().narrationAudioUrl(widget.text);
+      if (_url == null) throw StateError('no speech in this build');
+      await _player.play(UrlSource(_url!));
+      if (mounted) setState(() => _playing = true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't play the audio guide — try again.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: widget.text.isEmpty ? null : _toggle,
+        icon: _loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Icon(_playing ? Icons.stop : Icons.play_arrow, size: 18, color: Colors.white),
+        label: Text(
+          _loading ? 'Preparing Audio…' : _playing ? 'Stop Audio' : 'Play Audio',
+          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
       ),
     );
   }

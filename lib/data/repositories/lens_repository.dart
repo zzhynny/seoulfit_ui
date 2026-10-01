@@ -7,4 +7,7 @@ abstract class LensRepository {
   /// choosing anything — a cancellation, not a failure, so callers should
   /// stay put rather than route on to a result screen.
   Future<LensPlaceResult?> scanPlace(LensPhotoSource source);
+
+  /// URL of [text] read aloud, or null when this build has no speech.
+  Future<String?> narrationAudioUrl(String text);
 }

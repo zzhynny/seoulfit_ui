@@ -40,6 +40,24 @@ class LensService {
     return LandmarkAnalysis.fromJson(payload);
   }
 
+  /// Absolute URL of the narration as an mp3, generated (or cached) server-side.
+  Future<String> speechUrl(String text) async {
+    final response = await http
+        .post(
+          Uri.parse('$_base/lens/speech'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'text': text}),
+        )
+        .timeout(const Duration(seconds: 60));
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Backend returned ${response.statusCode}: ${response.body}',
+      );
+    }
+    final url = (jsonDecode(response.body) as Map<String, dynamic>)['url'];
+    return '$_base$url';
+  }
+
   String _guessMimeType(String filename) {
     final lower = filename.toLowerCase();
     if (lower.endsWith('.png')) return 'image/png';

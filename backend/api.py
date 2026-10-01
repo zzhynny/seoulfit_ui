@@ -81,7 +81,7 @@ if not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
 
 from graph import build_graph, clear_thread, FIELD_QUESTIONS
-from lens import router as lens_router
+from lens import AUDIO_DIR as LENS_AUDIO_DIR, router as lens_router
 from live_help import router as live_help_router
 from guardrail_gate import is_blocked
 from checkin_store import save_checkin
@@ -148,7 +148,7 @@ app.mount("/static/stamps", StaticFiles(directory=str(_STAMPS_DIR)), name="stamp
 # ---------------------------------------------------------------------------
 _METERED_PATHS = {
     "/chat", "/poi-summary", "/poi-detail", "/poi-image",
-    "/analyze-landmark", "/nearby", "/nearby-poi", "/nearby-shopping",
+    "/analyze-landmark", "/lens/speech", "/nearby", "/nearby-poi", "/nearby-shopping",
     "/emergency-rooms", "/place-photo",
     # /reset really deletes a session's state now (it used to be a no-op),
     # and /day-plan writes day_specs -- both write to state protected only
@@ -301,6 +301,7 @@ app.add_middleware(
 
 # Lens (camera → landmark) endpoints
 app.include_router(lens_router)
+app.mount("/static/lens_audio", StaticFiles(directory=str(LENS_AUDIO_DIR)), name="lens_audio_static")
 
 # 여행 중 도우미 (주변 추천 · 응급실) endpoints
 app.include_router(live_help_router)
