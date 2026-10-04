@@ -54,7 +54,8 @@ from geo import (  # noqa: E402
 # ---------------------------------------------------------------------------
 
 def normalize_text(value: Any) -> str:
-    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+    # Same as planner._normalize_text: "IFC몰" and "IFC 몰" are one place.
+    return re.sub(r"\s+", "", str(value or "").lower())
 
 
 def safe_str(value: Any, default: str = "") -> str:

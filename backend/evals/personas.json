@@ -1,0 +1,205 @@
+{
+ "personas": [
+  [
+   1,
+   "First-time classics",
+   "It's my first time in Korea. I want palaces, hanok streets and a traditional market meal.",
+   "jongno"
+  ],
+  [
+   2,
+   "K-pop fan",
+   "I'm here for K-pop: idol agency buildings, fan-culture shops and anywhere my favourite groups filmed.",
+   "seongsu"
+  ],
+  [
+   3,
+   "K-drama fan",
+   "I watch a lot of Korean dramas and want to visit the filming locations and the cafes from the shows.",
+   "hongdae"
+  ],
+  [
+   4,
+   "Foodie",
+   "Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights.",
+   "dongdaemun"
+  ],
+  [
+   5,
+   "Beauty & fashion",
+   "I want Korean skincare brands, spa visits and trendy fashion streets.",
+   "gangnam"
+  ],
+  [
+   6,
+   "Slow couple",
+   "We want a calm trip with parks, river walks and quiet cafes, nothing rushed or crowded.",
+   "yeouido"
+  ],
+  [
+   7,
+   "Family, young kids",
+   "Travelling with two kids under 8. We need places children enjoy: playgrounds, aquarium or theme-park style stops.",
+   "jamsil"
+  ],
+  [
+   8,
+   "Nightlife",
+   "Bars, live music and late-night spots. I'm happy to start the day late.",
+   "itaewon"
+  ],
+  [
+   9,
+   "Art & design",
+   "Contemporary art galleries, design shops and independent craft studios.",
+   "seongsu"
+  ],
+  [
+   10,
+   "Budget backpacker",
+   "Cheap eats, free attractions and walkable neighbourhoods. I'm trying to spend as little as possible.",
+   "myeongdong"
+  ],
+  [
+   11,
+   "Wellness & spa",
+   "I want to unwind: a jjimjilbang, a hot spring or spa, and maybe a skincare treatment. Nothing strenuous.",
+   "gangnam"
+  ],
+  [
+   12,
+   "Muslim visitor",
+   "I'm a Muslim traveller and need halal food and prayer rooms. I'd also like some of the main sights.",
+   "itaewon"
+  ],
+  [
+   13,
+   "Buddhist",
+   "I'm a Buddhist and want temples and a quiet, contemplative day. Temple food and a short meditation would be ideal.",
+   "jongno"
+  ],
+  [
+   14,
+   "Medical recovery",
+   "I'm in Seoul for a dermatology treatment and need recovery days. Short, easy walks and quiet cafes only, no long hikes.",
+   "gangnam"
+  ],
+  [
+   15,
+   "Fine dining & drinks",
+   "I want a Michelin-level dinner and a craft-alcohol tasting, like makgeolli or soju, plus a few good coffee shops.",
+   "yeouido"
+  ],
+  [
+   16,
+   "Outdoors",
+   "I want to hike Namsan or Bukhansan, then cycle the Han River and watch the city lights at night.",
+   "jongno"
+  ],
+  [
+   17,
+   "Photography",
+   "I'm here for photos: murals, neon streets and scenic viewpoints, ideally at golden hour.",
+   "seongsu"
+  ],
+  [
+   18,
+   "Heritage & roots",
+   "I'm an overseas Korean tracing family roots. I want museums, war memorials and places that explain modern Korean history.",
+   "jongno"
+  ],
+  [
+   19,
+   "Games & tech",
+   "I'm into gaming and tech: PC cafes, esports venues, electronics streets and anime or webtoon shops.",
+   "hongdae"
+  ],
+  [
+   20,
+   "Education",
+   "I'm learning Korean and want hands-on classes: wearing hanbok, a cooking class and a K-beauty makeup workshop.",
+   "myeongdong"
+  ]
+ ],
+ "gold": {
+  "1": [
+   "VK_THEME_004",
+   "VK_THEME_010",
+   "VK_THEME_028",
+   "VS_MVP_015_DAY2",
+   "VS_MVP_019",
+   "VS_MVP_026",
+   "VS_MVP_030_DAY1AND2"
+  ],
+  "2": [
+   "VK_THEME_025",
+   "VS_MVP_014"
+  ],
+  "3": [
+   "VK_THEME_045",
+   "VK_THEME_048"
+  ],
+  "4": [
+   "VS_MVP_003_DAY1",
+   "VS_MVP_021"
+  ],
+  "5": [
+   "VK_THEME_014",
+   "VK_THEME_034",
+   "VK_THEME_048",
+   "VS_MVP_020",
+   "VS_MVP_032"
+  ],
+  "6": [
+   "VK_THEME_037"
+  ],
+  "7": [
+   "VK_THEME_008",
+   "VK_THEME_009",
+   "VS_MVP_002_DAY3",
+   "VS_MVP_035_DAY3"
+  ],
+  "8": [
+   "VK_THEME_035"
+  ],
+  "9": [
+   "VK_THEME_030"
+  ],
+  "10": [
+   "VS_MVP_036_DAY1"
+  ],
+  "11": [
+   "VK_THEME_014",
+   "VK_THEME_048"
+  ],
+  "12": [
+   "VS_MVP_035_DAY1"
+  ],
+  "13": [
+   "VK_THEME_033"
+  ],
+  "14": [],
+  "15": [],
+  "17": [],
+  "16": [
+   "VK_THEME_040",
+   "VS_MVP_008",
+   "VS_MVP_027",
+   "VS_MVP_028_DAY3",
+   "VS_MVP_037_DAY1AND2"
+  ],
+  "18": [
+   "VK_THEME_005",
+   "VK_THEME_028",
+   "VK_THEME_043",
+   "VS_MVP_018",
+   "VS_MVP_033_DAY1"
+  ],
+  "19": [
+   "VS_MVP_004"
+  ],
+  "20": [
+   "VS_MVP_019"
+  ]
+ }
+}

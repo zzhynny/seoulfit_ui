@@ -140,7 +140,9 @@ CAR_KMH = 30.0
 # ---------------------------------------------------------------------------
 
 def _normalize_text(value: Any) -> str:
-    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+    # 공백을 아예 지운다: 같은 곳이 데이터마다 "IFC몰" / "IFC 몰" 로 갈려 하루에
+    # 두 번 들어갔다.
+    return re.sub(r"\s+", "", str(value or "").lower())
 
 
 def _kakao_route_url(
@@ -2172,6 +2174,29 @@ def make_retrieve_node(api_key: str):
                     seen_ids.add(c["course_id"])
                     all_courses.append(c)
 
+        # 유사도는 "맞는 코스가 없다"를 구분하지 못한다 (페르소나 20개 실험에서
+        # 맞는 코스가 없을 때의 top1 이 0.688~0.757, 맞을 때가 0.676~0.811).
+        # 그래서 LLM 이 날마다 후보 중 하나를 고르거나 아무것도 고르지 않는다.
+        picks, searches = judge_anchors(segments, queries)
+        trip_keywords = state.get("purpose_keywords") or []
+        for seg in segments:
+            day = seg["day_numbers"][0]
+            if day in picks:
+                seg["anchor_courses"] = [c for c in seg["anchor_courses"]
+                                         if c["course_id"] == picks[day]]
+            if not seg["anchor_courses"]:
+                # 코스가 없는 날은 Google 보완이 유일한 후보인데, 보완은 키워드가
+                # 있어야만 검색한다. 키워드가 하나도 없으면 날 LLM 은 빈 후보로
+                # 장소를 지어내고, 검증기가 그걸 다 지운 뒤 아무 코스로 채웠다.
+                seg["keywords"] = [*seg["keywords"], *searches.get(day, [])]
+                if not seg["keywords"] and not trip_keywords:
+                    seg["keywords"] = [{"phrase": "things to do", "poi_type": "tourist_spot"}]
+
+        # 판정에서 떨어진 코스는 풀에서도 뺀다. 남겨두면 검증기의 최소 정류장
+        # 채우기가 그 코스 POI 를 Google 보다 먼저 꺼내 쓴다 (풀에 먼저 들어가서).
+        kept = {c["course_id"] for seg in segments for c in seg["anchor_courses"]}
+        all_courses = [c for c in all_courses if c["course_id"] in kept]
+
         return {
             **state,
             "retrieved_courses": all_courses,
@@ -2180,6 +2205,83 @@ def make_retrieve_node(api_key: str):
         }
 
     return retrieve_node
+
+
+ANCHOR_JUDGE_PROMPT = """You choose the backbone course for each day of a Seoul trip.
+
+For each day you get the traveller's request and up to 3 curated courses in that
+day's area. Pick the ONE course whose stops best serve the request.
+
+The course is only the backbone: the planner adds live places around it for
+whatever it doesn't cover. So a course does NOT need to cover everything asked
+for -- pick it if its stops clearly serve at least one specific thing the
+traveller wants (a temple for a temple-goer, a bar street for nightlife).
+
+Return null only when no course serves any specific part of the request.
+Sharing the area, or a generic theme like "first visit" or "relaxing", does not
+count. Judge by the stops a course actually visits, not only its wording.
+
+For a null day (or a day with no courses), give 1-2 Google Maps searches for
+kinds of place that day should be built from instead, e.g. "quiet cafes" or
+"spa". Kinds of place, not named venues or neighbourhoods. Meals are handled
+separately, so no restaurants. poi_type is one of: tourist_spot, cafe,
+shopping, kpop_landmark. Leave "search" empty for a day with a course.
+
+Return ONLY JSON: {"days": [{"day": <int>, "course_id": "<id>" or null,
+"search": [{"phrase": "<search phrase>", "poi_type": "<poi_type>"}],
+"reason": "<one short sentence>"}]}
+"""
+
+_JUDGE_SEARCH_TYPES = {"tourist_spot", "cafe", "shopping", "kpop_landmark"}
+
+
+def _anchor_judge_prompt(segments: list[dict[str, Any]], queries: list[str]) -> str:
+    blocks = []
+    for seg, query in zip(segments, queries):
+        lines = [f"=== DAY {seg['day_numbers'][0]} ({_area_label(seg['area'])}) ===",
+                 f"Request: {query}"]
+        for c in seg["anchor_courses"]:
+            stops = ", ".join(p.get("poi_name", "") for p in c.get("sequence") or [])
+            lines.append(f"- {c['course_id']}: {c.get('course_title', '')}\n"
+                         f"  Purpose: {c['purpose']}\n  Stops: {stops}")
+        blocks.append("\n".join(lines))
+    return ANCHOR_JUDGE_PROMPT + "\n" + "\n\n".join(blocks)
+
+
+@traceable(run_type="chain", name="judge_anchors")
+def judge_anchors(
+    segments: list[dict[str, Any]], queries: list[str],
+) -> tuple[dict[int, str | None], dict[int, list[dict[str, str]]]]:
+    """({day: chosen course_id or None}, {day: Google searches for a day with no course}).
+
+    One Gemini call for the whole trip. A day absent from the picks keeps every
+    retrieved anchor, which is how it worked before the judge: the call failed,
+    the day had no candidates, or the answer named a course that wasn't offered.
+    """
+    offered = {seg["day_numbers"][0]: {c["course_id"] for c in seg["anchor_courses"]}
+               for seg in segments}
+    if not any(offered.values()):
+        return {}, {}
+    try:
+        raw = json.loads(_gemini_text(_anchor_judge_prompt(segments, queries)))
+        answers = {int(d["day"]): d for d in raw["days"]}
+    except Exception as e:
+        print(f"[judge] failed ({type(e).__name__}) -- keeping all anchors")
+        return {}, {}
+
+    picks = {day: answers[day].get("course_id") for day, ids in offered.items()
+             if ids and day in answers
+             and (answers[day].get("course_id") is None or answers[day]["course_id"] in ids)}
+    searches = {}
+    for day, a in answers.items():
+        found = [{"phrase": str(s["phrase"]).strip(), "poi_type": s["poi_type"]}
+                 for s in a.get("search") or []
+                 if isinstance(s, dict) and str(s.get("phrase") or "").strip()
+                 and s.get("poi_type") in _JUDGE_SEARCH_TYPES][:2]
+        if found:
+            searches[day] = found
+    print(f"[judge] picks={picks} searches={searches}")
+    return picks, searches
 
 
 def _embed_texts(texts: list[str]):
@@ -2369,7 +2471,10 @@ def _trip_lines(state: TravelState) -> str:
 def plan_node(state: TravelState) -> TravelState:
     courses = state.get("retrieved_courses") or []
     day_segments = state.get("day_segments") or []
-    if not courses or not day_segments:
+    # No course at all is a normal outcome now -- the judge can turn every day
+    # down -- and Google Places is then the candidate source. Without a Places
+    # key either, there is nothing to plan from.
+    if not day_segments or not (courses or GOOGLE_PLACES_API_KEY):
         return {
             **state,
             "current_step": "done",
