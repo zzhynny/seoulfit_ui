@@ -53,6 +53,7 @@ backend/**/__pycache__/
 backend/.env
 backend/checkins.db
 backend/evals.db
+backend/evals/out/
 
 # Live Google Places key. The file says so itself, but it was tracked anyway
 # and the key rode 21 unpushed commits before this line existed.

@@ -12,14 +12,16 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, NamedTuple
+from typing import Any, NamedTuple
 
 import numpy as np
-
-from geo import area_matches_requested, infer_area_from_fields
 from langsmith import traceable
+
+import place_facts
+from geo import area_matches_requested, infer_area_from_fields
 
 _HERE = Path(__file__).resolve().parent
 COURSE_DATA = _HERE / "dataset" / "course_data_v6.json"
@@ -73,10 +75,29 @@ def load_courses() -> list[dict[str, Any]]:
             # 순위만 밀리는 것보다 개수가 어긋나는 편이 눈에 띈다.
             print(f"[retrieval] no description for {c['course_id']} — skipped")
             continue
-        merged.append({**c, "interests": d["interests"], "purpose": d["purpose"],
+        merged.append({**c, "sequence": _with_place_facts(c.get("sequence") or []),
+                       "interests": d["interests"], "purpose": d["purpose"],
                        "description": d["description"], "constraints": d.get("constraints") or []})
     _courses = merged
     return _courses
+
+
+def _with_place_facts(sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop POIs Google lists as permanently closed, and give closed_weekday to
+    the ones course_data_v6 has none for. Done here, at the one place the course
+    data is read, so the prompt, both candidate pools and the critic all see it."""
+    out = []
+    for p in sequence:
+        if place_facts.fact(p.get("poi_name")).get("closed_permanently"):
+            continue
+        oh = p.get("opening_hours") or {}
+        if oh.get("closed_weekday") is None and not p.get("is_area_type"):
+            closed = place_facts.closed_weekdays(p.get("poi_name"))
+            if closed is not None:
+                p = {**p, "opening_hours": {**oh, "closed_weekday": closed,
+                                            "closed_weekday_source": "place_facts"}}
+        out.append(p)
+    return out
 
 
 def _in_region(course: dict[str, Any], region: str) -> bool:
@@ -187,7 +208,7 @@ def _rank(pool, query_vec, vectors):
 
 
 @lru_cache(maxsize=1)
-def load_vectors() -> tuple[list[str], "np.ndarray"] | None:
+def load_vectors() -> tuple[list[str], np.ndarray] | None:
     """dataset/course_vectors.npz 를 읽어 (ids, matrix) 로 돌려준다.
 
     없으면 None — 호출자는 유사도 정렬만 건너뛰고 필터 결과로 계속 간다.

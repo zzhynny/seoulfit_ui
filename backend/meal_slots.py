@@ -13,8 +13,10 @@ import re
 from pathlib import Path
 from typing import Any, NamedTuple
 
-import geo
 from langsmith import traceable
+
+import geo
+import place_facts
 
 _HERE = Path(__file__).resolve().parent
 RESTAURANT_PATH = _HERE / "dataset" / "restaurant.json"
@@ -59,9 +61,9 @@ DIET_RULES: dict[str, dict[str, Any]] = {
 
 # Order matters: "vegan" is checked before "vegetarian".
 _DIET_PATTERNS = [
-    ("vegan", re.compile(r"vegan|비건|plant[- ]based", re.I)),
-    ("vegetarian", re.compile(r"vegetarian|veggie|no meat|채식", re.I)),
-    ("halal", re.compile(r"halal|할랄|muslim", re.I)),
+    ("vegan", re.compile(r"vegan|비건|plant[- ]based", re.IGNORECASE)),
+    ("vegetarian", re.compile(r"vegetarian|veggie|no meat|채식", re.IGNORECASE)),
+    ("halal", re.compile(r"halal|할랄|muslim", re.IGNORECASE)),
 ]
 
 
@@ -124,6 +126,9 @@ def load_restaurants(
         fam_info = family_map.get(entry.get("cuisine"), {})
         entry["cuisine_family"] = fam_info.get("family")  # None for needs_review
         entry["needs_review"] = bool(fam_info.get("needs_review"))
+        # 43 rows carry no hours; Google's, in the same shape, beat "never open".
+        if not entry.get("opening_hours"):
+            entry["opening_hours"] = place_facts.hours(entry.get("name"))
         out.append(entry)
     return out
 
@@ -552,23 +557,12 @@ def fill_meal_slot(
 
     if google_results:
         best_google = max(google_results, key=lambda g: g.get("rating") or 0)
-        return {
-            "name": best_google.get("poi_name"),
-            "type": "restaurant",
-            "lat": best_google.get("lat"),
-            "lng": best_google.get("lng"),
-            "address": best_google.get("address_en"),
-            "meal_slot": slot_name,
-            "slot_time": slot_time,
-            "source_tier": "google",
-            # Legacy Places API 응답엔 opening_hours도 cuisine도 없다 — 하드코딩이
-            # 아니라 "이 tier에 애초에 그 데이터가 없다"는 사실을 그대로 반영한
-            # False다. exclude_families가 걸려 있어도 후보 자체는 그대로 반환한다
-            # (밥을 못 먹는 것보다 검증 안 된 후보가 낫다는 게 요구사항) — 다만
-            # verified.cuisine=False로 남아있으니 상위 레이어가 이 사실을 안다.
-            "verified": {"opening_hours": False, "cuisine": False},
-            "status": "filled",
-        }
+        # The rest of the same search (all rated 4.0+ by fetch_nearby_places)
+        # rides along so the meal can be re-chosen for the stops it ends up
+        # between (planner._choose_for_gap / rechoose_meals) -- no new lookup.
+        return {**_google_meal(best_google, slot_name, slot_time),
+                "alternatives": [_google_meal(g, slot_name, slot_time)
+                                 for g in google_results if g is not best_google]}
 
     # 3층 — 둘 다 빔
     return _unfilled(
@@ -589,20 +583,43 @@ def _fill_from_diet_search(
     if not found:
         return _unfilled(slot_start, slot_end, f"no {diet} restaurant found in {area}")
     best = max(found, key=lambda g: g.get("rating") or 0)
-    return {
-        "name": best.get("poi_name"),
-        "type": "restaurant",
-        "lat": best.get("lat"),
-        "lng": best.get("lng"),
-        "address": best.get("address_en"),
-        "meal_slot": slot_name,
-        "slot_time": f"{slot_start}-{slot_end}",
-        "source_tier": "google",
-        "verified": {"opening_hours": False, "cuisine": False},
+    slot_time = f"{slot_start}-{slot_end}"
+
+    def as_meal(g: dict[str, Any]) -> dict[str, Any]:
         # One warning that covers both unknowns; the planner skips its generic
         # "from Google" one for these.
-        "diet_search": True,
-        "warnings": [f"Found by a Google search for '{search}' — check the menu suits a "
-                     f"{diet} diet, and the opening hours"],
+        return {**_google_meal(g, slot_name, slot_time), "diet_search": True,
+                "warnings": [(f"Found by a Google search for '{search}' — check the menu "
+                              f"suits a {diet} diet, and the opening hours")]}
+
+    # Alternatives come from this diet's own search only, so a re-pick can't
+    # leave the diet. The text search has no rating floor (fetch_text_places
+    # min_rating=0.0), so unrated or poorly rated rows don't qualify.
+    return {**as_meal(best),
+            "alternatives": [as_meal(g) for g in found
+                             if g is not best and (g.get("rating") or 0) >= _ALT_MIN_RATING]}
+
+
+# The same floor fetch_nearby_places puts on every general Google meal.
+_ALT_MIN_RATING = 4.0
+
+
+def _google_meal(g: dict[str, Any], slot_name: str | None, slot_time: str) -> dict[str, Any]:
+    """A Google Places row as a filled meal slot."""
+    return {
+        "name": g.get("poi_name"),
+        "type": "restaurant",
+        "lat": g.get("lat"),
+        "lng": g.get("lng"),
+        "address": g.get("address_en"),
+        "meal_slot": slot_name,
+        "slot_time": slot_time,
+        "source_tier": "google",
+        # Legacy Places API 응답엔 opening_hours도 cuisine도 없다 — 하드코딩이
+        # 아니라 "이 tier에 애초에 그 데이터가 없다"는 사실을 그대로 반영한
+        # False다. exclude_families가 걸려 있어도 후보 자체는 그대로 반환한다
+        # (밥을 못 먹는 것보다 검증 안 된 후보가 낫다는 게 요구사항) — 다만
+        # verified.cuisine=False로 남아있으니 상위 레이어가 이 사실을 안다.
+        "verified": {"opening_hours": False, "cuisine": False},
         "status": "filled",
     }

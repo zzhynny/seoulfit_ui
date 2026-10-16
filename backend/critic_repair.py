@@ -19,7 +19,7 @@ The node is intentionally robust:
 from __future__ import annotations
 
 import math
-import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
@@ -30,31 +30,33 @@ try:
 except Exception:
     TravelState = dict
 
-import eval_store
-from date_utils import weekday_for_day
-import planner
-from planner import compute_transit_legs, _google_get
 from langsmith import traceable
 
+import eval_store
+import meal_slots
+import place_facts
+import planner
+from date_utils import weekday_for_day
 
 # Area tables live in geo.py. This module used to keep its own copy, which fell
 # behind (no bukchon/apgujeong), so RepairAgent added Bukchon stops that the
 # critic then counted as zero.
-from geo import (  # noqa: E402
+from geo import (
     SEOUL_AREA_CENTERS,
-    area_label as _geo_area_label,
     area_matches_requested,
     haversine_km,
     infer_area,
 )
-
+from geo import (
+    area_label as _geo_area_label,
+)
+from planner import _google_get, compute_transit_legs
 
 # ---------------------------------------------------------------------------
 # Safe utilities
 # ---------------------------------------------------------------------------
 
-def normalize_text(value: Any) -> str:
-    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+normalize_text = planner._normalize_text  # one definition: planner and critic must key names alike
 
 
 def safe_str(value: Any, default: str = "") -> str:
@@ -559,6 +561,109 @@ def google_fallback_candidates(
 # Critic data structures
 # ---------------------------------------------------------------------------
 
+def _weekday_of(trip_start_date: str | None, day_num: int) -> str | None:
+    """"Monday".. for a day of the trip; None without a usable start date."""
+    if not trip_start_date:
+        return None
+    try:
+        return weekday_for_day(trip_start_date, day_num, lang="en")
+    except (ValueError, TypeError):
+        return None
+
+
+def _learn_hours(pois: list[dict[str, Any]], state: dict[str, Any]) -> None:
+    """Google hours for the day's stops place_facts has never looked up --
+    Google supplements found at request time, names the LLM wrote itself --
+    so fix_opening_hours can see them. Meals are meal_slots' job. A supplement
+    keeps its place_id from the search; anything else goes through Find Place
+    near its own point. Misses are remembered too, so no name is fetched twice."""
+    todo = [p for p in pois if not planner._is_locked_meal(p) and p.get("name")
+            and not place_facts.known(p["name"])]
+    if not todo:
+        return
+    supplement = (state.get("planning_context") or {}).get("google_supplement") or []
+    ids = {normalize_text(r.get("poi_name")): r.get("place_id") for r in supplement}
+    key = planner.GOOGLE_PLACES_API_KEY
+
+    def one(p: dict[str, Any]) -> None:
+        place_id = ids.get(normalize_text(p["name"]))
+        if not place_id:
+            lat, lng = safe_float(p.get("lat")), safe_float(p.get("lng"))
+            bias = f"circle:2000@{lat},{lng}" if lat and lng else planner._SEOUL_BIAS
+            found = planner._google_get(
+                "https://maps.googleapis.com/maps/api/place/findplacefromtext/json",
+                {"input": p["name"], "inputtype": "textquery", "fields": "place_id",
+                 "locationbias": bias, "key": key})
+            place_id = ((found.get("candidates") or [{}])[0]).get("place_id")
+        hours = planner.fetch_weekly_closure(place_id=place_id, api_key=key) if place_id else None
+        place_facts.learn(p["name"], (hours or {}).get("periods"))
+
+    with ThreadPoolExecutor(6) as pool:
+        list(pool.map(one, todo))
+
+
+def _replace_shut_stops(
+    pois: list[dict[str, Any]],
+    weekday: str | None,
+    pool: dict[str, dict[str, Any]],
+    used: set[str],
+    state: dict[str, Any],
+    deadline: int,
+    logs: list[str],
+    day_num: Any,
+) -> list[dict[str, Any]]:
+    """A stop fix_opening_hours couldn't move into its hours: swap in a
+    same-area, same-type candidate Google says is open then, else drop it while
+    the day keeps planner._MIN_STOPS_AFTER_FIT sights -- a shut door is worth
+    less than one stop fewer. A swap must not push a meal past its window or
+    the day past its end. Candidates whose hours are unknown are never swapped
+    in: that would trade a known miss for a guess.
+
+    Same type only, and a priority-1 stop is never dropped: on a K-pop day,
+    any-sight swaps turned four agency buildings into fashion stores. Those
+    are core to the trip and their Google hours are office hours, while the
+    visit is a photo outside.
+    """
+    if not weekday:
+        return pois
+    out, i = pois, 0
+    while i < len(out):
+        p = out[i]
+        start = planner._stop_starts(out)[0][i]
+        if planner._is_locked_meal(p) or planner._open_through(p, weekday, start) is not False:
+            i += 1
+            continue
+        area = infer_area_from_poi(p)
+        cands = candidates_for_area(pool, area, exclude=used,
+                                    preferred_types={normalize_text(p.get("type"))})[:6] if area else []
+        _learn_hours(cands, state)
+        bad, limit = planner._shut_visits(out, weekday), max(planner._day_schedule(out)[0],
+                                                             deadline + planner._DAY_END_GRACE)
+        swapped = None
+        for c in cands:
+            q = as_output_poi(c, note_suffix=f"Swapped by Repair Agent -- {poi_name(p)} is closed at that hour.")
+            trial = out[:i] + [q] + out[i + 1:]
+            if (planner._open_through(q, weekday, planner._stop_starts(trial)[0][i])
+                    and planner._shut_visits(trial, weekday) < bad
+                    and planner._day_schedule(trial)[0] <= limit
+                    and planner._meals_on_time(trial, out)):
+                swapped = (q, trial)
+                break
+        if swapped:
+            q, out = swapped
+            if p.get("priority") in (1, 2, 3):
+                q["priority"] = p["priority"]
+            used.add(normalize_text(q.get("name")))
+            logs.append(f"Day {day_num}: replaced {poi_name(p)} (closed at that hour) with {q.get('name')}.")
+            i += 1
+        elif p.get("priority") != 1 and _non_meal_count(out) > planner._MIN_STOPS_AFTER_FIT:
+            out = out[:i] + out[i + 1:]
+            logs.append(f"Day {day_num}: dropped {poi_name(p)}, closed at that hour with no open swap.")
+        else:
+            i += 1
+    return out
+
+
 def _trace_days(state: Any) -> dict[str, Any]:
     """Trim a TravelState to the day -> POI-name skeleton for a LangSmith span.
 
@@ -572,6 +677,13 @@ def _trace_days(state: Any) -> dict[str, Any]:
         {"day": d.get("day"), "pois": [p.get("name") for p in (d.get("pois") or [])]}
         for d in days
     ]}
+
+
+# Free minutes before the pace's end time that make a short day "short" rather
+# than full: one more stop at _day_schedule's default 60-minute stay.
+# ponytail: ignores the travel leg to that stop; use the nearest candidate's
+# _leg_minutes if short days keep getting flagged with nothing that fits.
+_ROOM_FOR_ONE_STOP = 60
 
 
 @dataclass
@@ -604,7 +716,8 @@ class CriticAgent:
         area_report = self._evaluate_area_coverage(itinerary, requested_areas, issues)
         day_report = self._evaluate_days(itinerary, requested_areas, pool, trip_start_date, issues,
                                          diet=state.get("diet"),
-                                         min_stops=planner._pace_bounds(state)[0])
+                                         min_stops=planner._pace_bounds(state)[0],
+                                         day_end=planner._day_end(state.get("pace"), state.get("purpose")))
         duplicate_report = self._evaluate_duplicates(itinerary, issues)
         foreigner_report = self._evaluate_foreigner_readiness(itinerary, issues)
 
@@ -693,6 +806,7 @@ class CriticAgent:
         issues: list[CriticIssue],
         diet: str | None = None,
         min_stops: int = 5,
+        day_end: int | None = None,
     ) -> dict[str, Any]:
         days = itinerary.get("days") or []
         if not days:
@@ -711,10 +825,15 @@ class CriticAgent:
             pois = day.get("pois") or []
 
             # Sights only, against the same pace target the prompt and the
-            # validator use -- the locked lunch and dinner come on top.
+            # validator use -- the locked lunch and dinner come on top. A day
+            # fit_day_to_time trimmed to end on time has no room for another
+            # stop, so it is full, not short: flagging it too penalised the
+            # trim harder (0.35) than the lateness it fixed (0.20).
             stops = _non_meal_count(pois)
+            has_room = (day_end is None
+                        or day_end - planner._day_schedule(pois)[0] >= _ROOM_FOR_ONE_STOP)
             checks += 1
-            if stops < min_stops:
+            if stops < min_stops and has_room:
                 penalties += 0.35
                 issues.append(CriticIssue(
                     code="TOO_FEW_POIS",
@@ -747,6 +866,25 @@ class CriticAgent:
             checks += 1
             if self._day_has_closed_poi(pois, pool, trip_start_date, day_num, issues):
                 penalties += 0.30
+
+            # Reported, never trimmed here: generation already ran fit_day_to_time,
+            # so a late day is either one it couldn't fit or a traveller's edit
+            # (/revalidate), and the traveller's stops are theirs to cut.
+            # Medium, not high: high would send the day back to the LLM. Within
+            # planner._DAY_END_GRACE of the end it isn't late -- the same
+            # tolerance fit_day_to_time trims to, so they never disagree.
+            if day_end is not None:
+                checks += 1
+                end = planner._day_schedule(pois)[0]
+                if end > day_end + planner._DAY_END_GRACE:
+                    penalties += 0.20
+                    issues.append(CriticIssue(
+                        code="DAY_RUNS_LATE",
+                        severity="medium",
+                        message=f"Day {day_num} ends around {end // 60:02d}:{end % 60:02d}, "
+                                f"past {day_end // 60:02d}:{day_end % 60:02d} for this pace.",
+                        day=day_num,
+                    ))
 
             if diet:
                 checks += 1
@@ -886,16 +1024,12 @@ class CriticAgent:
         for day in itinerary.get("days") or []:
             for poi in day.get("pois") or []:
                 total += 1
-                english = safe_int(poi.get("english_support"), 1)
-                cash_only = safe_int(poi.get("cash_only"), 0)
-                friction = safe_int(poi.get("cultural_friction"), 0)
-                confidence = normalize_text(poi.get("label_confidence"))
-
-                if english == 0 or cash_only == 1 or friction == 1:
+                # Itinerary POIs carry no labels; place_facts has them by name.
+                # A missing label is unknown, not a pass or a fail.
+                f = place_facts.fact(poi_name(poi))
+                if (f.get("english_support") == 0 or f.get("cash_only") == 1
+                        or f.get("cultural_friction") == 1):
                     risky += 1
-
-                if confidence == "low":
-                    risky += 0.25
 
         if total == 0:
             return {"score": 0.7}
@@ -1424,6 +1558,50 @@ def reorder_supplements(
     return route
 
 
+def _locked_near_neighbours(
+    state: dict[str, Any],
+    day_num: int,
+    slot: str,
+    pois: list[dict[str, Any]],
+    locked: dict[str, Any],
+    days: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """`locked`, with Michelin alternatives looked up around the two stops the
+    meal now sits between, for planner.rechoose_meals to rank.
+
+    The planner found its alternatives near the day's anchor stops, but the day
+    was reordered since, and a supplement can sit well away from the anchors.
+    Local Michelin data only (no Google call); the original pick stays an option.
+    A Google or diet-search pick has no such data and is returned unchanged.
+    """
+    i = next((k for k, p in enumerate(pois) if p.get("meal_slot") == slot), None)
+    region = {s.get("day"): s.get("region") for s in state.get("day_specs") or []}.get(day_num)
+    if i is None or not region or locked.get("source_tier") != "michelin" or state.get("diet"):
+        return locked
+    near = [(float(q["lat"]), float(q["lng"]))
+            for q in (pois[i - 1] if i else None, pois[i + 1] if i + 1 < len(pois) else None)
+            if q and not q.get("meal_slot") and q.get("lat") is not None and q.get("lng") is not None]
+    try:
+        weekday = weekday_for_day(state.get("trip_start_date"), day_num, lang="en")
+    except (ValueError, TypeError):
+        return locked
+    if not near:
+        return locked
+
+    # Every other meal on the trip is taken, and this day's other slot with it.
+    taken = {p.get("name") for d in days for p in d.get("pois") or [] if p.get("meal_slot")}
+    taken.discard(pois[i].get("name"))
+    start, end = meal_slots.MEAL_SLOTS[slot]
+    found = meal_slots.fill_meal_slot(
+        area=region, weekday=weekday, slot_start=start, slot_end=end,
+        exclude_names=tuple(n for n in taken if n), allow_google=False, stops=near,
+    )
+    if found.get("status") != "filled":
+        return locked
+    own = {k: v for k, v in locked.items() if k != "alternatives"}
+    return {**found, "alternatives": [*(found.get("alternatives") or []), own]}
+
+
 _REVISE_SEVERITIES = {"high", "critical"}
 
 
@@ -1502,14 +1680,46 @@ def make_critic_repair_node():
             pool = build_candidate_pool(state)
             movable_names = {n for n, it in pool.items() if it.get("source_kind") == "google"}
             areas = _areas_from_day_specs(state)
+            ctx = state.get("planning_context") or {}
+            dinners, lunches = ctx.get("locked_meals") or {}, ctx.get("locked_lunch_meals") or {}
+            deadline = planner._day_end(state.get("pace"), state.get("purpose"))
+            reserved = {normalize_text(m.get("name")) for src in (dinners, lunches) for m in src.values()}
             for day in repaired.get("days") or []:
                 day["pois"] = reorder_supplements(day.get("pois") or [], movable_names)
+                # Before the trim: fit_day_to_time only moves stops after dinner
+                # and puts stops back only with every meal on time, so it can't
+                # undo this. The re-pick below re-chooses lunch for its new spot.
+                day["pois"] = planner.fix_lunch_time(day["pois"])
                 # After the order is final, before the (API-backed) legs: a day
                 # past its pace's end time loses its least relevant stops.
                 day["pois"], dropped = planner.fit_day_to_time(
                     day["pois"], state.get("pace"), areas, purpose=state.get("purpose"))
                 logs.extend(f"Day {day.get('day')}: dropped {name} (priority {prio}) "
                             "so the day ends on time." for name, prio in dropped)
+                # The meals were chosen for the stops beside them; trimming or
+                # reordering just moved those, so re-pick around the stops each
+                # meal now sits between. The alternatives the planner kept were
+                # found near the day's anchors, and a supplement pulled ahead of
+                # dinner can be 3 km from all of them.
+                n = safe_int(day.get("day"))
+                locked = {slot: src.get(n) or src.get(str(n))
+                          for slot, src in (("dinner", dinners), ("lunch", lunches))}
+                locked = {slot: _locked_near_neighbours(state, n, slot, day["pois"], meal, repaired["days"])
+                          for slot, meal in locked.items() if meal}
+                elsewhere = {normalize_text(p.get("name")) for d in repaired["days"] if d is not day
+                             for p in d.get("pois") or [] if p.get("meal_slot")}
+                # After the trim, before the re-pick: moving a stop shifts the
+                # clock, and the meals are then chosen for where stops ended up.
+                _learn_hours(day["pois"], state)
+                weekday = _weekday_of(state.get("trip_start_date"), n)
+                day["pois"] = planner.fix_opening_hours(day["pois"], weekday, deadline)
+                day["pois"] = _replace_shut_stops(day["pois"], weekday, pool, used_name_set(repaired),
+                                                  state, deadline, logs, day.get("day"))
+                day["pois"] = planner.rechoose_meals(day["pois"], locked, reserved, elsewhere, deadline)
+                for p in day["pois"]:
+                    tip = place_facts.tips(p.get("name"))
+                    if tip and tip not in (p.get("notes") or ""):
+                        p["notes"] = f"{p.get('notes') or ''} {tip}".strip()
                 day["transit_legs"] = compute_transit_legs(day.get("pois") or [])
             return repaired, logs, critic.evaluate({**state, "itinerary": repaired})
 
