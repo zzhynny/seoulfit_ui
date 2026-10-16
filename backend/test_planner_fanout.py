@@ -195,3 +195,18 @@ def test_a_days_note_keywords_are_searched_only_in_its_zone() -> None:
     assert got["jongno"] == ["tea house"]
     # Trip keyword first, the case-insensitive repeat dropped, capped at 4.
     assert got["seongsu"] == ["tea house", "birthday cake", "a", "b"]
+
+
+def test_a_multi_word_location_still_picks_its_area(monkeypatch) -> None:
+    """No requested areas: the location string picks one. Names lose their
+    spaces for dedup ("IFC몰" == "IFC 몰"); aliases like "digital media city"
+    must still match, not fall through to Myeongdong."""
+    searched = []
+    monkeypatch.setattr(planner, "build_google_supplement_for_area",
+                        lambda *, area, keywords, api_key, day_segments: searched.append(area) or [])
+    for location, want in (("Digital Media City", "dmc"), ("near Hongik University", "hongdae")):
+        searched.clear()
+        planner.build_google_supplement_by_areas(
+            requested_areas=[], location=location, api_key="k",
+            keywords=[{"phrase": "cafes", "poi_type": "cafe"}])
+        assert searched == [want], (location, searched)

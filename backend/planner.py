@@ -16,6 +16,7 @@ Main improvements:
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import random
@@ -33,14 +34,22 @@ from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree, tracing_context
 
 import meal_slots
+import place_facts
 from date_utils import weekday_for_day
 from geo import (
-    AREA_ALIASES,
     DEFAULT_CENTER,
     SEOUL_AREA_CENTERS,
+)
+from geo import (
     area_label as _area_label,
+)
+from geo import (
     area_matches_requested as _area_matches_requested,
+)
+from geo import (
     haversine_km as _haversine_km,
+)
+from geo import (
     infer_area_from_fields as _infer_area_from_text_or_coords,
 )
 from rag import _parse_num_days
@@ -133,6 +142,9 @@ _FANOUT_WORKERS = 6
 KAKAO_ROUTE_BASE = "https://m.map.kakao.com/scheme/route"
 WALK_KMH = 4.0
 CAR_KMH = 30.0
+# Minutes added to every leg for finding the entrance, ticketing, a wrong turn.
+# A clock without it runs each leg at bare travel time and the day has no give.
+LEG_SLACK_MIN = 10
 
 
 # ---------------------------------------------------------------------------
@@ -687,13 +699,9 @@ def build_google_supplement_by_areas(
 
     if not requested_areas:
         # Fallback: choose one area from location string or Seoul center.
-        fallback_area = None
-        text = _normalize_text(location)
-        for area, aliases in AREA_ALIASES.items():
-            if area in text or any(alias in text for alias in aliases):
-                fallback_area = area
-                break
-        requested_areas = [fallback_area or "myeongdong"]
+        # geo's matcher, not _normalize_text: that strips spaces, and aliases
+        # like "digital media city" have them.
+        requested_areas = [_infer_area_from_text_or_coords(name=location) or "myeongdong"]
 
     print(f"[planner] 요청 지역별 Google Places 보완 시작: {[_area_label(a) for a in requested_areas]}")
 
@@ -1147,8 +1155,11 @@ def _choose_for_gap(
     """The locked pick, or one of its alternatives, with the shortest walk from
     `prev` and on to `nxt` -- the two stops the meal is about to sit between.
 
-    Summing both legs is the detour minus a constant (prev->nxt), so this is
-    cheapest insertion, the same rule critic_repair.reorder_supplements uses.
+    Ranks by the sum of the two legs plus the longer one. The sum is the detour
+    (cheapest insertion, as critic_repair.reorder_supplements), but every point
+    on the prev->nxt line has the same sum, so alone it can't tell a restaurant
+    beside one stop from one midway; adding the longer leg prefers midway. The
+    longer leg alone would let a midway restaurant 3 km off the line win.
     A neighbour without coordinates, or one that is itself a meal, is left out;
     with neither left the pick stands. `forbidden` holds normalized names already
     eating elsewhere on the trip. Keeps the pick's own warnings.
@@ -1163,7 +1174,8 @@ def _choose_for_gap(
             lat, lng = float(m["lat"]), float(m["lng"])
         except (KeyError, TypeError, ValueError):
             return float("inf")
-        return sum(_haversine_km(lat, lng, e_lat, e_lng) for e_lat, e_lng in ends)
+        legs = [_haversine_km(lat, lng, e_lat, e_lng) for e_lat, e_lng in ends]
+        return sum(legs) + max(legs)
 
     options = [m for m in (meal, *(meal.get("alternatives") or []))
                if _normalize_text(m.get("name")) not in forbidden]
@@ -1847,9 +1859,14 @@ def _pace_bounds(state: TravelState) -> tuple[int, int]:
 # (_pace_bounds), and ending it at 20:00 on top pulled a nightlife trip's clubs
 # in ahead of dinner.
 _DAY_START = 10 * 60
-_DAY_END = {"packed": 22 * 60}
-_DAY_END_DEFAULT = 21 * 60
+_DAY_END = {"packed": 23 * 60}
+_DAY_END_DEFAULT = 22 * 60
 _DAY_END_NIGHTLIFE = 24 * 60
+# A day may run this far past its end time before a stop is dropped: taking a
+# whole 60-120 minute stop off a day that is ten minutes late cost more than it
+# saved (27 of 58 late days in the A/B runs were within 30 minutes).
+# ponytail: one value for every pace; make it per pace if relaxed days want less.
+_DAY_END_GRACE = 30
 
 # ponytail: keyword match on the traveller's own purpose text. Misses
 # paraphrases ("dance till late"); give purpose keywords a nightlife poi_type
@@ -1877,25 +1894,26 @@ def _leg_minutes(a: dict[str, Any], b: dict[str, Any]) -> int:
     """Travel time between two stops, without calling any API.
 
     ponytail: straight-line distance -- a short hop is walked, anything longer
-    is a ride plus 10 minutes of waiting/transfers. Swap in ODsay durations if
-    trims look wrong; compute_transit_legs already fetches them for the final day.
+    is a ride plus 10 minutes of waiting/transfers, and every leg gets
+    LEG_SLACK_MIN on top. Swap in ODsay durations if trims look wrong;
+    compute_transit_legs already fetches them for the final day.
     """
     import odsay
     try:
         dist = _haversine_km(float(a["lat"]), float(a["lng"]), float(b["lat"]), float(b["lng"]))
     except (KeyError, TypeError, ValueError):
-        return 15
+        return 15 + LEG_SLACK_MIN
     if dist < odsay.WALKABLE_KM:
-        return round(dist / WALK_KMH * 60)
-    return round(dist / CAR_KMH * 60) + 10
+        return round(dist / WALK_KMH * 60) + LEG_SLACK_MIN
+    return round(dist / CAR_KMH * 60) + 10 + LEG_SLACK_MIN
 
 
-def _day_schedule(pois: list[dict[str, Any]]) -> tuple[int, dict[str, int]]:
-    """(end minute of the day, {meal_slot: start minute}).
+def _stop_starts(pois: list[dict[str, Any]]) -> tuple[list[int], int]:
+    """(start minute of each stop, end minute of the day).
 
     A locked meal can't start before its window opens -- arriving early waits.
     """
-    t, meal_starts = _DAY_START, {}
+    t, starts = _DAY_START, []
     for i, p in enumerate(pois):
         if i:
             t += _leg_minutes(pois[i - 1], p)
@@ -1903,9 +1921,71 @@ def _day_schedule(pois: list[dict[str, Any]]) -> tuple[int, dict[str, int]]:
             window = meal_slots.MEAL_SLOTS.get(p["meal_slot"])
             if window:
                 t = max(t, _hhmm(window[0]))
-            meal_starts[p["meal_slot"]] = t
+        starts.append(t)
         t += int(float(p.get("stay_minutes") or 60))
-    return t, meal_starts
+    return starts, t
+
+
+def _day_schedule(pois: list[dict[str, Any]]) -> tuple[int, dict[str, int]]:
+    """(end minute of the day, {meal_slot: start minute})."""
+    starts, end = _stop_starts(pois)
+    return end, {p["meal_slot"]: s for p, s in zip(pois, starts) if _is_locked_meal(p)}
+
+
+def _open_through(poi: dict[str, Any], weekday: str, start: int) -> bool | None:
+    """Do Google's hours cover the whole visit from `start`? None without hours."""
+    hours = place_facts.hours(poi.get("name"))
+    if hours is None:
+        return None
+    end = start + int(float(poi.get("stay_minutes") or 60))
+    for r in hours.get(weekday) or []:
+        o, c = meal_slots._parse_range(r)
+        if o <= start and end <= c:
+            return True
+    return False
+
+
+def _shut_visits(pois: list[dict[str, Any]], weekday: str) -> int:
+    """Stops (meals aside -- meal_slots picks those by hours) arriving while shut."""
+    starts, _ = _stop_starts(pois)
+    return sum(_open_through(p, weekday, s) is False
+               for p, s in zip(pois, starts) if not _is_locked_meal(p))
+
+
+def fix_opening_hours(pois: list[dict[str, Any]], weekday: str | None,
+                      deadline: int) -> list[dict[str, Any]]:
+    """Move stops that would arrive while shut (10:00 at a mall that opens at
+    10:30) to where in the day they're open.
+
+    One stop moves at a time, and only if fewer visits are shut afterwards,
+    every meal is still on time and the day ends no later than it did or
+    `deadline` + _DAY_END_GRACE. Among those, the earliest end then the
+    shortest route. A stop with no hours never counts as shut. A stop that
+    fits nowhere stays where it is -- dropping it is fit_day_to_time's call.
+    """
+    if not weekday:
+        return pois
+    out, bad = pois, _shut_visits(pois, weekday)
+    while bad:
+        limit = max(_day_schedule(out)[0], deadline + _DAY_END_GRACE)
+        best = None
+        for i, p in enumerate(out):
+            if _is_locked_meal(p):
+                continue
+            rest = out[:i] + out[i + 1:]
+            for j in range(len(out)):
+                if j == i:
+                    continue
+                trial = rest[:j] + [p] + rest[j:]
+                n, end = _shut_visits(trial, weekday), _day_schedule(trial)[0]
+                if n < bad and end <= limit and _meals_on_time(trial, out):
+                    rank = (n, end, _route_km(trial))
+                    if best is None or rank < best[0]:
+                        best = (rank, trial)
+        if best is None:
+            break
+        out, bad = best[1], best[0][0]
+    return out
 
 
 def _pull_evening_forward(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1923,6 +2003,26 @@ def _pull_evening_forward(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return pois
 
 
+def fix_lunch_time(pois: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Move lunch one place earlier at a time while it starts after its window
+    closes. The validator places lunch by position (_meal_slot_indices, about a
+    third of the way in), not by clock, so two long morning stops push it to
+    14:00. Lunch keeps at least one stop before it -- first thing at 10:00 it
+    would wait an hour for 11:00 -- and a swap that pushes dinner past its own
+    window is refused. A day already on time comes back as the same list.
+    """
+    lunch_close = _hhmm(meal_slots.MEAL_SLOTS["lunch"][1])
+    dinner_close = _hhmm(meal_slots.MEAL_SLOTS["dinner"][1])
+    out = pois
+    i = next((k for k, p in enumerate(out) if p.get("meal_slot") == "lunch"), None)
+    while i is not None and i >= 2 and _day_schedule(out)[1].get("lunch", 0) > lunch_close:
+        trial = out[:i - 1] + [out[i], out[i - 1]] + out[i + 1:]
+        if _day_schedule(trial)[1].get("dinner", 0) > dinner_close:
+            break
+        out, i = trial, i - 1
+    return out
+
+
 def _priority(poi: dict[str, Any]) -> int:
     """Gemini's 1 (core to the purpose) .. 3 (filler). Stops the code added
     itself were chosen for nobody, so they count as 3."""
@@ -1938,14 +2038,23 @@ def fit_day_to_time(
 ) -> tuple[list[dict[str, Any]], list[tuple[str, int]]]:
     """Make a day end by its pace's end time, dropping the least relevant stops.
 
-    First evening stops move into idle time before dinner; then, while still
+    A day up to _DAY_END_GRACE minutes late is left exactly as planned. Past
+    that, first evening stops move into idle time before dinner; then, while still
     late, the lowest-priority stop goes (ties: the later one). Locked meals and
     the first stop covering each requested area are never dropped, and a day
     keeps at least _MIN_STOPS_AFTER_FIT stops even if that leaves it late.
+    A whole stop comes off even when the day is only minutes late, so once it
+    fits, each dropped stop (most relevant first) goes back in wherever it
+    still fits without pushing a meal past its window; the shortest route wins.
+
+    Pulling evening stops ahead of dinner is decided by time alone, and can
+    send the day back and forth across town to reach dinner. So the trim runs
+    both with and without the pull and keeps the one with more stops, then the
+    one that ends less late, then the shorter route.
     Returns (pois, [(dropped name, priority), ...]); a day that fits comes
     back as the same list.
     """
-    deadline = _day_end(pace, purpose)
+    deadline = _day_end(pace, purpose) + _DAY_END_GRACE
     if _day_schedule(pois)[0] <= deadline:
         return pois, []
 
@@ -1958,19 +2067,112 @@ def fit_day_to_time(
             covered.add(req)
             protected.add(id(p))
 
-    out = _pull_evening_forward(list(pois))
-    dropped: list[tuple[str, int]] = []
+    def rank(trimmed: tuple[list[dict[str, Any]], list[dict[str, Any]]]) -> tuple:
+        out = trimmed[0]
+        return (-sum(1 for p in out if not _is_locked_meal(p)),
+                max(0, _day_schedule(out)[0] - deadline), _route_km(out))
+
+    # Same POI objects in both, so `protected` (ids) holds for each. On a full
+    # tie the pull wins: it is what this did before.
+    out, victims = min((_trim(pois, protected, deadline, _pull_evening_forward),
+                        _trim(pois, protected, deadline, list)), key=rank)
+    if _day_schedule(out)[0] > deadline:
+        print(f"[fit_day] still past {deadline // 60}:{deadline % 60:02d} at "
+              f"{_MIN_STOPS_AFTER_FIT} stops; keeping them")
+    kept = {id(p) for p in out}
+    return out, [(str(v.get("name")), _priority(v)) for v in victims if id(v) not in kept]
+
+
+def _trim(
+    pois: list[dict[str, Any]],
+    protected: set[int],
+    deadline: int,
+    arrange: Any,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """fit_day_to_time's drop-then-put-back pass, with `arrange` applied after
+    every change (_pull_evening_forward, or `list` to keep the order).
+    Returns (pois, every stop dropped along the way)."""
+    out = arrange(list(pois))
+    victims: list[dict[str, Any]] = []
     while _day_schedule(out)[0] > deadline:
         if sum(1 for p in out if not _is_locked_meal(p)) <= _MIN_STOPS_AFTER_FIT:
-            print(f"[fit_day] still past {deadline // 60}:00 at {_MIN_STOPS_AFTER_FIT} stops; keeping them")
             break
         candidates = [(i, p) for i, p in enumerate(out) if id(p) not in protected]
         if not candidates:
             break
         i, victim = max(candidates, key=lambda ip: (_priority(ip[1]), ip[0]))
-        dropped.append((str(victim.get("name")), _priority(victim)))
-        out = _pull_evening_forward(out[:i] + out[i + 1:])
-    return out, dropped
+        victims.append(victim)
+        out = arrange(out[:i] + out[i + 1:])
+
+    if _day_schedule(out)[0] <= deadline:
+        for victim in sorted(victims, key=_priority):
+            fits = [t for t in (out[:i] + [victim] + out[i:] for i in range(len(out) + 1))
+                    if _day_schedule(t)[0] <= deadline and _meals_on_time(t, out)]
+            if fits:
+                out = min(fits, key=_route_km)
+    return out, victims
+
+
+def rechoose_meals(
+    pois: list[dict[str, Any]],
+    locked: dict[str, dict[str, Any]],
+    reserved: set[str],
+    elsewhere: set[str],
+    deadline: int,
+) -> list[dict[str, Any]]:
+    """Re-pick each meal for the stops it now sits between.
+
+    The validator chose a meal for the two stops beside it, but fit_day_to_time
+    can then move or drop those stops, leaving the meal a detour away (an evening
+    stop pulled ahead of dinner makes dinner a round trip). `locked` is the day's
+    {"lunch"|"dinner": locked pick}, still carrying its `alternatives`, so this is
+    the same re-rank _choose_for_gap did -- no new lookup. `reserved` is every
+    locked name on the trip, `elsewhere` the meals served on other days.
+
+    A swap that would push the day past `deadline` (the new walk is longer) is
+    skipped. A Google-tier pick has no alternatives and stays where it is.
+    """
+    out = list(pois)
+    for i, p in enumerate(out):
+        meal = locked.get(p.get("meal_slot") or "")
+        if not meal:
+            continue
+        own = _normalize_text(meal.get("name"))
+        same_day = {_normalize_text(q.get("name")) for q in out if q is not p and q.get("meal_slot")}
+        pick = _choose_for_gap(
+            meal,
+            out[i - 1] if i else None,
+            out[i + 1] if i + 1 < len(out) else None,
+            (reserved - {own}) | elsewhere | same_day,
+        )
+        if _normalize_text(pick.get("name")) == _normalize_text(p.get("name")):
+            continue
+        swapped = {
+            **p,
+            "name": pick.get("name"), "type": pick.get("type", "restaurant"),
+            "address": pick.get("address") or "", "lat": pick.get("lat"), "lng": pick.get("lng"),
+            "source_tier": pick.get("source_tier"), "verified": pick.get("verified"),
+            "warnings": (
+                ["From Google, not the Michelin guide — cuisine and opening hours unverified"]
+                if pick.get("source_tier") == "google" and not pick.get("diet_search") else []
+            ) + list(pick.get("warnings") or []),
+        }
+        trial = out[:i] + [swapped] + out[i + 1:]
+        if _day_schedule(trial)[0] <= max(_day_schedule(out)[0], deadline):
+            out = trial
+    return out
+
+
+def _meals_on_time(trial: list[dict[str, Any]], before: list[dict[str, Any]]) -> bool:
+    """No meal in `trial` starts after its window closes, unless it already did in `before`."""
+    was, now = _day_schedule(before)[1], _day_schedule(trial)[1]
+    return all(t <= max(_hhmm(meal_slots.MEAL_SLOTS[m][1]), was.get(m, 0))
+               for m, t in now.items() if m in meal_slots.MEAL_SLOTS)
+
+
+def _route_km(pois: list[dict[str, Any]]) -> float:
+    pts = [(float(p["lat"]), float(p["lng"])) for p in pois if p.get("lat") and p.get("lng")]
+    return sum(_haversine_km(*a, *b) for a, b in itertools.pairwise(pts))
 
 
 _PACE_LABELS: dict[str, str] = {"packed": "packed schedule", "relaxed": "relaxed pace"}
@@ -2175,22 +2377,30 @@ def make_retrieve_node(api_key: str):
                     all_courses.append(c)
 
         # 유사도는 "맞는 코스가 없다"를 구분하지 못한다 (페르소나 20개 실험에서
-        # 맞는 코스가 없을 때의 top1 이 0.688~0.757, 맞을 때가 0.676~0.811).
+        # 맞는 코스가 없을 때(3명)의 top1 이 0.688~0.757, 맞을 때(17명)가 0.676~0.811;
+        # evals/persona_ranked.json 의 1위 유사도를 evals/personas.json gold 로 나눈 값).
         # 그래서 LLM 이 날마다 후보 중 하나를 고르거나 아무것도 고르지 않는다.
         picks, searches = judge_anchors(segments, queries)
         trip_keywords = state.get("purpose_keywords") or []
         for seg in segments:
             day = seg["day_numbers"][0]
             if day in picks:
+                # Kept aside, not lost: plan_node puts them back if neither a
+                # course nor Google Places can fill the day.
+                seg["rejected_courses"] = [c for c in seg["anchor_courses"]
+                                           if c["course_id"] != picks[day]]
                 seg["anchor_courses"] = [c for c in seg["anchor_courses"]
                                          if c["course_id"] == picks[day]]
-            if not seg["anchor_courses"]:
-                # 코스가 없는 날은 Google 보완이 유일한 후보인데, 보완은 키워드가
-                # 있어야만 검색한다. 키워드가 하나도 없으면 날 LLM 은 빈 후보로
-                # 장소를 지어내고, 검증기가 그걸 다 지운 뒤 아무 코스로 채웠다.
-                seg["keywords"] = [*seg["keywords"], *searches.get(day, [])]
-                if not seg["keywords"] and not trip_keywords:
-                    seg["keywords"] = [{"phrase": "things to do", "poi_type": "tourist_spot"}]
+            # 코스가 있는 날도 검색어를 붙인다. 코스 하나만으로는 하루를 못
+            # 채우는 일이 흔하고(A/B 평가 18/18일), 보완은 키워드가 있어야만
+            # 검색해서, 검증기와 repair 가 구역 밖 코스 장소로 채우거나 아예
+            # 못 채웠다.
+            seg["keywords"] = [*seg["keywords"], *searches.get(day, [])]
+            # 코스가 없는 날은 Google 보완이 유일한 후보다. 키워드가 하나도
+            # 없으면 날 LLM 은 빈 후보로 장소를 지어내고, 검증기가 그걸 다
+            # 지운 뒤 아무 코스로 채웠다.
+            if not seg["anchor_courses"] and not seg["keywords"] and not trip_keywords:
+                seg["keywords"] = [{"phrase": "things to do", "poi_type": "tourist_spot"}]
 
         # 판정에서 떨어진 코스는 풀에서도 뺀다. 남겨두면 검증기의 최소 정류장
         # 채우기가 그 코스 POI 를 Google 보다 먼저 꺼내 쓴다 (풀에 먼저 들어가서).
@@ -2221,11 +2431,13 @@ Return null only when no course serves any specific part of the request.
 Sharing the area, or a generic theme like "first visit" or "relaxing", does not
 count. Judge by the stops a course actually visits, not only its wording.
 
-For a null day (or a day with no courses), give 1-2 Google Maps searches for
-kinds of place that day should be built from instead, e.g. "quiet cafes" or
-"spa". Kinds of place, not named venues or neighbourhoods. Meals are handled
-separately, so no restaurants. poi_type is one of: tourist_spot, cafe,
-shopping, kpop_landmark. Leave "search" empty for a day with a course.
+For every day, give 1-2 Google Maps searches, run in that day's area. For a day
+with a course, they find places for the parts of the request its stops don't
+cover (a K-pop fan's course of fan shops -> "k-pop cafe"). For a null day (or
+a day with no courses), they are what the day is built from instead, e.g.
+"quiet cafes" or "spa". Kinds of place, not named venues or neighbourhoods.
+Meals are handled separately, so no restaurants. poi_type is one of:
+tourist_spot, cafe, shopping, kpop_landmark.
 
 Return ONLY JSON: {"days": [{"day": <int>, "course_id": "<id>" or null,
 "search": [{"phrase": "<search phrase>", "poi_type": "<poi_type>"}],
@@ -2252,7 +2464,7 @@ def _anchor_judge_prompt(segments: list[dict[str, Any]], queries: list[str]) -> 
 def judge_anchors(
     segments: list[dict[str, Any]], queries: list[str],
 ) -> tuple[dict[int, str | None], dict[int, list[dict[str, str]]]]:
-    """({day: chosen course_id or None}, {day: Google searches for a day with no course}).
+    """({day: chosen course_id or None}, {day: Google searches to fill that day}).
 
     One Gemini call for the whole trip. A day absent from the picks keeps every
     retrieved anchor, which is how it worked before the judge: the call failed,
@@ -2269,9 +2481,11 @@ def judge_anchors(
         print(f"[judge] failed ({type(e).__name__}) -- keeping all anchors")
         return {}, {}
 
-    picks = {day: answers[day].get("course_id") for day, ids in offered.items()
-             if ids and day in answers
-             and (answers[day].get("course_id") is None or answers[day]["course_id"] in ids)}
+    # A missing "course_id" key is no verdict, not null -- only an explicit
+    # null turns a day's courses down.
+    picks = {day: answers[day]["course_id"] for day, ids in offered.items()
+             if ids and day in answers and "course_id" in answers[day]
+             and (answers[day]["course_id"] is None or answers[day]["course_id"] in ids)}
     searches = {}
     for day, a in answers.items():
         found = [{"phrase": str(s["phrase"]).strip(), "poi_type": s["poi_type"]}
@@ -2290,8 +2504,9 @@ def _embed_texts(texts: list[str]):
     실패하면 None 을 돌려 유사도 정렬만 건너뛴다. 예전에는 여기서 예외가 나면
     retrieve_node 가 통째로 죽어 대화가 멈췄다.
     """
-    from build_vectors import EMBEDDING_MODEL, normalize
     import numpy as np
+
+    from build_vectors import EMBEDDING_MODEL, normalize
 
     try:
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -2471,15 +2686,14 @@ def _trip_lines(state: TravelState) -> str:
 def plan_node(state: TravelState) -> TravelState:
     courses = state.get("retrieved_courses") or []
     day_segments = state.get("day_segments") or []
-    # No course at all is a normal outcome now -- the judge can turn every day
-    # down -- and Google Places is then the candidate source. Without a Places
-    # key either, there is nothing to plan from.
-    if not day_segments or not (courses or GOOGLE_PLACES_API_KEY):
-        return {
-            **state,
-            "current_step": "done",
-            "messages": [AIMessage(content="⚠️ No candidate courses found. Try different details.")],
-        }
+    no_candidates = {
+        **state,
+        # "confirm", not "done": see the except branch below.
+        "current_step": "confirm",
+        "messages": [AIMessage(content="⚠️ No candidate courses found. Try different details.")],
+    }
+    if not day_segments:
+        return no_candidates
 
     purpose = _synth_purpose(state)
     duration = state.get("travel_dates") or ""
@@ -2528,6 +2742,19 @@ def plan_node(state: TravelState) -> TravelState:
         )
     else:
         print("[planner] GOOGLE_PLACES_API_KEY 없음 -- Google Places 보완 생략")
+
+    # The judge turned a day's courses down on the promise that Google Places
+    # would fill it. Where Places found nothing for that area (no key, quota,
+    # an empty search), a rejected course beats a day of only meals.
+    for seg in day_segments:
+        if (not seg.get("anchor_courses") and seg.get("rejected_courses")
+                and not _supplement_for_area(google_supplement, seg.get("area"))):
+            seg["anchor_courses"] = seg.pop("rejected_courses")
+            have = {c["course_id"] for c in courses}
+            courses = [*courses, *(c for c in seg["anchor_courses"] if c["course_id"] not in have)]
+            print(f"[planner] day {_day_num(seg)}: no Places results, keeping the judge's rejected courses")
+    if not (courses or google_supplement):
+        return no_candidates
 
     trip_lines = _trip_lines(state)
 
@@ -2595,6 +2822,9 @@ def plan_node(state: TravelState) -> TravelState:
     return {
         **state,
         "itinerary": itinerary,
+        # Restored courses must reach the critic's candidate pool and revise_days.
+        "retrieved_courses": courses,
+        "day_segments": day_segments,
         "planning_context": {
             "requested_areas": requested_areas,
             "google_supplement": google_supplement,

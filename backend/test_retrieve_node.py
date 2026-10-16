@@ -4,11 +4,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-import json  # noqa: E402
+import json
 
-import pytest  # noqa: E402
+import pytest
 
-import planner  # noqa: E402
+import planner
 
 
 @pytest.fixture(autouse=True)
@@ -71,6 +71,7 @@ def test_each_day_is_searched_with_the_trip_purpose_plus_its_own_note(monkeypatc
     """One batched embedding of the distinct day queries; a day without a note
     reuses the trip query, and the note reaches its segment."""
     import numpy as np
+
     import retrieval
 
     ids = [c["course_id"] for c in retrieval.load_courses()]
@@ -138,11 +139,37 @@ def test_a_day_without_a_course_searches_what_the_judge_suggests(monkeypatch):
     ])
     d1, d2 = out["day_segments"][0], out["day_segments"][1]
     assert d1["keywords"] == [{"phrase": "quiet cafes", "poi_type": "cafe"}]
-    assert d2["keywords"] == []           # a day with a course needs no extra search
+    assert d2["keywords"] == []           # the judge suggested none for it
+
+
+def test_a_day_with_a_course_also_searches_what_the_judge_suggests(monkeypatch):
+    """One course rarely fills a day, and Google Places only searches with a
+    keyword -- without one the day's only fill was the course's own stops."""
+    out = _judged(monkeypatch, lambda segs: [
+        {"day": 1, "course_id": segs[0]["anchor_courses"][0]["course_id"],
+         "search": [{"phrase": "hanbok rental", "poi_type": "shopping"}]},
+    ])
+    d1 = out["day_segments"][0]
+    assert len(d1["anchor_courses"]) == 1
+    assert d1["keywords"] == [{"phrase": "hanbok rental", "poi_type": "shopping"}]
 
 
 def test_names_differing_only_in_spacing_are_one_place():
     assert planner._normalize_text("IFC Mall (IFC몰)") == planner._normalize_text("IFC Mall (IFC 몰)")
+
+
+def test_an_answer_without_course_id_is_no_verdict(monkeypatch):
+    """Leaving the key out isn't choosing null: the day keeps its anchors."""
+    out = _judged(monkeypatch, lambda segs: [
+        {"day": s["day_numbers"][0], "search": [], "reason": "?"} for s in segs])
+    assert all(len(s["anchor_courses"]) == 3 for s in out["day_segments"])
+
+
+def test_a_rejected_days_courses_are_kept_aside_for_plan_node(monkeypatch):
+    """plan_node restores them if nothing else can fill the day."""
+    out = _judged(monkeypatch, lambda segs: [
+        {"day": s["day_numbers"][0], "course_id": None} for s in segs])
+    assert all(len(s["rejected_courses"]) == 3 for s in out["day_segments"])
 
 
 def test_a_course_that_was_not_offered_keeps_that_days_anchors(monkeypatch):

@@ -143,3 +143,46 @@ def test_each_day_is_told_its_weekday_and_never_shown_a_stop_closed_that_day(llm
     assert "Closed On Tuesdays" in day1 and "Closed On Tuesdays" not in day2
     assert "Day 1 lunch is open: no verified vegetarian restaurant" in day1
     assert "Day 2 dinner is open" in day2
+
+
+def _rejected_state():
+    """The judge turned every day down: no anchors, its courses kept aside."""
+    state = _state(days=2)
+    for seg in state["day_segments"]:
+        seg["rejected_courses"], seg["anchor_courses"] = seg["anchor_courses"], []
+    state["retrieved_courses"] = []
+    return state
+
+
+def _restored(out):
+    assert out["current_step"] == "critic", out["messages"]
+    assert [c["course_id"] for c in out["retrieved_courses"]] == ["c1"]
+    assert all(s["anchor_courses"] for s in out["day_segments"])
+    assert all(any(n in POOL for n in _names(d)) for d in out["itinerary"]["days"])
+
+
+def test_rejected_courses_come_back_when_there_is_no_places_key(llm):
+    calls, answers = llm            # the fixture blanks GOOGLE_PLACES_API_KEY
+    answers.update({1: POOL[0:4], 2: POOL[5:9]})
+    _restored(planner.plan_node(_rejected_state()))
+
+
+def test_rejected_courses_come_back_when_places_finds_nothing(llm, monkeypatch):
+    calls, answers = llm
+    answers.update({1: POOL[0:4], 2: POOL[5:9]})
+    monkeypatch.setattr(planner, "GOOGLE_PLACES_API_KEY", "test-key")
+    monkeypatch.setattr(planner, "build_google_supplement_by_areas", lambda **kw: [])
+    _restored(planner.plan_node(_rejected_state()))
+
+
+def test_rejected_courses_stay_out_when_places_fills_the_day(llm, monkeypatch):
+    calls, answers = llm
+    answers.update({1: ["g 0", "g 1", "g 2"], 2: ["g 3", "g 4", "g 5"]})
+    monkeypatch.setattr(planner, "GOOGLE_PLACES_API_KEY", "test-key")
+    found = [{"poi_name": f"g {i}", "area": "jongno", "lat": 37.5729, "lng": 126.9794,
+              "poi_type": "tourist_spot", "source_kind": "google"} for i in range(8)]
+    monkeypatch.setattr(planner, "build_google_supplement_by_areas", lambda **kw: found)
+    out = planner.plan_node(_rejected_state())
+    assert out["current_step"] == "critic", out["messages"]
+    assert out["retrieved_courses"] == []
+    assert all(s["anchor_courses"] == [] for s in out["day_segments"])

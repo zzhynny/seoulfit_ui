@@ -38,25 +38,25 @@ sys.path.insert(0, _here)
 # module attributes directly (hasattr/setattr) now emits a deprecation warning,
 # so use the official setters instead.
 from langchain.globals import set_debug, set_verbose
+
 set_debug(False)
 set_verbose(False)
 # ──────────────────────────────────────────────────────────────────────────────
 
-from dotenv import load_dotenv
-from pathlib import Path
 import datetime as _dt
 import functools
 import re as _re
 import threading as _threading
 import time as _time
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse as _JSONResponse
-from typing import Optional
+from fastapi.staticfiles import StaticFiles
+from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, Field
-from langchain_core.messages import HumanMessage, AIMessage
 
 # In dev we load .env from disk; in prod (Render) env vars are injected
 # directly into the process so load_dotenv is a no-op.
@@ -80,11 +80,12 @@ if not GEMINI_API_KEY:
 if not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
 
-from graph import build_graph, clear_thread, FIELD_QUESTIONS
-from lens import AUDIO_DIR as LENS_AUDIO_DIR, router as lens_router
-from live_help import router as live_help_router
-from guardrail_gate import is_blocked
 from checkin_store import save_checkin
+from graph import FIELD_QUESTIONS, build_graph, clear_thread
+from guardrail_gate import is_blocked
+from lens import AUDIO_DIR as LENS_AUDIO_DIR
+from lens import router as lens_router
+from live_help import router as live_help_router
 from stamp import generate_stamp, request_stamp, stamp_status, valid_trip_id
 
 # Canned reply when the input gatekeeper blocks an off-topic / injection /
@@ -375,23 +376,23 @@ class ChatRequest(BaseModel):
     # None on first call → triggers greeting. 상한은 가드레일과 플래너 양쪽
     # Gemini 호출에 그대로 들어가는 값이라 건다 — 사람이 채팅창에 치는 한 문장은
     # 수백 자를 넘지 않는다.
-    message: Optional[str] = Field(None, max_length=2000)
+    message: str | None = Field(None, max_length=2000)
 
 
 class StateResponse(BaseModel):
-    travel_dates: Optional[str] = None
-    restrictions: Optional[str] = None
-    companion: Optional[str] = None
-    pace: Optional[str] = None
-    purpose: Optional[str] = None
-    day_specs: Optional[list[dict]] = None
+    travel_dates: str | None = None
+    restrictions: str | None = None
+    companion: str | None = None
+    pace: str | None = None
+    purpose: str | None = None
+    day_specs: list[dict] | None = None
     current_step: str
     # Which slot the buddy is waiting on right now, so the client can show the
     # matching quick replies / date picker. None outside the collecting step.
-    current_field: Optional[str] = None
+    current_field: str | None = None
     confirmed: bool
-    reply: Optional[str]
-    itinerary: Optional[dict] = None
+    reply: str | None
+    itinerary: dict | None = None
 
 
 class CheckinRequest(BaseModel):
@@ -431,7 +432,7 @@ class SwapCandidatesRequest(BaseModel):
     # type을 못 찾아 카테고리 필터가 통째로 빠지면서 카페 자리에 호텔이,
     # 호텔 자리에 레스토랑이 뜨는 버그가 났다. 프론트가 보내는 이 값을
     # pool 조회보다 우선해서 항상 같은 카테고리로만 후보를 좁힌다.
-    current_poi_type: Optional[str] = None
+    current_poi_type: str | None = None
     excluded_ids: list[str] = []
 
 
@@ -460,14 +461,14 @@ def _get_state(thread_id: str) -> dict:
     }
 
 
-def _latest_ai_message(state: dict) -> Optional[str]:
+def _latest_ai_message(state: dict) -> str | None:
     for msg in reversed(state.get("messages", [])):
         if isinstance(msg, AIMessage):
             return msg.content
     return None
 
 
-def _state_response(state: dict, *, reply: Optional[str] = None) -> StateResponse:
+def _state_response(state: dict, *, reply: str | None = None) -> StateResponse:
     """StateResponse 를 만드는 유일한 곳. 필드가 늘 때마다 세 군데를 고치던 걸 막는다."""
     return StateResponse(
         travel_dates=state.get("travel_dates"),
@@ -484,7 +485,7 @@ def _state_response(state: dict, *, reply: Optional[str] = None) -> StateRespons
     )
 
 
-def _run(thread_id: str, user_input: Optional[str]) -> dict:
+def _run(thread_id: str, user_input: str | None) -> dict:
     # ponytail: only pass the new message — spreading the full state (including
     # the existing messages list) into invoke() causes add_messages to double
     # history on every turn because the reducer merges checkpoint + input.
@@ -517,7 +518,7 @@ def chat(req: ChatRequest):
 
     try:
         new_state = _run(req.thread_id, req.message)
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()          # prints full stack to uvicorn terminal
         raise HTTPException(status_code=500, detail=_INTERNAL_ERROR)
@@ -672,7 +673,7 @@ except Exception as _e:  # 파일이 없어도 서버는 떠야 한다 — 폴�
 print(f"[poi] Michelin name index: {len(_MICHELIN_SNAP)} entries")
 
 
-def _michelin(name: str) -> Optional[dict]:
+def _michelin(name: str) -> dict | None:
     return _MICHELIN_SNAP.get(_norm_poi_name(name))
 
 # ponytail: in-memory dict, 24시간 TTL. 공사 데이터는 하루 1회 갱신이라 그 이상
@@ -681,7 +682,7 @@ _COMMON_CACHE: dict[str, tuple[float, dict]] = {}
 _COMMON_TTL = 24 * 3600
 
 
-def _tour_common(name: str) -> Optional[dict]:
+def _tour_common(name: str) -> dict | None:
     """이름이 공사 DB 에 있으면 detailCommon2 한 줄을 돌려준다. 없으면 None.
 
     실패는 삼킨다 — 부르는 쪽마다 Tavily/Places 폴백이 있어서, 여기서 예외를
@@ -867,7 +868,7 @@ def poi_detail(req: PoiSummaryRequest):
 class EventsRequest(BaseModel):
     # kEventCategories 의 첫 칩. 모르는 값은 _chip_filter 가 전체로 떨어뜨린다.
     category: str = Field("All", max_length=40)
-    travel_dates: Optional[str] = Field(None, max_length=100)
+    travel_dates: str | None = Field(None, max_length=100)
 
 
 # ── /events — 한국관광공사 TourAPI(EngService2) 실시간 조회 ────────────────────
@@ -930,7 +931,7 @@ def _venue_of(row: dict) -> str:
     return addr1 or addr2
 
 
-def _coord(value) -> Optional[float]:
+def _coord(value) -> float | None:
     """TourAPI 의 mapx/mapy 는 문자열이고, 가끔 빈 값이 온다."""
     try:
         return float(value)
@@ -1147,9 +1148,19 @@ def revalidate(req: RevalidateRequest):
     요일 기반 규칙(CLOSED_ON_ASSIGNED_DAY 등)이 여기서 새로 체크된다.
 
     끝나면 새 itinerary를 체크포인트에 저장한다(update_state) — 이어지는
-    편집(재교체, 재정렬)이 이 결과 위에서 계속되도록."""
-    from critic_repair import CriticAgent, RepairAgent, apply_slot_edits, build_candidate_pool
-    from planner import compute_transit_legs
+    편집(재교체, 재정렬)이 이 결과 위에서 계속되도록.
+
+    graph의 critic_repair 노드와 달리 reorder_supplements / fit_day_to_time /
+    LLM revise는 돌리지 않는다 — 셋 다 사용자가 방금 고른 순서·장소를 덮어쓴다.
+    pace 종료시간을 planner._DAY_END_GRACE(30분) 넘게 넘긴 day는 critic이
+    DAY_RUNS_LATE로 알리고, 무엇을 뺄지는 사용자가 정한다. summary/themes만 바뀐 stop 기준으로 다시 쓴다."""
+    import planner
+    from critic_repair import (
+        CriticAgent,
+        RepairAgent,
+        apply_slot_edits,
+        build_candidate_pool,
+    )
 
     thread_id = _require_thread_id(req.thread_id)
     state = _get_state(thread_id)
@@ -1168,10 +1179,16 @@ def revalidate(req: RevalidateRequest):
 
         repaired_itinerary, repair_log = RepairAgent().repair(edited_state, before_report)
         for day in repaired_itinerary.get("days") or []:
-            day["transit_legs"] = compute_transit_legs(day.get("pois") or [])
+            day["transit_legs"] = planner.compute_transit_legs(day.get("pois") or [])
 
         after_state = {**edited_state, "itinerary": repaired_itinerary}
         after_report = critic.evaluate(after_state)
+
+        # Same guard as the graph node: stale-but-present beats a failed edit.
+        try:
+            planner.describe_itinerary(after_state, repaired_itinerary)
+        except Exception as e:
+            print(f"[revalidate] describe_itinerary failed: {type(e).__name__}: {e}")
 
         _graph.update_state(_config(thread_id), {"itinerary": repaired_itinerary})
     except HTTPException:
@@ -1204,7 +1221,7 @@ def _closed_warning(weekday: str, day_num: int) -> str:
     return f"Usually closed on {weekday}s — Day {day_num} is a {weekday}"
 
 
-def _itinerary_poi(state: dict, day_num: int, slot_index: int, name: str) -> Optional[dict]:
+def _itinerary_poi(state: dict, day_num: int, slot_index: int, name: str) -> dict | None:
     """The POI the traveller tapped, read off the itinerary itself.
 
     Not build_candidate_pool: a locked meal is inserted by the validator from
@@ -1253,13 +1270,16 @@ def swap_candidates(req: SwapCandidatesRequest):
     is_generic_activity/is_transit_marker/requires_review로 걸러진 POI는
     build_candidate_pool 단계에서 이미 후보 풀에 없으므로 여기서 따로 걸러낼
     필요가 없다."""
+    import meal_slots
     from critic_repair import (
-        build_candidate_pool, candidates_for_area, google_fallback_candidates, haversine_km,
+        build_candidate_pool,
+        candidates_for_area,
+        google_fallback_candidates,
+        haversine_km,
         normalize_text,
     )
     from date_utils import weekday_for_day
     from planner import GOOGLE_PLACES_API_KEY
-    import meal_slots
 
     thread_id = _require_thread_id(req.thread_id)
     state = _get_state(thread_id)

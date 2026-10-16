@@ -242,3 +242,33 @@ def test_nearest_michelin_can_be_limited_to_diet_cuisines() -> None:
     hits = meal_slots.nearest_michelin(lat=37.5729, lng=126.9794, restaurants=rs,
                                        cuisines=("Vegan", "Vegetarian"))
     assert [h["name"] for h in hits] == ["Leaf"]
+
+
+def _row(name, rating, lng=126.98):
+    return {"poi_name": name, "rating": rating, "lat": 37.57, "lng": lng, "address_en": f"{name} st"}
+
+
+def test_a_google_meal_carries_the_rest_of_its_search_as_alternatives(monkeypatch) -> None:
+    rows = [_row("Top", 4.8), _row("Near", 4.2, 127.04), _row("Taken", 4.5)]
+    monkeypatch.setattr(meal_slots, "_fetch_google_restaurants_raw", lambda area: rows)
+    meal_slots._GOOGLE_PLACES_CACHE.clear()
+    out = fill_meal_slot(area="jongno", weekday="Tuesday", slot_start="18:00", slot_end="20:00",
+                         restaurants=[], exclude_names=("Taken",))
+    meal_slots._GOOGLE_PLACES_CACHE.clear()
+    assert out["name"] == "Top"                                   # still the best-rated
+    [alt] = out["alternatives"]                                   # "Taken" stays excluded
+    assert alt["name"] == "Near" and "poi_name" not in alt        # shaped like the pick
+    assert alt["lng"] == 127.04 and alt["address"] == "Near st"
+    assert alt["source_tier"] == "google" and alt["meal_slot"] == "dinner"
+
+
+def test_a_diet_meals_alternatives_stay_in_the_diet_and_above_the_rating_floor(monkeypatch) -> None:
+    found = [_row("Veg Top", 4.7), _row("Veg Near", 4.1), _row("Veg Unrated", None),
+             _row("Veg Low", 3.6)]
+    monkeypatch.setattr(meal_slots, "_fetch_google_restaurants_raw",
+                        lambda area: [_row("Steakhouse", 4.9)])   # must never be offered
+    out, _ = _diet_fill(monkeypatch, [], found)
+    assert out["name"] == "Veg Top"
+    assert [a["name"] for a in out["alternatives"]] == ["Veg Near"]
+    alt = out["alternatives"][0]
+    assert alt["diet_search"] is True and "vegetarian" in alt["warnings"][0]

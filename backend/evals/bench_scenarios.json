@@ -1,0 +1,893 @@
+[
+ {
+  "id": "P01",
+  "set": "pairwise",
+  "persona": 5,
+  "regions": [
+   "gangnam",
+   "jamsil",
+   "dongdaemun"
+  ],
+  "days": 3,
+  "theme": "shopping_beauty",
+  "companion": "solo",
+  "diet": null,
+  "pace": null,
+  "weekday": "mon",
+  "purpose": "I want Korean skincare brands, spa visits and trendy fashion streets.",
+  "start": "2026-11-02",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 3 days, on my own. I want Korean skincare brands, spa visits and trendy fashion streets. Areas by day: Day 1 (Mon Nov 02): Gangnam; Day 2 (Tue Nov 03): Jamsil; Day 3 (Wed Nov 04): Dongdaemun."
+ },
+ {
+  "id": "P02",
+  "set": "pairwise",
+  "persona": 11,
+  "regions": [
+   "gangnam",
+   "jamsil"
+  ],
+  "days": 2,
+  "theme": "wellness_night",
+  "companion": "solo",
+  "diet": "vegan",
+  "pace": "packed",
+  "weekday": "sat",
+  "purpose": "I want to unwind: a jjimjilbang, a hot spring or spa, and maybe a skincare treatment. Nothing strenuous.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 2 days, on my own. I want to unwind: a jjimjilbang, a hot spring or spa, and maybe a skincare treatment. Nothing strenuous. Areas by day: Day 1 (Sat Nov 07): Gangnam; Day 2 (Sun Nov 08): Jamsil. I want to fit in as much as I can. I'm vegan."
+ },
+ {
+  "id": "P03",
+  "set": "pairwise",
+  "persona": 4,
+  "regions": [
+   "dongdaemun",
+   "jamsil",
+   "hongdae",
+   "seongsu",
+   "gangnam"
+  ],
+  "days": 5,
+  "theme": "food",
+  "companion": "family",
+  "diet": "vegetarian",
+  "pace": null,
+  "weekday": "sat",
+  "purpose": "Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 5 days, with my family (young children). Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights. Areas by day: Day 1 (Sat Nov 07): Dongdaemun; Day 2 (Sun Nov 08): Jamsil; Day 3 (Mon Nov 09): Hongdae; Day 4 (Tue Nov 10): Seongsu; Day 5 (Wed Nov 11): Gangnam. I'm vegetarian."
+ },
+ {
+  "id": "P04",
+  "set": "pairwise",
+  "persona": 1,
+  "regions": [
+   "jongno"
+  ],
+  "days": 1,
+  "theme": "heritage",
+  "companion": "couple",
+  "diet": "halal",
+  "pace": "packed",
+  "weekday": "mon",
+  "purpose": "It's my first time in Korea. I want palaces, hanok streets and a traditional market meal.",
+  "start": "2026-11-02",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 1 day, as a couple. It's my first time in Korea. I want palaces, hanok streets and a traditional market meal. Areas by day: Day 1 (Mon Nov 02): Jongno. I want to fit in as much as I can. Halal food only."
+ },
+ {
+  "id": "P05",
+  "set": "pairwise",
+  "persona": 2,
+  "regions": [
+   "seongsu",
+   "itaewon",
+   "dongdaemun",
+   "hongdae",
+   "myeongdong"
+  ],
+  "days": 5,
+  "theme": "hallyu",
+  "companion": "friends",
+  "diet": "vegan",
+  "pace": "relaxed",
+  "weekday": "mon",
+  "purpose": "I'm here for K-pop: idol agency buildings, fan-culture shops and anywhere my favourite groups filmed.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 5 days, with friends. I'm here for K-pop: idol agency buildings, fan-culture shops and anywhere my favourite groups filmed. Areas by day: Day 1 (Mon Nov 02): Seongsu; Day 2 (Tue Nov 03): Itaewon; Day 3 (Wed Nov 04): Dongdaemun; Day 4 (Thu Nov 05): Hongdae; Day 5 (Fri Nov 06): Myeongdong. I prefer a relaxed pace. I'm vegan."
+ },
+ {
+  "id": "P06",
+  "set": "pairwise",
+  "persona": 15,
+  "regions": [
+   "yeouido",
+   "itaewon",
+   "jongno",
+   "myeongdong"
+  ],
+  "days": 4,
+  "theme": "food",
+  "companion": "couple",
+  "diet": null,
+  "pace": "relaxed",
+  "weekday": "sat",
+  "purpose": "I want a Michelin-level dinner and a craft-alcohol tasting, like makgeolli or soju, plus a few good coffee shops.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 4 days, as a couple. I want a Michelin-level dinner and a craft-alcohol tasting, like makgeolli or soju, plus a few good coffee shops. Areas by day: Day 1 (Sat Nov 07): Yeouido; Day 2 (Sun Nov 08): Itaewon; Day 3 (Mon Nov 09): Jongno; Day 4 (Tue Nov 10): Myeongdong. I prefer a relaxed pace."
+ },
+ {
+  "id": "P07",
+  "set": "pairwise",
+  "persona": 10,
+  "regions": [
+   "myeongdong",
+   "yeouido"
+  ],
+  "days": 2,
+  "theme": "shopping_beauty",
+  "companion": "family",
+  "diet": "halal",
+  "pace": "relaxed",
+  "weekday": "sat",
+  "purpose": "Cheap eats, free attractions and walkable neighbourhoods. I'm trying to spend as little as possible.",
+  "start": "2026-11-07",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 2 days, with my family (young children). Cheap eats, free attractions and walkable neighbourhoods. I'm trying to spend as little as possible. Areas by day: Day 1 (Sat Nov 07): Myeongdong; Day 2 (Sun Nov 08): Yeouido. I prefer a relaxed pace. Halal food only."
+ },
+ {
+  "id": "P08",
+  "set": "pairwise",
+  "persona": 3,
+  "regions": [
+   "hongdae",
+   "itaewon",
+   "jongno",
+   "yeouido"
+  ],
+  "days": 4,
+  "theme": "hallyu",
+  "companion": "family",
+  "diet": "vegetarian",
+  "pace": "packed",
+  "weekday": "mon",
+  "purpose": "I watch a lot of Korean dramas and want to visit the filming locations and the cafes from the shows.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 4 days, with my family (young children). I watch a lot of Korean dramas and want to visit the filming locations and the cafes from the shows. Areas by day: Day 1 (Mon Nov 02): Hongdae; Day 2 (Tue Nov 03): Itaewon; Day 3 (Wed Nov 04): Jongno; Day 4 (Thu Nov 05): Yeouido. I want to fit in as much as I can. I'm vegetarian."
+ },
+ {
+  "id": "P09",
+  "set": "pairwise",
+  "persona": 13,
+  "regions": [
+   "jongno",
+   "gangnam",
+   "yeouido"
+  ],
+  "days": 3,
+  "theme": "heritage",
+  "companion": "friends",
+  "diet": "vegetarian",
+  "pace": "relaxed",
+  "weekday": "sat",
+  "purpose": "I'm a Buddhist and want temples and a quiet, contemplative day. Temple food and a short meditation would be ideal.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 3 days, with friends. I'm a Buddhist and want temples and a quiet, contemplative day. Temple food and a short meditation would be ideal. Areas by day: Day 1 (Sat Nov 07): Jongno; Day 2 (Sun Nov 08): Gangnam; Day 3 (Mon Nov 09): Yeouido. I prefer a relaxed pace. I'm vegetarian."
+ },
+ {
+  "id": "P10",
+  "set": "pairwise",
+  "persona": 2,
+  "regions": [
+   "seongsu"
+  ],
+  "days": 1,
+  "theme": "hallyu",
+  "companion": "friends",
+  "diet": null,
+  "pace": null,
+  "weekday": "sat",
+  "purpose": "I'm here for K-pop: idol agency buildings, fan-culture shops and anywhere my favourite groups filmed.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 1 day, with friends. I'm here for K-pop: idol agency buildings, fan-culture shops and anywhere my favourite groups filmed. Areas by day: Day 1 (Sat Nov 07): Seongsu."
+ },
+ {
+  "id": "P11",
+  "set": "pairwise",
+  "persona": 4,
+  "regions": [
+   "dongdaemun",
+   "seongsu",
+   "myeongdong"
+  ],
+  "days": 3,
+  "theme": "food",
+  "companion": "friends",
+  "diet": "halal",
+  "pace": "packed",
+  "weekday": "mon",
+  "purpose": "Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights.",
+  "start": "2026-11-02",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 3 days, with friends. Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights. Areas by day: Day 1 (Mon Nov 02): Dongdaemun; Day 2 (Tue Nov 03): Seongsu; Day 3 (Wed Nov 04): Myeongdong. I want to fit in as much as I can. Halal food only."
+ },
+ {
+  "id": "P12",
+  "set": "pairwise",
+  "persona": 8,
+  "regions": [
+   "itaewon",
+   "myeongdong"
+  ],
+  "days": 2,
+  "theme": "wellness_night",
+  "companion": "couple",
+  "diet": "vegetarian",
+  "pace": null,
+  "weekday": "mon",
+  "purpose": "Bars, live music and late-night spots. I'm happy to start the day late.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 2 days, as a couple. Bars, live music and late-night spots. I'm happy to start the day late. Areas by day: Day 1 (Mon Nov 02): Itaewon; Day 2 (Tue Nov 03): Myeongdong. I'm vegetarian."
+ },
+ {
+  "id": "P13",
+  "set": "pairwise",
+  "persona": 5,
+  "regions": [
+   "gangnam",
+   "jongno",
+   "dongdaemun",
+   "yeouido"
+  ],
+  "days": 4,
+  "theme": "shopping_beauty",
+  "companion": "couple",
+  "diet": "vegan",
+  "pace": null,
+  "weekday": "mon",
+  "purpose": "I want Korean skincare brands, spa visits and trendy fashion streets.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 4 days, as a couple. I want Korean skincare brands, spa visits and trendy fashion streets. Areas by day: Day 1 (Mon Nov 02): Gangnam; Day 2 (Tue Nov 03): Jongno; Day 3 (Wed Nov 04): Dongdaemun; Day 4 (Thu Nov 05): Yeouido. I'm vegan."
+ },
+ {
+  "id": "P14",
+  "set": "pairwise",
+  "persona": 11,
+  "regions": [
+   "gangnam",
+   "itaewon",
+   "jongno",
+   "dongdaemun"
+  ],
+  "days": 4,
+  "theme": "wellness_night",
+  "companion": "solo",
+  "diet": "halal",
+  "pace": "relaxed",
+  "weekday": "mon",
+  "purpose": "I want to unwind: a jjimjilbang, a hot spring or spa, and maybe a skincare treatment. Nothing strenuous.",
+  "start": "2026-11-02",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 4 days, on my own. I want to unwind: a jjimjilbang, a hot spring or spa, and maybe a skincare treatment. Nothing strenuous. Areas by day: Day 1 (Mon Nov 02): Gangnam; Day 2 (Tue Nov 03): Itaewon; Day 3 (Wed Nov 04): Jongno; Day 4 (Thu Nov 05): Dongdaemun. I prefer a relaxed pace. Halal food only."
+ },
+ {
+  "id": "P15",
+  "set": "pairwise",
+  "persona": 18,
+  "regions": [
+   "jongno",
+   "hongdae",
+   "itaewon",
+   "yeouido",
+   "gangnam"
+  ],
+  "days": 5,
+  "theme": "heritage",
+  "companion": "family",
+  "diet": null,
+  "pace": "packed",
+  "weekday": "sat",
+  "purpose": "I'm an overseas Korean tracing family roots. I want museums, war memorials and places that explain modern Korean history.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 5 days, with my family (young children). I'm an overseas Korean tracing family roots. I want museums, war memorials and places that explain modern Korean history. Areas by day: Day 1 (Sat Nov 07): Jongno; Day 2 (Sun Nov 08): Hongdae; Day 3 (Mon Nov 09): Itaewon; Day 4 (Tue Nov 10): Yeouido; Day 5 (Wed Nov 11): Gangnam. I want to fit in as much as I can."
+ },
+ {
+  "id": "P16",
+  "set": "pairwise",
+  "persona": 10,
+  "regions": [
+   "myeongdong"
+  ],
+  "days": 1,
+  "theme": "shopping_beauty",
+  "companion": "solo",
+  "diet": "vegetarian",
+  "pace": "packed",
+  "weekday": "sat",
+  "purpose": "Cheap eats, free attractions and walkable neighbourhoods. I'm trying to spend as little as possible.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 1 day, on my own. Cheap eats, free attractions and walkable neighbourhoods. I'm trying to spend as little as possible. Areas by day: Day 1 (Sat Nov 07): Myeongdong. I want to fit in as much as I can. I'm vegetarian."
+ },
+ {
+  "id": "P17",
+  "set": "pairwise",
+  "persona": 15,
+  "regions": [
+   "yeouido"
+  ],
+  "days": 1,
+  "theme": "food",
+  "companion": "family",
+  "diet": "vegan",
+  "pace": "relaxed",
+  "weekday": "sat",
+  "purpose": "I want a Michelin-level dinner and a craft-alcohol tasting, like makgeolli or soju, plus a few good coffee shops.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 1 day, with my family (young children). I want a Michelin-level dinner and a craft-alcohol tasting, like makgeolli or soju, plus a few good coffee shops. Areas by day: Day 1 (Sat Nov 07): Yeouido. I prefer a relaxed pace. I'm vegan."
+ },
+ {
+  "id": "P18",
+  "set": "pairwise",
+  "persona": 3,
+  "regions": [
+   "hongdae",
+   "jamsil",
+   "itaewon",
+   "myeongdong",
+   "yeouido"
+  ],
+  "days": 5,
+  "theme": "hallyu",
+  "companion": "couple",
+  "diet": "halal",
+  "pace": null,
+  "weekday": "sat",
+  "purpose": "I watch a lot of Korean dramas and want to visit the filming locations and the cafes from the shows.",
+  "start": "2026-11-07",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 5 days, as a couple. I watch a lot of Korean dramas and want to visit the filming locations and the cafes from the shows. Areas by day: Day 1 (Sat Nov 07): Hongdae; Day 2 (Sun Nov 08): Jamsil; Day 3 (Mon Nov 09): Itaewon; Day 4 (Tue Nov 10): Myeongdong; Day 5 (Wed Nov 11): Yeouido. Halal food only."
+ },
+ {
+  "id": "P19",
+  "set": "pairwise",
+  "persona": 1,
+  "regions": [
+   "jongno",
+   "hongdae"
+  ],
+  "days": 2,
+  "theme": "heritage",
+  "companion": "solo",
+  "diet": null,
+  "pace": null,
+  "weekday": "mon",
+  "purpose": "It's my first time in Korea. I want palaces, hanok streets and a traditional market meal.",
+  "start": "2026-11-02",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 2 days, on my own. It's my first time in Korea. I want palaces, hanok streets and a traditional market meal. Areas by day: Day 1 (Mon Nov 02): Jongno; Day 2 (Tue Nov 03): Hongdae."
+ },
+ {
+  "id": "P20",
+  "set": "pairwise",
+  "persona": 8,
+  "regions": [
+   "itaewon",
+   "hongdae",
+   "seongsu"
+  ],
+  "days": 3,
+  "theme": "wellness_night",
+  "companion": "family",
+  "diet": null,
+  "pace": "relaxed",
+  "weekday": "sat",
+  "purpose": "Bars, live music and late-night spots. I'm happy to start the day late.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 3 days, with my family (young children). Bars, live music and late-night spots. I'm happy to start the day late. Areas by day: Day 1 (Sat Nov 07): Itaewon; Day 2 (Sun Nov 08): Hongdae; Day 3 (Mon Nov 09): Seongsu. I prefer a relaxed pace."
+ },
+ {
+  "id": "P21",
+  "set": "pairwise",
+  "persona": 13,
+  "regions": [
+   "jongno",
+   "yeouido",
+   "hongdae"
+  ],
+  "days": 3,
+  "theme": "heritage",
+  "companion": "couple",
+  "diet": "vegan",
+  "pace": "packed",
+  "weekday": "sat",
+  "purpose": "I'm a Buddhist and want temples and a quiet, contemplative day. Temple food and a short meditation would be ideal.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 3 days, as a couple. I'm a Buddhist and want temples and a quiet, contemplative day. Temple food and a short meditation would be ideal. Areas by day: Day 1 (Sat Nov 07): Jongno; Day 2 (Sun Nov 08): Yeouido; Day 3 (Mon Nov 09): Hongdae. I want to fit in as much as I can. I'm vegan."
+ },
+ {
+  "id": "P22",
+  "set": "pairwise",
+  "persona": 18,
+  "regions": [
+   "jongno",
+   "gangnam",
+   "seongsu",
+   "jamsil"
+  ],
+  "days": 4,
+  "theme": "heritage",
+  "companion": "friends",
+  "diet": null,
+  "pace": "relaxed",
+  "weekday": "sat",
+  "purpose": "I'm an overseas Korean tracing family roots. I want museums, war memorials and places that explain modern Korean history.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 4 days, with friends. I'm an overseas Korean tracing family roots. I want museums, war memorials and places that explain modern Korean history. Areas by day: Day 1 (Sat Nov 07): Jongno; Day 2 (Sun Nov 08): Gangnam; Day 3 (Mon Nov 09): Seongsu; Day 4 (Tue Nov 10): Jamsil. I prefer a relaxed pace."
+ },
+ {
+  "id": "P23",
+  "set": "pairwise",
+  "persona": 2,
+  "regions": [
+   "seongsu",
+   "jamsil",
+   "yeouido"
+  ],
+  "days": 3,
+  "theme": "hallyu",
+  "companion": "solo",
+  "diet": "halal",
+  "pace": "packed",
+  "weekday": "sat",
+  "purpose": "I'm here for K-pop: idol agency buildings, fan-culture shops and anywhere my favourite groups filmed.",
+  "start": "2026-11-07",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 3 days, on my own. I'm here for K-pop: idol agency buildings, fan-culture shops and anywhere my favourite groups filmed. Areas by day: Day 1 (Sat Nov 07): Seongsu; Day 2 (Sun Nov 08): Jamsil; Day 3 (Mon Nov 09): Yeouido. I want to fit in as much as I can. Halal food only."
+ },
+ {
+  "id": "P24",
+  "set": "pairwise",
+  "persona": 3,
+  "regions": [
+   "hongdae",
+   "yeouido"
+  ],
+  "days": 2,
+  "theme": "hallyu",
+  "companion": "friends",
+  "diet": "vegetarian",
+  "pace": null,
+  "weekday": "sat",
+  "purpose": "I watch a lot of Korean dramas and want to visit the filming locations and the cafes from the shows.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 2 days, with friends. I watch a lot of Korean dramas and want to visit the filming locations and the cafes from the shows. Areas by day: Day 1 (Sat Nov 07): Hongdae; Day 2 (Sun Nov 08): Yeouido. I'm vegetarian."
+ },
+ {
+  "id": "P25",
+  "set": "pairwise",
+  "persona": 4,
+  "regions": [
+   "dongdaemun",
+   "seongsu",
+   "hongdae",
+   "jongno",
+   "itaewon"
+  ],
+  "days": 5,
+  "theme": "food",
+  "companion": "solo",
+  "diet": "vegan",
+  "pace": null,
+  "weekday": "mon",
+  "purpose": "Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 5 days, on my own. Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights. Areas by day: Day 1 (Mon Nov 02): Dongdaemun; Day 2 (Tue Nov 03): Seongsu; Day 3 (Wed Nov 04): Hongdae; Day 4 (Thu Nov 05): Jongno; Day 5 (Fri Nov 06): Itaewon. I'm vegan."
+ },
+ {
+  "id": "P26",
+  "set": "pairwise",
+  "persona": 11,
+  "regions": [
+   "gangnam",
+   "seongsu",
+   "dongdaemun",
+   "itaewon",
+   "yeouido"
+  ],
+  "days": 5,
+  "theme": "wellness_night",
+  "companion": "friends",
+  "diet": "vegetarian",
+  "pace": "relaxed",
+  "weekday": "mon",
+  "purpose": "I want to unwind: a jjimjilbang, a hot spring or spa, and maybe a skincare treatment. Nothing strenuous.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 5 days, with friends. I want to unwind: a jjimjilbang, a hot spring or spa, and maybe a skincare treatment. Nothing strenuous. Areas by day: Day 1 (Mon Nov 02): Gangnam; Day 2 (Tue Nov 03): Seongsu; Day 3 (Wed Nov 04): Dongdaemun; Day 4 (Thu Nov 05): Itaewon; Day 5 (Fri Nov 06): Yeouido. I prefer a relaxed pace. I'm vegetarian."
+ },
+ {
+  "id": "P27",
+  "set": "pairwise",
+  "persona": 5,
+  "regions": [
+   "gangnam",
+   "yeouido",
+   "jongno",
+   "dongdaemun",
+   "jamsil"
+  ],
+  "days": 5,
+  "theme": "shopping_beauty",
+  "companion": "friends",
+  "diet": null,
+  "pace": null,
+  "weekday": "sat",
+  "purpose": "I want Korean skincare brands, spa visits and trendy fashion streets.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 5 days, with friends. I want Korean skincare brands, spa visits and trendy fashion streets. Areas by day: Day 1 (Sat Nov 07): Gangnam; Day 2 (Sun Nov 08): Yeouido; Day 3 (Mon Nov 09): Jongno; Day 4 (Tue Nov 10): Dongdaemun; Day 5 (Wed Nov 11): Jamsil."
+ },
+ {
+  "id": "P28",
+  "set": "pairwise",
+  "persona": 8,
+  "regions": [
+   "itaewon"
+  ],
+  "days": 1,
+  "theme": "wellness_night",
+  "companion": "couple",
+  "diet": "vegan",
+  "pace": null,
+  "weekday": "sat",
+  "purpose": "Bars, live music and late-night spots. I'm happy to start the day late.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 1 day, as a couple. Bars, live music and late-night spots. I'm happy to start the day late. Areas by day: Day 1 (Sat Nov 07): Itaewon. I'm vegan."
+ },
+ {
+  "id": "P29",
+  "set": "pairwise",
+  "persona": 15,
+  "regions": [
+   "yeouido",
+   "gangnam"
+  ],
+  "days": 2,
+  "theme": "food",
+  "companion": "friends",
+  "diet": "halal",
+  "pace": null,
+  "weekday": "mon",
+  "purpose": "I want a Michelin-level dinner and a craft-alcohol tasting, like makgeolli or soju, plus a few good coffee shops.",
+  "start": "2026-11-02",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 2 days, with friends. I want a Michelin-level dinner and a craft-alcohol tasting, like makgeolli or soju, plus a few good coffee shops. Areas by day: Day 1 (Mon Nov 02): Yeouido; Day 2 (Tue Nov 03): Gangnam. Halal food only."
+ },
+ {
+  "id": "X1",
+  "set": "stress",
+  "theme": null,
+  "diet": null,
+  "pace": null,
+  "name": "Monday heritage",
+  "days": 2,
+  "persona": 1,
+  "regions": [
+   "jongno",
+   "myeongdong"
+  ],
+  "companion": "solo",
+  "weekday": "mon",
+  "probe": "OH",
+  "purpose": "It's my first time in Korea. I want palaces, hanok streets and a traditional market meal.",
+  "start": "2026-11-02",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 2 days, on my own. It's my first time in Korea. I want palaces, hanok streets and a traditional market meal. Areas by day: Day 1 (Mon Nov 02): Jongno; Day 2 (Tue Nov 03): Myeongdong."
+ },
+ {
+  "id": "X2",
+  "set": "stress",
+  "theme": null,
+  "diet": "halal",
+  "pace": null,
+  "name": "Halal family, 5 days",
+  "days": 5,
+  "persona": 12,
+  "companion": "family",
+  "weekday": "sat",
+  "probe": "CC",
+  "regions": [
+   "itaewon",
+   "dongdaemun",
+   "jongno",
+   "myeongdong",
+   "hongdae"
+  ],
+  "purpose": "I'm a Muslim traveller and need halal food and prayer rooms. I'd also like some of the main sights.",
+  "start": "2026-11-07",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 5 days, with my family (young children). I'm a Muslim traveller and need halal food and prayer rooms. I'd also like some of the main sights. Areas by day: Day 1 (Sat Nov 07): Itaewon; Day 2 (Sun Nov 08): Dongdaemun; Day 3 (Mon Nov 09): Jongno; Day 4 (Tue Nov 10): Myeongdong; Day 5 (Wed Nov 11): Hongdae. Halal food only."
+ },
+ {
+  "id": "X3",
+  "set": "stress",
+  "theme": null,
+  "diet": null,
+  "pace": "packed",
+  "name": "Packed nightlife",
+  "days": 2,
+  "persona": 8,
+  "companion": "friends",
+  "weekday": "sat",
+  "probe": "TF",
+  "regions": [
+   "itaewon",
+   "gangnam"
+  ],
+  "purpose": "Bars, live music and late-night spots. I'm happy to start the day late.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 2 days, with friends. Bars, live music and late-night spots. I'm happy to start the day late. Areas by day: Day 1 (Sat Nov 07): Itaewon; Day 2 (Sun Nov 08): Gangnam. I want to fit in as much as I can."
+ },
+ {
+  "id": "X4",
+  "set": "stress",
+  "theme": null,
+  "diet": "vegan",
+  "pace": null,
+  "name": "Vegan, 1 day",
+  "days": 1,
+  "persona": 4,
+  "companion": "solo",
+  "weekday": "mon",
+  "probe": "CC",
+  "regions": [
+   "dongdaemun"
+  ],
+  "purpose": "Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 1 day, on my own. Street food, local markets and neighbourhood restaurants are the whole point. I don't care much about sights. Areas by day: Day 1 (Mon Nov 02): Dongdaemun. I'm vegan."
+ },
+ {
+  "id": "X5",
+  "set": "stress",
+  "theme": null,
+  "diet": null,
+  "pace": "relaxed",
+  "name": "Recovery, easy walks",
+  "days": 2,
+  "persona": 14,
+  "restrictions": "Recovering from a dermatology treatment: short, easy walks only, no long hikes.",
+  "companion": "couple",
+  "weekday": "sat",
+  "probe": "MB",
+  "regions": [
+   "gangnam",
+   "jongno"
+  ],
+  "purpose": "I'm in Seoul for a dermatology treatment and need recovery days. Short, easy walks and quiet cafes only, no long hikes.",
+  "start": "2026-11-07",
+  "request": "I'm visiting Seoul for 2 days, as a couple. I'm in Seoul for a dermatology treatment and need recovery days. Short, easy walks and quiet cafes only, no long hikes. Areas by day: Day 1 (Sat Nov 07): Gangnam; Day 2 (Sun Nov 08): Jongno. I prefer a relaxed pace. Recovering from a dermatology treatment: short, easy walks only, no long hikes."
+ },
+ {
+  "id": "X6",
+  "set": "stress",
+  "theme": null,
+  "diet": null,
+  "pace": null,
+  "name": "Four far-apart regions",
+  "days": 4,
+  "persona": 7,
+  "regions": [
+   "jamsil",
+   "hongdae",
+   "gangnam",
+   "jongno"
+  ],
+  "companion": "family",
+  "weekday": "mon",
+  "probe": "RD",
+  "purpose": "Travelling with two kids under 8. We need places children enjoy: playgrounds, aquarium or theme-park style stops.",
+  "start": "2026-11-02",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 4 days, with my family (young children). Travelling with two kids under 8. We need places children enjoy: playgrounds, aquarium or theme-park style stops. Areas by day: Day 1 (Mon Nov 02): Jamsil; Day 2 (Tue Nov 03): Hongdae; Day 3 (Wed Nov 04): Gangnam; Day 4 (Thu Nov 05): Jongno."
+ },
+ {
+  "id": "PS1",
+  "set": "persona",
+  "theme": null,
+  "diet": null,
+  "pace": null,
+  "name": "First-time culture solo",
+  "days": 3,
+  "regions": [
+   "jongno",
+   "jongno",
+   "dongdaemun"
+  ],
+  "companion": "solo",
+  "weekday": "mon",
+  "purpose": "It's my first time in Korea. I want palaces, hanok streets and traditional culture.",
+  "start": "2026-11-02",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 3 days, on my own. It's my first time in Korea. I want palaces, hanok streets and traditional culture. Areas by day: Day 1 (Mon Nov 02): Jongno; Day 2 (Tue Nov 03): Jongno; Day 3 (Wed Nov 04): Dongdaemun."
+ },
+ {
+  "id": "PS2",
+  "set": "persona",
+  "theme": null,
+  "diet": "vegan",
+  "pace": null,
+  "name": "Vegan foodie couple",
+  "days": 2,
+  "regions": [
+   "seongsu",
+   "hongdae"
+  ],
+  "companion": "couple",
+  "weekday": "sat",
+  "purpose": "We love food: vegan restaurants and local cafes.",
+  "start": "2026-11-07",
+  "restrictions": "I'm vegan.",
+  "request": "I'm visiting Seoul for 2 days, as a couple. We love food: vegan restaurants and local cafes. Areas by day: Day 1 (Sat Nov 07): Seongsu; Day 2 (Sun Nov 08): Hongdae. I'm vegan."
+ },
+ {
+  "id": "PS3",
+  "set": "persona",
+  "theme": null,
+  "diet": "halal",
+  "pace": "relaxed",
+  "name": "Halal family",
+  "days": 4,
+  "regions": [
+   "itaewon",
+   "myeongdong",
+   "jamsil",
+   "jongno"
+  ],
+  "companion": "family",
+  "weekday": "sat",
+  "purpose": "A Muslim family: halal food and prayer rooms matter.",
+  "start": "2026-11-07",
+  "restrictions": "Halal food only.",
+  "request": "I'm visiting Seoul for 4 days, with my family (young children). A Muslim family: halal food and prayer rooms matter. Areas by day: Day 1 (Sat Nov 07): Itaewon; Day 2 (Sun Nov 08): Myeongdong; Day 3 (Mon Nov 09): Jamsil; Day 4 (Tue Nov 10): Jongno. I prefer a relaxed pace. Halal food only."
+ },
+ {
+  "id": "PS4",
+  "set": "persona",
+  "theme": null,
+  "diet": null,
+  "pace": "relaxed",
+  "name": "Family with young kids",
+  "days": 3,
+  "regions": [
+   "jamsil",
+   "yeouido",
+   "jongno"
+  ],
+  "companion": "family",
+  "weekday": "sat",
+  "purpose": "Two kids under 8. We need places children enjoy: playgrounds, aquarium or theme-park style stops.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 3 days, with my family (young children). Two kids under 8. We need places children enjoy: playgrounds, aquarium or theme-park style stops. Areas by day: Day 1 (Sat Nov 07): Jamsil; Day 2 (Sun Nov 08): Yeouido; Day 3 (Mon Nov 09): Jongno. I prefer a relaxed pace."
+ },
+ {
+  "id": "PS5",
+  "set": "persona",
+  "theme": null,
+  "diet": null,
+  "pace": "packed",
+  "name": "K-pop fan friends",
+  "days": 2,
+  "regions": [
+   "seongsu",
+   "gangnam"
+  ],
+  "companion": "friends",
+  "weekday": "mon",
+  "purpose": "We're K-pop fans: idol-related places, agency buildings and merchandise.",
+  "start": "2026-11-02",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 2 days, with friends. We're K-pop fans: idol-related places, agency buildings and merchandise. Areas by day: Day 1 (Mon Nov 02): Seongsu; Day 2 (Tue Nov 03): Gangnam. I want to fit in as much as I can."
+ },
+ {
+  "id": "PS6",
+  "set": "persona",
+  "theme": null,
+  "diet": null,
+  "pace": "packed",
+  "name": "Shopping and beauty solo",
+  "days": 1,
+  "regions": [
+   "myeongdong"
+  ],
+  "companion": "solo",
+  "weekday": "sat",
+  "purpose": "Korean skincare brands, Olive Young, beauty clinics and trendy fashion.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 1 day, on my own. Korean skincare brands, Olive Young, beauty clinics and trendy fashion. Areas by day: Day 1 (Sat Nov 07): Myeongdong. I want to fit in as much as I can."
+ },
+ {
+  "id": "PS7",
+  "set": "persona",
+  "theme": null,
+  "diet": null,
+  "pace": "packed",
+  "name": "Nightlife friends",
+  "days": 2,
+  "regions": [
+   "hongdae",
+   "itaewon"
+  ],
+  "companion": "friends",
+  "weekday": "sat",
+  "purpose": "Bars, live music and late-night spots. We're happy to start late.",
+  "start": "2026-11-07",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 2 days, with friends. Bars, live music and late-night spots. We're happy to start late. Areas by day: Day 1 (Sat Nov 07): Hongdae; Day 2 (Sun Nov 08): Itaewon. I want to fit in as much as I can."
+ },
+ {
+  "id": "PS8",
+  "set": "persona",
+  "theme": null,
+  "diet": "vegetarian",
+  "pace": null,
+  "name": "Five-day mixed couple",
+  "days": 5,
+  "regions": [
+   "jongno",
+   "seongsu",
+   "myeongdong",
+   "gangnam",
+   "hongdae"
+  ],
+  "companion": "couple",
+  "weekday": "mon",
+  "purpose": "A bit of everything: history, food and shopping.",
+  "start": "2026-11-02",
+  "restrictions": "I'm vegetarian.",
+  "request": "I'm visiting Seoul for 5 days, as a couple. A bit of everything: history, food and shopping. Areas by day: Day 1 (Mon Nov 02): Jongno; Day 2 (Tue Nov 03): Seongsu; Day 3 (Wed Nov 04): Myeongdong; Day 4 (Thu Nov 05): Gangnam; Day 5 (Fri Nov 06): Hongdae. I'm vegetarian."
+ },
+ {
+  "id": "PS9",
+  "set": "persona",
+  "theme": null,
+  "diet": null,
+  "pace": "relaxed",
+  "name": "Senior couple, little English",
+  "days": 3,
+  "regions": [
+   "jongno",
+   "gangnam",
+   "yeouido"
+  ],
+  "companion": "couple",
+  "weekday": "mon",
+  "purpose": "We are in our late sixties and speak very little English. We prefer slow days and places that are easy to walk.",
+  "start": "2026-11-02",
+  "restrictions": null,
+  "request": "I'm visiting Seoul for 3 days, as a couple. We are in our late sixties and speak very little English. We prefer slow days and places that are easy to walk. Areas by day: Day 1 (Mon Nov 02): Jongno; Day 2 (Tue Nov 03): Gangnam; Day 3 (Wed Nov 04): Yeouido. I prefer a relaxed pace."
+ }
+]

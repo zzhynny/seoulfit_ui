@@ -11,10 +11,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import planner  # noqa: E402
-from critic_repair import reorder_supplements  # noqa: E402
-from planner import (  # noqa: E402
-    _is_meal_poi, _meal_slot_indices, _validate_and_repair_itinerary,
+import planner
+from critic_repair import reorder_supplements
+from planner import (
+    _is_meal_poi,
+    _meal_slot_indices,
+    _validate_and_repair_itinerary,
 )
 
 
@@ -284,6 +286,15 @@ def test_a_meal_is_rechosen_for_the_stops_either_side() -> None:
     assert planner._choose_for_gap(pick, {"name": "no coords"}, None, set()) is pick
 
 
+def test_a_meal_prefers_the_midpoint_between_the_stops() -> None:
+    prev = {"name": "A", "lat": 37.5560, "lng": 126.9230}
+    nxt = {"name": "B", "lat": 37.5590, "lng": 126.9260}
+    hugging_a = _at("HuggingA", "lunch", 37.5563, 126.9233)     # on the A->B line, beside A
+    middle = _at("Middle", "lunch", 37.5575, 126.9245)          # on the line, halfway
+    pick = _at("Pick", "lunch", 37.5563, 126.9233, alternatives=[hugging_a, middle])
+    assert planner._choose_for_gap(pick, prev, nxt, set())["name"] == "Middle"
+
+
 def test_no_restaurant_is_served_twice_across_the_trip() -> None:
     """Both days' dinners could re-choose the same nearby place; only the first gets it,
     and nobody takes another meal's own pick."""
@@ -325,3 +336,14 @@ def test_revision_cannot_reuse_a_meal_from_another_day() -> None:
     )
     names = [p["name"] for p in out["days"][0]["pois"]]
     assert "Pick" in names and "ServedOnDay2" not in names, names
+
+
+def test_a_meal_off_the_route_loses_to_one_on_it() -> None:
+    """Balance must not buy a detour: midway but ~3 km off the A->B line loses
+    to a pick right on the line beside A."""
+    prev = {"name": "A", "lat": 37.5000, "lng": 127.0000}
+    nxt = {"name": "B", "lat": 37.5360, "lng": 127.0000}         # 4 km north of A
+    on_route = _at("OnRoute", "lunch", 37.5009, 127.0000)        # 0.1 km from A, on the line
+    pick = _at("OffRoute", "lunch", 37.5180, 127.0340,           # midway, 3 km east
+               alternatives=[on_route])
+    assert planner._choose_for_gap(pick, prev, nxt, set())["name"] == "OnRoute"
