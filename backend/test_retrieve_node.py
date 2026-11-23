@@ -178,3 +178,54 @@ def test_a_course_that_was_not_offered_keeps_that_days_anchors(monkeypatch):
         {"day": 2, "course_id": None},
     ])   # day 3 missing from the answer
     assert [len(s["anchor_courses"]) for s in out["day_segments"]] == [3, 0, 3]
+
+
+# --- CRAG verdicts -----------------------------------------------------------
+
+def _graded(segs, verdict, course_id=True):
+    return [{"day": s["day_numbers"][0],
+             "course_id": s["anchor_courses"][0]["course_id"] if course_id else None,
+             "verdict": verdict,
+             "search": [{"phrase": "hanbok rental", "poi_type": "shopping"}]} for s in segs]
+
+
+def test_a_correct_course_that_fills_the_day_skips_the_search(monkeypatch):
+    monkeypatch.setattr(planner, "_pace_bounds", lambda state: (1, 1))
+    out = _judged(monkeypatch, lambda segs: _graded(segs, "correct"))
+    for s in out["day_segments"]:
+        assert s["retrieval_verdict"] == "correct"
+        assert s["keywords"] == [] and s["skip_search"]
+
+
+def test_a_correct_course_too_short_for_the_pace_still_searches(monkeypatch):
+    """The judge grades relevance; whether the course can fill the day is
+    counted, and one course rarely can."""
+    monkeypatch.setattr(planner, "_pace_bounds", lambda state: (99, 99))
+    out = _judged(monkeypatch, lambda segs: _graded(segs, "correct"))
+    for s in out["day_segments"]:
+        assert s["retrieval_verdict"] == "ambiguous"
+        assert s["keywords"] == [{"phrase": "hanbok rental", "poi_type": "shopping"}]
+        assert not s.get("skip_search")
+
+
+def test_crag_skip_off_searches_correct_days_too(monkeypatch):
+    monkeypatch.setattr(planner, "_pace_bounds", lambda state: (1, 1))
+    monkeypatch.setenv("CRAG_SKIP", "0")
+    out = _judged(monkeypatch, lambda segs: _graded(segs, "correct"))
+    for s in out["day_segments"]:
+        assert s["retrieval_verdict"] == "correct"
+        assert s["keywords"] == [{"phrase": "hanbok rental", "poi_type": "shopping"}]
+
+
+def test_the_pick_overrides_a_contradicting_label(monkeypatch):
+    out = _judged(monkeypatch, lambda segs: _graded(segs, "correct", course_id=False))
+    assert all(s["retrieval_verdict"] == "incorrect" for s in out["day_segments"])
+    out = _judged(monkeypatch, lambda segs: _graded(segs, "incorrect"))
+    assert all(s["retrieval_verdict"] == "ambiguous" for s in out["day_segments"])
+
+
+def test_no_label_or_no_answer_is_ambiguous(monkeypatch):
+    """A missing label keeps today's behaviour: the day still searches."""
+    out = _judged(monkeypatch, lambda segs: [
+        {"day": 1, "course_id": segs[0]["anchor_courses"][0]["course_id"]}])
+    assert [s["retrieval_verdict"] for s in out["day_segments"]] == ["ambiguous"] * 3

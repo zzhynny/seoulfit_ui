@@ -19,6 +19,7 @@ The node is intentionally robust:
 from __future__ import annotations
 
 import math
+import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
@@ -1631,23 +1632,26 @@ def _revise_once(state, itinerary, after_report, flagged, repair_and_tidy):
 
     The revision runs on a deep copy (RepairAgent edits in place) and is kept
     only if the critic scores it no worse -- otherwise the trip we already had
-    ships. Any failure keeps it too.
+    ships. Any failure keeps it too. REVISE_MODE=react (read per call, so an
+    eval can flip it between arms) uses revise_agent's tool-using agent.
     """
     import copy
 
+    react = os.getenv("REVISE_MODE") == "react"
+    how = "ReAct" if react else "LLM"
     days = ", ".join(str(d) for d in sorted(flagged))
     before = after_report.get("overall_score") or 0
     try:
-        revised = planner.revise_days(state, copy.deepcopy(itinerary), flagged)
+        revised = planner.revise_days(state, copy.deepcopy(itinerary), flagged, react=react)
         revised, _, report = repair_and_tidy(revised, critic_report_for(state, revised))
     except Exception as e:
         print(f"[critic] revision of day {days} failed: {type(e).__name__}: {e}")
-        return itinerary, after_report, f"Revised day {days} via LLM: failed, kept original."
+        return itinerary, after_report, f"Revised day {days} via {how}: failed, kept original."
 
     score = report.get("overall_score") or 0
     if score >= before:
-        return revised, report, f"Revised day {days} via LLM: accepted, {before} -> {score}."
-    return itinerary, after_report, f"Revised day {days} via LLM: rejected, {before} -> {score}."
+        return revised, report, f"Revised day {days} via {how}: accepted, {before} -> {score}."
+    return itinerary, after_report, f"Revised day {days} via {how}: rejected, {before} -> {score}."
 
 
 def critic_report_for(state: dict[str, Any], itinerary: dict[str, Any]) -> dict[str, Any]:

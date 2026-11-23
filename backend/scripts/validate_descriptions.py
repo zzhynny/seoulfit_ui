@@ -30,7 +30,7 @@ _HERE = Path(__file__).resolve().parent
 _BACKEND = _HERE.parent
 sys.path.insert(0, str(_BACKEND))
 
-COURSE_DATA = _BACKEND / "dataset" / "course_data_v6.json"
+COURSE_DATA = _BACKEND / "dataset" / "course_data_v7.json"
 DESCRIPTIONS = _BACKEND / "dataset" / "course_descriptions.json"
 
 INTERESTS = [
@@ -221,7 +221,7 @@ def validate(path: Path) -> int:
         total += 1
         facts = facts_by_id.get(cid)
         if not facts:
-            print(f"✗ {cid}: course_data_v6.json 에 없는 course_id")
+            print(f"✗ {cid}: course_data_v7.json 에 없는 course_id")
             failed += 1
             continue
         errs = check_one(entry, facts, gaz, cid)

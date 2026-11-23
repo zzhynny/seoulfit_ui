@@ -1,0 +1,441 @@
+{
+  "thresholds": {
+    "min_stops": 3,
+    "min_non_food": 2,
+    "max_path_km": 20.0
+  },
+  "counts": {
+    "v6": 125,
+    "v7": 90,
+    "dropped": 35,
+    "stops_removed": 26
+  },
+  "dropped_courses": [
+    {
+      "course_id": "VS_MVP_004",
+      "title": "A One-Day Seoul Course for E-Sports Enthusiasts",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 6,
+      "stops_after": 6,
+      "path_km": 21.0
+    },
+    {
+      "course_id": "VS_MVP_009",
+      "title": "Lively Seoul Travel Course, HIGHTEEN SEOUL",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 4,
+      "stops_after": 2,
+      "path_km": 3.8
+    },
+    {
+      "course_id": "VS_MVP_012_DAY1",
+      "title": "3 nights 4 days course for novices",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 1,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_012_DAY4",
+      "title": "3 nights 4 days course for novices",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 2,
+      "stops_after": 2,
+      "path_km": 3.2
+    },
+    {
+      "course_id": "VS_MVP_013_DAY1",
+      "title": "2 nights 3 days course for novices",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 1,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_013_DAY3",
+      "title": "2 nights 3 days course for novices",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 3,
+      "stops_after": 2,
+      "path_km": 3.1
+    },
+    {
+      "course_id": "VS_MVP_015_DAY1",
+      "title": "If you are a backpacker",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 1,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_015_DAY3",
+      "title": "If you are a backpacker",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 2,
+      "stops_after": 2,
+      "path_km": 2.2
+    },
+    {
+      "course_id": "VS_MVP_015_DAY5",
+      "title": "If you are a backpacker",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 1,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_016",
+      "title": "Seoul Media Course",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 7,
+      "stops_after": 7,
+      "path_km": 30.2
+    },
+    {
+      "course_id": "VS_MVP_018",
+      "title": "Seoul Time Machine Course",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 9,
+      "stops_after": 9,
+      "path_km": 22.4
+    },
+    {
+      "course_id": "VS_MVP_020",
+      "title": "Seoul Shopping Course",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 7,
+      "stops_after": 7,
+      "path_km": 21.9
+    },
+    {
+      "course_id": "VS_MVP_021",
+      "title": "Seoul Night Life Course",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 6,
+      "stops_after": 6,
+      "path_km": 31.2
+    },
+    {
+      "course_id": "VS_MVP_022",
+      "title": "Seoul Epicurean Course",
+      "reasons": [
+        "food_only"
+      ],
+      "stops_before": 3,
+      "stops_after": 3,
+      "path_km": 11.5
+    },
+    {
+      "course_id": "VS_MVP_023",
+      "title": "Seoul Activities Course",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 4,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_028_DAY1",
+      "title": "3 nights 4 days course for those who have visited Seoul already",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 2,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_028_DAY2",
+      "title": "3 nights 4 days course for those who have visited Seoul already",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 4,
+      "stops_after": 3,
+      "path_km": 28.7
+    },
+    {
+      "course_id": "VS_MVP_029_DAY1",
+      "title": "3 nights 4 days course for real Seoulite",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 2,
+      "stops_after": 2,
+      "path_km": 0.7
+    },
+    {
+      "course_id": "VS_MVP_030_DAY5",
+      "title": "If you visit Seoul for the first time",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 1,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_031",
+      "title": "If you are a foodie traveler",
+      "reasons": [
+        "food_only",
+        "spread"
+      ],
+      "stops_before": 6,
+      "stops_after": 5,
+      "path_km": 23.1
+    },
+    {
+      "course_id": "VS_MVP_033_DAY1",
+      "title": "If you are a cultural traveler",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 2,
+      "stops_after": 2,
+      "path_km": 0.8
+    },
+    {
+      "course_id": "VS_MVP_034",
+      "title": "If you are a business traveler",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 10,
+      "stops_after": 10,
+      "path_km": 24.2
+    },
+    {
+      "course_id": "VS_MVP_035_DAY1",
+      "title": "If you are a Muslim traveler",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 2,
+      "stops_after": 2,
+      "path_km": 2.0
+    },
+    {
+      "course_id": "VS_MVP_036_DAY1",
+      "title": "If you are a budget traveler",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 3,
+      "stops_after": 2,
+      "path_km": 0.7
+    },
+    {
+      "course_id": "VS_MVP_036_DAY3",
+      "title": "If you are a budget traveler",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 2,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_037_DAY3",
+      "title": "If you are an activity lover",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 2,
+      "stops_after": 0,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_038_DAY1",
+      "title": "If you are a Hallyu star fan",
+      "reasons": [
+        "thin",
+        "food_only"
+      ],
+      "stops_before": 1,
+      "stops_after": 1,
+      "path_km": 0
+    },
+    {
+      "course_id": "VS_MVP_038_DAY5",
+      "title": "If you are a Hallyu star fan",
+      "reasons": [
+        "thin"
+      ],
+      "stops_before": 2,
+      "stops_after": 2,
+      "path_km": 0.6
+    },
+    {
+      "course_id": "VK_THEME_002",
+      "title": "RM's Pick: Seoul Art Tour",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 6,
+      "stops_after": 6,
+      "path_km": 33.4
+    },
+    {
+      "course_id": "VK_THEME_008",
+      "title": "Enjoy Theme Parks and Riverside Picnics at Hangang River in Seoul",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 8,
+      "stops_after": 8,
+      "path_km": 33.4
+    },
+    {
+      "course_id": "VK_THEME_014",
+      "title": "[For Mothers and Daughters] Embark on a Beauty and Gourmet Tour in Seoul",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 7,
+      "stops_after": 7,
+      "path_km": 24.6
+    },
+    {
+      "course_id": "VK_THEME_027",
+      "title": "K-pop Stars' Favorite Restaurants in Seoul Revealed!",
+      "reasons": [
+        "food_only"
+      ],
+      "stops_before": 3,
+      "stops_after": 3,
+      "path_km": 7.0
+    },
+    {
+      "course_id": "VK_THEME_034",
+      "title": "Luxury Tour with a Blend of Tradition & Modern Technology",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 4,
+      "stops_after": 4,
+      "path_km": 21.0
+    },
+    {
+      "course_id": "VK_THEME_038",
+      "title": "A One-of-a-kind Railroad-themed Seoul Tour",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 6,
+      "stops_after": 6,
+      "path_km": 24.9
+    },
+    {
+      "course_id": "VK_THEME_045",
+      "title": "Filming Spots: \"Taxi Driver\"",
+      "reasons": [
+        "spread"
+      ],
+      "stops_before": 3,
+      "stops_after": 3,
+      "path_km": 29.0
+    }
+  ],
+  "trimmed_courses": [
+    {
+      "course_id": "VS_MVP_001",
+      "removed": [
+        "Seongsu Self-Photo Booths (성수동 셀프 포토부스) [generic]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_008",
+      "removed": [
+        "Chungmuro Station (충무로역) [station]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_010",
+      "removed": [
+        "Daehak-ro Retro Cafe (대학로 레트로카페) [generic]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_012_DAY2",
+      "removed": [
+        "Seoul Station (서울역) [station]",
+        "Hangang Parks (한강공원) [generic]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_013_DAY2",
+      "removed": [
+        "Hangang Parks (한강공원) [generic]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_019",
+      "removed": [
+        "Hanbok Rental (한복대여) [generic]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_025",
+      "removed": [
+        "Sinchon Station (신촌역) [station]",
+        "Jazz Bars (재즈바) [generic]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_026",
+      "removed": [
+        "Anguk Station (안국역) [station]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_027",
+      "removed": [
+        "Gyeongbokgung Station (경복궁역) [station]"
+      ]
+    },
+    {
+      "course_id": "VS_MVP_037_DAY1AND2",
+      "removed": [
+        "Hanbok Experience at Palaces (궁궐 한복 체험) [generic]",
+        "Food Delivery at Hangang River (한강 배달음식) [generic]"
+      ]
+    }
+  ]
+}

@@ -18,7 +18,7 @@ flowchart LR
     CR --> D[요약·테마 재작성]
     D --> A[앱 화면]
 
-    DB[(코스 DB 125개<br/>course_vectors.npz)] --> R
+    DB[(코스 DB 90개<br/>course_vectors.npz)] --> R
     M[(미쉐린 180곳)] --> P
     G([Google Places]) --> P
     PF[(place_facts.json<br/>영업시간·리뷰 라벨)] --> R
@@ -33,8 +33,8 @@ flowchart LR
 
 | 파일 | 규모 | 쓰임 |
 |---|---|---|
-| `dataset/course_data_v6.json` | 코스 125개, 방문 순서 551개, 고유 POI 374곳 | Visit Seoul·Visit Korea 추천 코스를 하루 단위로 정리. 하루의 뼈대 |
-| `dataset/course_descriptions.json` → `course_vectors.npz` | 125 × 3072 | 코스마다 "어떤 여행자에게 맞는가" 한 문장(`purpose`)을 임베딩 |
+| `dataset/course_data_v7.json` | 코스 90개, 방문 순서 405개, 고유 POI 288곳 | Visit Seoul·Visit Korea 추천 코스를 하루 단위로 정리. 하루의 뼈대. v6(125개)에서 얇은·식당뿐인·너무 넓은 코스와 일반명 정류장을 뺐다 (`scripts/build_course_data_v7.py`) |
+| `dataset/course_descriptions.json` → `course_vectors.npz` | 90 × 3072 | 코스마다 "어떤 여행자에게 맞는가" 한 문장(`purpose`)을 임베딩 |
 | `dataset/restaurant.json` | 180곳 | 미쉐린 서울 식당. 점심·저녁의 1순위 후보 |
 | `dataset/place_facts.json` | 490곳 | 코스 POI·미쉐린 식당의 Google 영업시간, 폐업 여부, 리뷰 기반 라벨(영어 응대, 현금 전용, 예약 필수, 문화 마찰). `scripts/enrich_place_facts.py`로 오프라인 생성 |
 | Google Places (실시간) | – | 코스로 다 못 채운 자리의 보완 장소, 2순위 식당, `place_facts`에 없는 장소의 영업시간 |
@@ -44,13 +44,15 @@ flowchart LR
 ### 1. 검색 (retrieve)
 
 1. **지역 필터**: 그날 지역에 POI가 하나라도 있는 코스만 후보가 됩니다. 유사도가 높아도 다른 지역 코스는 제외합니다.
-2. **순위**: 질의 임베딩과 코스 벡터의 내적으로 상위 3개를 고릅니다. 125개라 근사 검색 없이 전수 계산합니다.
+2. **순위**: 질의 임베딩과 코스 벡터의 내적으로 상위 3개를 고릅니다. 90개라 근사 검색 없이 전수 계산합니다.
 3. **LLM Judge**: 후보 3개 중 하나를 고르거나, 맞는 코스가 없으면 `null`을 냅니다. 유사도 숫자만으로는 "맞는 코스 없음"을 구분하지 못했기 때문입니다. 코스가 채우지 못하는 요청은 Google Maps 검색어(1~2개)로 적고, 이 검색어는 그날 지역에서만 실행됩니다.
+4. **CRAG 판정**: Judge는 날마다 `correct`(코스가 요청을 다 충족) / `ambiguous`(일부만 충족) / `incorrect`(`null`) 중 하나를 냅니다. `correct`라도 그날 보여줄 정류장 수가 페이스 최소치에 못 미치면 코드가 `ambiguous`로 내립니다. `correct`인 날은 Google 검색을 하지 않고, 한 지역의 모든 날이 `correct`이면 그 지역은 아예 검색하지 않습니다. `ambiguous`는 코스 + 검색, `incorrect`는 검색만으로 하루를 만듭니다. `CRAG_SKIP=0`이면 예전처럼 모든 날을 검색합니다.
 
 ### 2. 생성 (plan, Generator)
 
 1. **식사 먼저 확정**: 날마다 저녁, 점심 순으로 미쉐린 → Google → 비움 순서로 정합니다. LLM에게는 식당을 넣지 말라고 지시합니다.
 2. **Gemini 호출**: 하루마다 따로, 최대 6개를 병렬로 부릅니다. 규칙은 제공된 목록의 장소만 쓰고, 이름·좌표를 그대로 복사하고, 장소마다 우선순위 1~3을 매기는 것입니다.
+   코스가 없는 날(`incorrect`)은 한 번에 생성하지 않고 ReAct 에이전트(`revise_agent.react_day`)가 만듭니다. 장소 검색·영업시간 확인 도구를 최대 3번 쓰고, 도구가 찾은 장소는 Google 보완 목록에 합쳐져 검증기와 Critic이 인정합니다. 실패하면 한 번 생성으로 돌아가고, `NULL_DAY_REACT=0`이면 처음부터 한 번 생성을 씁니다.
 3. **검증기**: 목록 밖 장소(환각)를 삭제하고, 요청 지역을 강제로 넣고, 확정한 식사를 삽입합니다. 그다음 페이스별 정류장 수를 맞추고(느긋 3~4, 보통 6~7, 빡빡 7~8) 이동 구간을 계산합니다.
 
 ### 3. 검사와 수정 (critic_repair)

@@ -4,16 +4,16 @@ Offline, no embedding calls needed (uses pre-computed rankings from persona_rank
 Usage: python evals/retrieval_eval.py
 """
 import json
+import sys
 from math import comb
 from pathlib import Path
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import retrieval
 
 here = Path(__file__).parent
-GOLD = {int(k): set(v) for k, v in json.load(open(here / "personas.json"))["gold"].items()}
-ranked = {r["n"]: r for r in json.load(open(here / "persona_ranked.json"))}
+GOLD = {int(k): set(v) for k, v in json.loads((here / "personas.json").read_text(encoding="utf-8"))["gold"].items()}
+ranked = {r["n"]: r for r in json.loads((here / "persona_ranked.json").read_text(encoding="utf-8"))}
 
 def hit(order, g, k): return any(c in g for c in order[:k])
 def first_rank(order, g): return next((i for i, c in enumerate(order, 1) if c in g), None)
@@ -25,10 +25,11 @@ for n, g in GOLD.items():
     emb = [c for c, _ in r["ranked"]]
     base = [c["course_id"] for c in retrieval._dedupe_by_base(retrieval.filter_pool(r["region"]))]
     N = len(base)
-    rows.append(dict(n=n, g=len(g), emb={k: hit(emb, g, k) for k in K},
-                     base={k: hit(base, g, k) for k in K},
-                     rnd={k: 1 - comb(N - len(g), k) / comb(N, k) for k in K},
-                     rank=first_rank(emb, g)))
+    rows.append({"n": n, "g": len(g), "emb": {k: hit(emb, g, k) for k in K},
+                 "base": {k: hit(base, g, k) for k in K},
+                 # k 가 풀보다 크면 무작위 순서도 전부 보여준다 — min(k, N).
+                 "rnd": {k: 1 - comb(N - len(g), min(k, N)) / comb(N, min(k, N)) for k in K},
+                 "rank": first_rank(emb, g)})
 
 lab = [x for x in rows if x["g"]]
 print(f"\nhit@k over {len(lab)} personas with fitting course:")

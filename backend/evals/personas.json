@@ -136,25 +136,19 @@
    "VS_MVP_014"
   ],
   "3": [
-   "VK_THEME_045",
    "VK_THEME_048"
   ],
   "4": [
-   "VS_MVP_003_DAY1",
-   "VS_MVP_021"
+   "VS_MVP_003_DAY1"
   ],
   "5": [
-   "VK_THEME_014",
-   "VK_THEME_034",
    "VK_THEME_048",
-   "VS_MVP_020",
    "VS_MVP_032"
   ],
   "6": [
    "VK_THEME_037"
   ],
   "7": [
-   "VK_THEME_008",
    "VK_THEME_009",
    "VS_MVP_002_DAY3",
    "VS_MVP_035_DAY3"
@@ -165,16 +159,11 @@
   "9": [
    "VK_THEME_030"
   ],
-  "10": [
-   "VS_MVP_036_DAY1"
-  ],
+  "10": [],
   "11": [
-   "VK_THEME_014",
    "VK_THEME_048"
   ],
-  "12": [
-   "VS_MVP_035_DAY1"
-  ],
+  "12": [],
   "13": [
    "VK_THEME_033"
   ],
@@ -191,13 +180,9 @@
   "18": [
    "VK_THEME_005",
    "VK_THEME_028",
-   "VK_THEME_043",
-   "VS_MVP_018",
-   "VS_MVP_033_DAY1"
+   "VK_THEME_043"
   ],
-  "19": [
-   "VS_MVP_004"
-  ],
+  "19": [],
   "20": [
    "VS_MVP_019"
   ]

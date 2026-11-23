@@ -39,7 +39,7 @@ def node(monkeypatch):
     calls = []
 
     def run(state, revise):
-        def fake(st, itinerary, flagged):
+        def fake(st, itinerary, flagged, react=False):
             calls.append(flagged)
             return revise(itinerary)
         monkeypatch.setattr(planner, "revise_days", fake)

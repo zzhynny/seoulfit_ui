@@ -1,0 +1,270 @@
+{
+ "_note": "Lens eval set. name/aliases/category stand in for Gemini Vision's output (hand-written, not from real photos). gold_post_sn is the seoul.json row the lookup should return; null means the place is not in seoul.json and the lookup should miss (-> Tavily). gt_answer is filled on first run from the English Wikipedia summary plus the place's official seoul.json facts; edit it by hand to improve it.",
+ "landmarks": [
+  {
+   "name_korean": "종묘",
+   "name_english": "Jongmyo Shrine",
+   "aliases_korean": [
+    "종묘"
+   ],
+   "category": "Historic Site",
+   "gold_post_sn": 507,
+   "wiki": "Jongmyo",
+   "gt_answer": "Jongmyo (Korean: 종묘) is a Confucian royal ancestral shrine in the Jongno District of Seoul, South Korea. It was originally built during the Joseon period (1392–1897) for memorial services for deceased kings and queens. According to UNESCO, the shrine is the oldest royal Confucian shrine preserved and the ritual ceremonies continue a tradition established in the 14th century. Such shrines existed during the Three Kingdoms of Korea period (57–668), but these have not survived. The Jongmyo Shrine was added to the UNESCO World Heritage list in 1995.\n\nAddress: 03135 157, Jong-ro, Jongno-gu, Seoul \nHours: Monday, Wednesday to Friday: Timed Tours (Enter at designated times, accompanied by a guide, and exit together as a group)\r\n- Korean Guided Tour Times: 9:20 / 10:20 / 11:20 / 12:20 / 13:20 / 14:20 / 15:20 / 16:20 / (March to September) 16:40 *Duration: 1 hour\r\n- English Guided Tour Times: 10:00 / 12:00 / 14:00 / 16:00\r\n- Japanese Guided Tour Times: 09:30 / 11:40 / 13:40 / 15:40\r\n- Chinese Guided Tour Times: 11:00 / 15:00\r\n\r\nRegular Admission on Saturdays, Sundays, Public Holidays, and the last Wednesday of every month:\r\n- February to May, September to October: 09:00-18:00 (Last entry at 17:00)\r\n- June to August: 09:00-18:30 (Last entry at 17:30)\r\n- November to January: 09:30-17:30 (Last entry at 16:30)\r\n(※ Please refer to the website for detailed information.)\nClosed: Tuesdays \nAccess: Subway Lines 1/3/5  Jongno 3-ga Station  Exit 8,  220m\nKeywords: Changgyeonggung,Architecture,UNESCO,Gwanghwamun,HistoricalSite,Jongmyo,Changdeokgung"
+  },
+  {
+   "name_korean": "숭례문",
+   "name_english": "Sungnyemun Gate",
+   "aliases_korean": [
+    "남대문",
+    "한양도성"
+   ],
+   "category": "Gate",
+   "gold_post_sn": 22888,
+   "wiki": "Sungnyemun",
+   "gt_answer": "Namdaemun, a.k.a. the Sungnyemun, is the southern gate of The Eight Gates of Seoul making part of the Seoul City Wall marking the city's original boundary during the Joseon period, although the city has since significantly outgrown it after that. It is located in Jung District between Seoul Station and Seoul Plaza, with the historic 24-hour Namdaemun Market next to the gate.\n\nAddress: 04528 40, Sejong-daero, Jung-gu, Seoul  \nHours: Tue-Sun 09:00-18:00 \nOpen: Tuesday - Sunday\nClosed: Monday\nAccess: Subway Lines 1 / 4 / Gyeongui-Jungang Line/ Airport Railroad  Exit 4,  258m  \r\nSubway Line 4  Hoehyeon Station  Exit 5,  403m\nKeywords: NationalTreasure,Namdaemun,HoehyeonStation,CulturalHeritage,Landmark,SeoulTravel,Gwanghwamun,Seoul,NationalTreasure,SeoulCulturalProperty,Sungnyemun,HistoricSite,KoreanCulturalHeritage"
+  },
+  {
+   "name_korean": "북촌한옥마을",
+   "name_english": "Bukchon Hanok Village",
+   "aliases_korean": [
+    "북촌"
+   ],
+   "category": "Traditional Architecture",
+   "gold_post_sn": 261,
+   "wiki": "Bukchon_Hanok_Village",
+   "gt_answer": "Bukchon Hanok Village (Korean: 북촌한옥마을) is a residential neighborhood in Jongno District, Seoul, South Korea. It has many restored traditional Korean houses, called hanok. This has made it a popular tourist destination.\n\nAddress: 03059 37, Gyedong-gil, Jongno-gu, Seoul  \nHours: 10:00 ~ 17:00 (Restricted Hours: 17:00 ~ 10:00 the following day; visitors are prohibited from entering restricted areas during these hours)\r\n(The Hanok Village is a residential space for local citizens before it is a tourist attraction.)\nAccess: Subway Line 3  Anguk Station  Exit 3,  516m\nKeywords: BukchonHanokVillageOuting,NicePlaceToWalk,KoreanTraditionalHouse,KoreanTradition,SeoulTravel,HanokVillage,KoreanCulture,SeoulOuting,SeoulAttractions,SeoulDating,SeoulBukchonHanokVillage,BukchonHanokVillage"
+  },
+  {
+   "name_korean": "동대문디자인플라자",
+   "name_english": "Dongdaemun Design Plaza",
+   "aliases_korean": [
+    "DDP",
+    "동대문"
+   ],
+   "category": "Modern Landmark",
+   "gold_post_sn": 24679,
+   "wiki": "Dongdaemun_Design_Plaza",
+   "gt_answer": "Dongdaemun Design Plaza is a major urban development landmark in Seoul, South Korea, designed by Zaha Hadid and Samoo, with a distinctively neofuturistic design characterized by the \"powerful, curving forms of elongated structures.\" The landmark is the centerpiece of South Korea's fashion hub and popular tourist destination, Dongdaemun, featuring a walkable park on its roofs, large global exhibition spaces, futuristic retail stores, and restored parts of the Seoul fortress.\n\nAddress: 04566 281, Euljiro, Jung-gu, Seoul (Euljiro 7-ga) \nHours: 10:00-20:00 KST (Vary by space, see the website)\nOpen: Daily \nAccess: Subway Lines 2/4/5, Dongdaemun History & Culture Park Station  Exit 1,  37m \nKeywords: DongdaemunDesignPlaza,SeoulAttractions,SeoulFun,DDP,SeoulCulturalComplex,SeoulDongdaemunHistory&CultureParkStation,SeoulDDP,SeoulDatingCourse"
+  },
+  {
+   "name_korean": "봉은사",
+   "name_english": "Bongeunsa Temple",
+   "aliases_korean": [
+    "봉은사"
+   ],
+   "category": "Temple",
+   "gold_post_sn": 411,
+   "wiki": "Bongeunsa",
+   "gt_answer": "Bongeunsa is a Korean Buddhist temple located in Samseong-dong, Gangnam District, Seoul, South Korea. It was founded in 794 during the reign of King Wonseong by State Preceptor Yeonhoe, then the highest ranking monk of Silla. The temple was originally named Gyeonseongsa. It is located on the slope of Sudo Mountain, across the street from the COEX Mall.\n\nAddress: 06087 531, Bongeunsa-ro, Gangnam-gu, Seoul, Korea  \nHours: Usage times may vary depending on temple schedules such as Buddhist services, prayer services, etc.\nAccess: Subway Line 9  Bongeunsa Station  Exit 1,  135m\nKeywords: Buddhism,Coex,BuddhistTemple,LanternParade,Gangnam,HistoricSite,TempleStay,Bongeunsa"
+  },
+  {
+   "name_korean": "조계사",
+   "name_english": "Jogyesa Temple",
+   "aliases_korean": [
+    "조계사"
+   ],
+   "category": "Temple",
+   "gold_post_sn": 2587,
+   "wiki": "Jogyesa",
+   "gt_answer": "Jogyesa is the chief temple of the Jogye Order of Korean Buddhism. The building dates back to the late 14th century and became the order's chief temple in 1936. It thus plays a leading role in the current state of Seon Buddhism in South Korea. The temple was first established in 1395, at the dawn of the Joseon period; the modern temple was founded in 1910 and initially called \"Gakhwangsa\". The name was changed to \"Taegosa\" during the period of Japanese rule, and then to the present name in 1954.\n\nAddress:  03144 55, Ujeongguk-ro, Jongno-gu, Seoul \nHours: Opening hours vary depending on what Buddhist ceremonies are taking place and the temple schedule\nAccess: Subway Line 1  Jonggak Station  Exit 2,  413m\nKeywords: Gwanghwamun Station,History,Jonggak Station,Jogyesa Temple,Buddhism,Anguk Station,Temple,Historic Site,Religious Site"
+  },
+  {
+   "name_korean": "운현궁",
+   "name_english": "Unhyeongung Palace",
+   "aliases_korean": [
+    "운현궁"
+   ],
+   "category": "Palace",
+   "gold_post_sn": 471,
+   "wiki": "Unhyeongung",
+   "gt_answer": "Unhyeongung, also known as Unhyeongung Royal Residence, is a former Korean royal residence located at 114-10 Unni-dong, Jongno-gu, Seoul. It was formerly the residence of the Heungseon Daewongun, who served as a prince regent of Joseon Korea in the 19th century and fathered Emperor Gojong. Gojong himself lived in Unhyeongung until age 12, when he assumed the throne. It is currently a museum and is open to the public free of charge.\n\nAddress: 03131 464, Samil-daero, Jongno-gu, Seoul \nHours: Daily 09:00 - 19:00 KST (Last entry 18:30 KST ) *Closed Mondays*\nClosed: Closed Mondays \r\n* Open on Mondays falling on public holidays\nAccess: Subway Line 3  Anguk Station  Exit 4,  103m\nKeywords: SeoulExcursion,SeoulAttractions,Jongmyo,UnhyeongungPalace,SeoulPalaces,SeoulWalkingCourse,KoreanPalaces,SeoulDateCourse,SeoulTravel,SeoulNationalPalaceTour,Seoul"
+  },
+  {
+   "name_korean": "N서울타워",
+   "name_english": "N Seoul Tower",
+   "aliases_korean": [
+    "남산서울타워",
+    "남산"
+   ],
+   "category": "Tower",
+   "gold_post_sn": 36,
+   "wiki": "N_Seoul_Tower",
+   "gt_answer": "Namsan Seoul Tower, also known as the YTN Seoul Tower, Namsan Tower, Seoul Tower or N Seoul Tower, is a communication and observation tower located on the summit of Namsan in central Seoul, South Korea. The 236-metre-tall (774 ft) structure was the nation’s first tower servicing multiple TV and radio broadcasters, and is considered a landmark and symbol of the city.\n\nAddress: 04340 105, Namsangongwon-gil, Yongsan-gu, Seoul, Korea (Yongsan-dong 2-ga, YTN Seoul Tower)\nHours: Weekdays 10:00-22:30, Weekends 10:00-23:00\r\n*Last entry 30 minutes before close\nAccess: Subway Line 3/4 Chungmuro Station Exit 2,  take Bus 01 (Namsan Circular), get off at 'Namsan Seoul Tower' stop, 357m\r\nSubway Line 3 Dongdaemun Station Exit 6,  take Bus 01 (Namsan Circular), get off at 'Namsan Seoul Tower' stop, 357m\nKeywords: NSeoulTower,Nightscape,View,Myeongdong,Romantic,Seoul,Date,CableCar,NamsanTower,Observatory,Namsan"
+  },
+  {
+   "name_korean": "경복궁",
+   "name_english": "Gyeongbokgung Palace",
+   "aliases_korean": [
+    "경복궁"
+   ],
+   "category": "Palace",
+   "gold_post_sn": 72,
+   "wiki": "Gyeongbokgung",
+   "gt_answer": "Gyeongbokgung is a former royal palace in Seoul, South Korea. Established in 1395, it was the first royal palace of the Joseon dynasty, and is now one of the most significant tourist attractions in the country.\n\nAddress: 03045 서울 종로구 사직로 161 (세종로, 경복궁) \nHours: 1월 ~ 2월 : 09:00~17:00(입장마감 16:00) \r\n3월 ~ 5월 : 09:00~18:00(입장마감 17:00) \r\n6월 ~ 8월 : 09:00~18:30(입장마감 17:30) \r\n9월 ~ 10월 : 09:00~18:00(입장마감 17:00) \r\n11월 ~ 12월 : 09:00~17:00(입장마감 16:00)\r\n※ 기관 사정에 따라 관람시간 단축 및 조정이 있을 수 있습니다.\nClosed: 화요일\nAccess: 지하철 5호선 광화문역 2번 출구,  471m \r\n지하철 3호선 경복궁역 5번 출구,  216m\nKeywords: 한국문화,한국전통,서울볼거리,서울나들이,경복궁입장료,경복궁,서울명소,서울궁궐,서울관광지,서울여행,한국역사적명소,서울가볼만한곳,서울데이트"
+  },
+  {
+   "name_korean": "창덕궁",
+   "name_english": "Changdeokgung Palace",
+   "aliases_korean": [
+    "창덕궁"
+   ],
+   "category": "Palace",
+   "gold_post_sn": 295,
+   "wiki": "Changdeokgung",
+   "gt_answer": "Changdeokgung is a former royal palace in Seoul, South Korea. A UNESCO World Heritage Site and a Historic Site of South Korea, it is among the best preserved of all Korean palaces. It and its neighboring palace Changgyeonggung have together been called the \"East Palace\".\n\nAddress: 03072 서울 종로구 율곡로 99 (와룡동, 창덕궁) \nHours: 2-5월\t09:00 ~ 18:00(입장마감은 17:00)\r\n6-8월\t09:00 ~ 18:30(입장마감은 17:30)\r\n9-10월\t09:00 ~ 18:00(입장마감은 17:00)\r\n11-1월\t09:00 ~ 17:30(입장마감은 16:30)\nOpen: 화요일~일요일\nClosed: 월요일 \nAccess: 지하철 3호선 안국역 3번 출구,  389m \nKeywords: 서울명소,서울한복투어,서울가볼만한곳,한국전통,서울여행코스,한국문화,서울필수여행지,세계유산,고궁투어,서울데이트코스,한국여행코스,서울,창덕궁"
+  },
+  {
+   "name_korean": "덕수궁",
+   "name_english": "Deoksugung Palace",
+   "aliases_korean": [
+    "덕수궁"
+   ],
+   "category": "Palace",
+   "gold_post_sn": 2049,
+   "wiki": "Deoksugung",
+   "gt_answer": "Deoksugung, also called Deoksu Palace or Deoksugung Palace, is a former royal palace in Seoul, South Korea. It was the main palace during the Korean Empire (1897–1910) and is now a major tourist attraction. It has a mix of traditional Korean and Western architecture that reflects its history. Inside the palace are the Daehan Empire History Museum and the National Museum of Modern and Contemporary Art, Deoksugung branch.\n\nAddress: 04519 서울 중구 세종대로 99 \nHours: 09:00 ~ 20:00 (매표 및 입장시간)\r\n21:00 (퇴장시간)\nOpen: 화요일~일요일 \nClosed: 월요일\nAccess: 지하철 1/2호선 시청역 1번 출구,  72m \nKeywords: 덕수궁투어,한국역사,서울걷기좋은길,한국궁,서울여행,정동돌담길,덕수궁야간,궁,고종의길,서울야경,정동길,한국전통,덕수궁,서울나들이,서울필수여행지,한국여행지,궁궐투어"
+  },
+  {
+   "name_korean": "국립중앙박물관",
+   "name_english": "National Museum of Korea",
+   "aliases_korean": [
+    "국립중앙박물관"
+   ],
+   "category": "Museum",
+   "gold_post_sn": 433,
+   "wiki": "National_Museum_of_Korea",
+   "gt_answer": "The National Museum of Korea (Korean: 국립중앙박물관) is the flagship museum of Korean history and art in South Korea. Since its establishment in 1945, the museum has been committed to various studies and research activities in the fields of archaeology, history, and art, continuously developing a variety of exhibitions and education programs.\n\nAddress: 04383 서울 용산구 서빙고로 137 (국립중앙박물관) \nHours: 월, 화, 목, 금, 일요일 : 10:00 - 18:00 \r\n수, 토요일 : 10:00 - 21:00 \r\n옥외 전시장(정원)은 오전 7시부터 오후 10시까지 관람 가능\r\n\nClosed: 1월1일, 설날, 추석 \r\n상설전시실 정기휴실일 : 매년 4, 11월 첫째 월요일\r\n상설전시관 내 특별전시실 2 휴실\r\n특별전시실 1(특별전시 미운영시 휴실), 야외전시장은 정상 개관\nAccess: 지하철 4호선/ 경의중앙선 이촌역 2번 출구,  309m\nKeywords: 국립,관람,어린이박물관, 역사, 국립중앙박물관,시티투어버스, 박물관,유물,이촌역,국립중앙,용산구"
+  },
+  {
+   "name_korean": "서대문형무소역사관",
+   "name_english": "Seodaemun Prison History Hall",
+   "aliases_korean": [
+    "서대문형무소",
+    "독립공원"
+   ],
+   "category": "Historic Site",
+   "gold_post_sn": 1833,
+   "wiki": "Seodaemun_Prison",
+   "gt_answer": "Seodaemun Prison History Hall (Korean: 서대문형무소역사관) is a museum and former prison in Seodaemun District, Seoul, South Korea. Imperial Japan, then the overlord of Korea, began its construction in 1907.\n\nAddress: 03732 서울 서대문구 통일로 251 (현저동, 독립공원) \nHours: 여름철(3월~10월): 09:30~18:00\r\n겨울철(11월~2월): 09:30~17:00\r\n입장 마감은 관람 종료 30분 전\r\n\nOpen: 화요일~일요일\nClosed: -월요일(공휴일인 경우 그 다음날)\r\n-1월1일\r\n-설날·추석 당일\nAccess: 지하철 3호선 독립문역 5번 출구,  209m\nKeywords: 3.1, 독립관,역사,역사관, 유관순, 서대문형무소,순국열사, 8.15,공원,독립운동가,독립문역,안창호, 강우규,서대문독립공원, 역사 유적, 독립선언기념탑"
+  },
+  {
+   "name_korean": "명동성당",
+   "name_english": "Myeongdong Cathedral",
+   "aliases_korean": [
+    "명동성당",
+    "명동"
+   ],
+   "category": "Historic Site",
+   "gold_post_sn": 4037,
+   "wiki": "Myeongdong_Cathedral",
+   "gt_answer": "The Cathedral Church of Our Lady of the Immaculate Conception, informally known as Myeongdong Cathedral (명동대성당), is the national cathedral of the Archdiocese of Seoul. Located in the Myeongdong neighbourhood of Jung District, Seoul, South Korea, it is the seat of the Archbishop of Seoul, Peter Chung Soon-taick.\n\nAddress: 04537 서울 중구 명동길 74 (명동성당) \nHours: 화~토 09:00~19:00\r\n일 07:00~21:00\nClosed: 월요일\nAccess: 지하철 4호선 명동역 8번 출구, 590m\r\n지하철 2호선 을지로입구역 5번 출구, 616m\r\n지하철 2호선 을지로3가역 12번 출구, 561m\nKeywords:  천주교,명동, 명동주교좌성당, 종교, 고딕,명동대성당, 성당,명동성당,가톨릭,역사"
+  },
+  {
+   "name_korean": "롯데월드타워",
+   "name_english": "Lotte World Tower",
+   "aliases_korean": [
+    "롯데월드타워",
+    "잠실"
+   ],
+   "category": "Modern Landmark",
+   "gold_post_sn": 21278,
+   "wiki": "Lotte_World_Tower",
+   "gt_answer": "Lotte World Tower is a 123-story, 555 metres (1,821 ft) supertall skyscraper, located in Sincheon-dong, Songpa District, Seoul, South Korea. It is the sixth-tallest building in the world, the tallest in OECD countries and in South Korea, and also the first in South Korea to be over 100 stories tall. It was the fifth-tallest in the world when completed. The tower opened to the public on April 3, 2017.\n\nAddress: 05551 서울 송파구 올림픽로 300 (신천동) \nHours: 매일 09:00 - 20:30 롯데면세점, 연중 무휴\r\n매일 10:00 - 23:00 롯데마트, 격주 일요일 휴무\r\n매일 10:00 - 20:00 롯데아쿠아리움, 연중 무휴\r\n매일 10:30 - 20:00 에비뉴엘, 월 1회 정기 휴무\r\n매일 10:30 - 22:00 쇼핑몰, 연중 무휴\r\n\r\n서울스카이\r\n평일 10:30 - 22:00 (월~목요일, 일요일)\r\n주말 10:30 - 23:00 (금, 토, 공휴일 前일)\r\n※시설별 상이 (홈페이지 참조)\nOpen: 월~일\nClosed: 연중무휴\r\n\nAccess: 지하철 2/8호선 잠실역 2번 출구,  29m \nKeywords:  롯데월드,롯데월드타워,아쿠아리움, 면세점,서울스카이,전망대,백화점,잠실"
+  },
+  {
+   "name_korean": "광화문광장",
+   "name_english": "Gwanghwamun Square",
+   "aliases_korean": [
+    "광화문",
+    "광화문광장"
+   ],
+   "category": "Modern Landmark",
+   "gold_post_sn": 1900,
+   "wiki": "Gwanghwamun_Square",
+   "gt_answer": "Gwanghwamun Square (Korean: 광화문광장), a.k.a. Gwanghwamun Plaza, is a public square located in Sejongno, Jongno-gu, Seoul, in front of Gyeongbokgung. Serving as a public space and, at times, a road for centuries of Korean history, it is also historically significant as it is the location of royal administrative buildings, known as Yukjo-geori or Street of Six Ministries. Today, it features statues of Admiral Yi Sun-sin and of King Sejong the Great.\n\nAddress: 03154 서울특별시 종로구 세종대로 172 \nHours: 도심 열린 광장으로 연중 24시간 상시 개방\nOpen: 월요일 ~ 일요일\nClosed: 연중무휴\nAccess: 지하철 5호선 광화문역 2번 출구,  235m\nKeywords:  경복궁,광화문광장,광화문, 이순신,청계천, 세종대왕,도시 문화 광장,세종문화회관"
+  },
+  {
+   "name_korean": "청계천",
+   "name_english": "Cheonggyecheon Stream",
+   "aliases_korean": [
+    "청계천",
+    "청계광장"
+   ],
+   "category": "Stream",
+   "gold_post_sn": null,
+   "wiki": "Cheonggyecheon",
+   "gt_answer": "Cheonggyecheon is a 10.9-kilometre-long (6.8 mi) stream and public space in downtown Seoul, South Korea. A natural stream sourced from the Suseongdong Valley in Inwangsan, it was historically maintained as part of Seoul's early sewerage until the mid-20th century, when post-Korean War rapid economic development and deteriorating conditions prompted the filling of the stream with concrete and the construction of an elevated freeway, the Cheonggye Expressway, in its place. In 2003, the city government began an urban renewal project to remove the expressway and restore the stream, which was completed in 2005 at a cost of over ₩386 billion."
+  },
+  {
+   "name_korean": "광장시장",
+   "name_english": "Gwangjang Market",
+   "aliases_korean": [
+    "광장시장"
+   ],
+   "category": "Market",
+   "gold_post_sn": null,
+   "wiki": "Gwangjang_Market",
+   "gt_answer": "Gwangjang Market (Korean: 광장시장), previously Dongdaemun Market (동대문시장), is a traditional street market in Jongno District, Seoul, South Korea. The market is one of the oldest and largest traditional markets in South Korea, with more than 5000 shops and 20,000 employees in an area of 42,000 m2 (450,000 ft2). Approximately 65,000 people visit the market each day."
+  },
+  {
+   "name_korean": "서울숲",
+   "name_english": "Seoul Forest",
+   "aliases_korean": [
+    "서울숲"
+   ],
+   "category": "Park",
+   "gold_post_sn": null,
+   "wiki": "Seoul_Forest",
+   "gt_answer": "Seoul Forest (Korean: 서울숲) is a large park in Seongdong District, Seoul, South Korea. It is open year-round, and admission is free. Seoul Forest opened in June 2005. The city government spent 235.2 billion won in development. It is the third largest park in Seoul. Seoul Forest is a massive park dotted with over 420,000 trees and 100 different animals. This nature park is located in Seongsu-dong and covers an area of 1,200 ha."
+  },
+  {
+   "name_korean": "낙산공원",
+   "name_english": "Naksan Park",
+   "aliases_korean": [
+    "낙산",
+    "한양도성"
+   ],
+   "category": "Park",
+   "gold_post_sn": null,
+   "wiki": "Naksan_Park",
+   "gt_answer": "Naksan is a mountain in Jongno District, Seoul, South Korea. It is 125 metres (410 ft) tall. It and Namsan are well known for their panoramic views of downtown Seoul."
+  },
+  {
+   "name_korean": "남대문시장",
+   "name_english": "Namdaemun Market",
+   "aliases_korean": [
+    "남대문시장",
+    "숭례문"
+   ],
+   "category": "Market",
+   "gold_post_sn": null,
+   "wiki": "Namdaemun_Market",
+   "gt_answer": "Namdaemun Market is a large traditional market in Seoul, South Korea. It is located next to Namdaemun, the main southern gate to the old city. The market is among the oldest extant markets in Korea, having opened during the Joseon period in 1414."
+  },
+  {
+   "name_korean": "인사동",
+   "name_english": "Insadong",
+   "aliases_korean": [
+    "인사동",
+    "인사동길"
+   ],
+   "category": "Shopping",
+   "gold_post_sn": null,
+   "wiki": "Insa-dong",
+   "gt_answer": "Insa-dong (Korean: 인사동) is a dong, or neighborhood, in Jongno District, Seoul, South Korea. Its main street is Insadong-gil, which is connected to a number of alleys that lead deeper into the district, with modern galleries and tea shops. Historically, it was the largest market for antiques and artwork in Korea."
+  },
+  {
+   "name_korean": "북한산",
+   "name_english": "Bukhansan Mountain",
+   "aliases_korean": [
+    "북한산",
+    "북한산국립공원"
+   ],
+   "category": "Mountain",
+   "gold_post_sn": null,
+   "wiki": "Bukhansan",
+   "gt_answer": "Bukhansan, alternatively Pukhan-san or Bukhan Mountain, is a mountain on the northern periphery of Seoul, South Korea. There are three major peaks, Baegundae 836.5 meters (2,744 ft), Insubong 810.5 meters (2,659 ft), Mangyeongdae 787.0 meters (2,582.0 ft). Because of its height and the fact that it borders a considerable portion of the city, Bukhansan is a major landmark visible from most city districts. The name \"Bukhansan\" means \"mountain north of Han River\", referring to the fact that it is the northern border of the city. During the Joseon era, the peaks marked the extreme northern boundary of Seoul."
+  }
+ ]
+}

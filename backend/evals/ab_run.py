@@ -8,6 +8,8 @@ Usage (from backend/):
     LANGSMITH_TRACING=false venv/bin/python evals/ab_run.py --dry-run --limit 3
     LANGSMITH_TRACING=false venv/bin/python evals/ab_run.py --reps 3
     LANGSMITH_TRACING=false venv/bin/python evals/ab_run.py --out evals/out/ab_<ts>   # resume
+    # B (one-shot revise) vs C (ReAct revise), same draft:
+    LANGSMITH_TRACING=false venv/bin/python evals/ab_run.py --reps 3 --days 2 --revise-ab --revise-severity medium
 """
 import argparse
 import copy
@@ -78,35 +80,51 @@ def done_keys(path):
     return keys
 
 
-def run_one(state, retrieve, critic):
+def run_one(state, retrieve, critic, revise_ab=False):
+    """(A, [B]) or, with revise_ab, (A, [B, C]): C is critic_repair on the same
+    draft with REVISE_MODE=react, so B vs C differ only in how flagged days are
+    revised."""
     import planner
     s = {**state, **retrieve(state)}
     s = planner.plan_node(s)
     if s.get("current_step") != "critic" or not s.get("itinerary"):
         raise RuntimeError(f"plan_node did not reach critic (step={s.get('current_step')})")
     a = copy.deepcopy(s["itinerary"])
-    b = critic(s)
+    arms = [critic(copy.deepcopy(s))]  # RepairAgent edits in place; C needs the same draft
+    if revise_ab:
+        os.environ["REVISE_MODE"] = "react"
+        try:
+            arms.append(critic(copy.deepcopy(s)))
+        finally:
+            os.environ.pop("REVISE_MODE", None)
     # critic_repair_node swallows its own failures and returns the unrepaired
     # plan, with no critic_report. That is not an A-vs-B sample.
-    if not (b.get("itinerary") or {}).get("critic_report"):
-        raise RuntimeError("critic_repair failed (no critic_report on B)")
-    return a, b["itinerary"]
+    for arm in arms:
+        if not (arm.get("itinerary") or {}).get("critic_report"):
+            raise RuntimeError("critic_repair failed (no critic_report)")
+    return a, [arm["itinerary"] for arm in arms]
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--only", type=int, nargs="+", help="scenario ids to run")
     ap.add_argument("--pace", choices=["relaxed", "packed"])
     ap.add_argument("--companion", default="solo")
     ap.add_argument("--days", type=int, default=1)
     ap.add_argument("--out", type=Path, help="existing run dir to resume")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--revise-ab", action="store_true",
+                    help="also run arm C: critic_repair with the ReAct revise agent (REVISE_MODE=react)")
+    ap.add_argument("--revise-severity", choices=["high", "medium"], default="high",
+                    help="lowest critic severity that sends a day to revision (eval-only; both arms)")
     args = ap.parse_args()
 
     out = args.out or HERE / "out" / f"ab_{datetime.now():%Y%m%d-%H%M}"
     runs = out / "runs.jsonl"
     todo = [(sc, rep) for sc in scenarios(args.limit, args.pace, args.companion, days=args.days)
+            if not args.only or sc["scenario_id"] in args.only
             for rep in range(args.reps)]
     skip = done_keys(runs)
     todo = [(sc, rep) for sc, rep in todo if (sc["scenario_id"], rep) not in skip]
@@ -126,8 +144,14 @@ def main():
     import eval_store
     eval_store._DEFAULT_SQLITE = str(out / "evals.db")
 
+    import critic_repair
     import planner
+    import revise_agent
     from critic_repair import make_critic_repair_node
+    if args.revise_severity == "medium":
+        # The revise path never fires at high: RepairAgent clears the only
+        # high/critical day issues first. Widening it is eval-only.
+        critic_repair._REVISE_SEVERITIES = {"medium", "high", "critical"}
     key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
     retrieve = planner.make_retrieve_node(key)
     critic = make_critic_repair_node()
@@ -147,17 +171,25 @@ def main():
 
     for sc, rep in todo:
         calls[0], t0 = 0, time.time()
+        revise_agent.STATS.clear()
         state = {**sc["state"],
                  "purpose_keywords": graph._extract_purpose_keywords(sc["state"]["purpose"])}
         row = {"scenario_id": sc["scenario_id"], "name": sc["name"], "rep": rep,
                "state": state, "error": None}
         try:
-            a, b = run_one(state, retrieve, critic)
+            a, (b, *c) = run_one(state, retrieve, critic, args.revise_ab)
             report = b["critic_report"]
             row.update(A=a, B=b, repair_log=report.get("repair_log"),
                        repair_applied=report.get("repair_applied"),
                        critic_before=report["before"].get("overall_score"),
-                       critic_after=report["after"].get("overall_score"))
+                       critic_after=report["after"].get("overall_score"),
+                       revised=any("Revised day" in line for line in report.get("repair_log") or []))
+            if c:
+                report_c = c[0]["critic_report"]
+                row.update(C=c[0], repair_log_C=report_c.get("repair_log"),
+                           critic_after_C=report_c["after"].get("overall_score"),
+                           revised_C=any("Revised day" in line for line in report_c.get("repair_log") or []),
+                           react=dict(revise_agent.STATS))
         except Exception as e:  # noqa: BLE001 -- one bad run must not stop the batch
             traceback.print_exc()
             row["error"] = f"{type(e).__name__}: {e}"

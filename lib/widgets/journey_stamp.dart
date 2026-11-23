@@ -71,6 +71,8 @@ class _JourneyStampState extends State<JourneyStamp> with SingleTickerProviderSt
   Timer? _next;
   int _polls = 0;
 
+  static const _graceNonePolls = 3;
+
   bool get _generating => _status.status == 'generating';
 
   @override
@@ -90,9 +92,11 @@ class _JourneyStampState extends State<JourneyStamp> with SingleTickerProviderSt
   Future<void> _poll() async {
     _polls++;
     StampStatus status;
+    var reachable = true;
     try {
       status = await (widget.fetchStatus ?? ApiService().fetchStampStatus)(widget.tripId);
     } catch (_) {
+      reachable = false;
       status = (status: 'none', version: null);
     }
     if (!mounted) return;
@@ -106,8 +110,11 @@ class _JourneyStampState extends State<JourneyStamp> with SingleTickerProviderSt
     if (status.status == 'ready' && version != null) {
       widget.onReady?.call(stampImageUrl(widget.apiBase, widget.tripId, version));
     }
-    if (_generating) {
-      _pulse.repeat(reverse: true);
+    // Complete Check-in navigates here while its POST is still in flight, so
+    // the first polls can see "none" before the backend marks "generating".
+    final pending = reachable && status.status == 'none' && _polls < _graceNonePolls;
+    if (_generating || pending) {
+      if (_generating) _pulse.repeat(reverse: true);
       _next = Timer(widget.pollEvery, _poll);
     } else {
       _pulse.stop();

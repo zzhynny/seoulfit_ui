@@ -116,7 +116,7 @@ void main() {
     });
     await tester.pump(const Duration(seconds: 10));
 
-    expect(calls, 1);
+    expect(calls, 3); // grace polls for a check-in POST still in flight
     expect(loader, findsNothing);
     expect(nativeCard, findsOneWidget);
   });

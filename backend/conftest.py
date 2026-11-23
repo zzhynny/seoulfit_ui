@@ -21,3 +21,16 @@ def _no_place_facts(monkeypatch):
     monkeypatch.setattr(place_facts, "_all", dict)
     monkeypatch.setattr(place_facts, "_live", {})
     monkeypatch.setattr(critic_repair, "_learn_hours", lambda pois, state: None)
+
+
+@pytest.fixture(autouse=True)
+def _no_live_react(monkeypatch):
+    """plan_node hands a null day to revise_agent's ReAct agent, and .env may
+    hold a real Gemini key. No test may reach it: the model fails to build, so
+    react_day falls back to the one-shot call each test already fakes. Tests of
+    the agent patch _model themselves."""
+    import revise_agent
+
+    def no_model():
+        raise RuntimeError("no live model in tests")
+    monkeypatch.setattr(revise_agent, "_model", no_model)

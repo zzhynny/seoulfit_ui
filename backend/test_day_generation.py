@@ -186,3 +186,134 @@ def test_rejected_courses_stay_out_when_places_fills_the_day(llm, monkeypatch):
     assert out["current_step"] == "critic", out["messages"]
     assert out["retrieved_courses"] == []
     assert all(s["anchor_courses"] == [] for s in out["day_segments"])
+
+
+def test_revise_days_react_uses_a_tool_found_place(llm, monkeypatch):
+    # The agent searches once, then answers with a place only the tool found.
+    # The validator must keep it (it rides in as a supplement row) and still
+    # drop the day-1 place the agent tried to reuse.
+    from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
+    from langchain_core.messages import AIMessage
+
+    import critic_repair
+    import revise_agent
+
+    calls, _ = llm
+
+    class Fake(FakeMessagesListChatModel):
+        def bind_tools(self, tools, **kw):
+            return self
+
+    day = {"theme": "t", "pois": [{"name": n} for n in ["New Museum", POOL[0], *POOL[10:13]]]}
+    monkeypatch.setattr(revise_agent, "_model", lambda: Fake(responses=[
+        AIMessage(content="", tool_calls=[{"name": "search_places", "id": "t1",
+                                           "args": {"area": "jongno", "category": "museum"}}]),
+        AIMessage(content=json.dumps(day)),
+    ]))
+    monkeypatch.setattr(planner, "GOOGLE_PLACES_API_KEY", "x")
+    monkeypatch.setattr(critic_repair, "google_fallback_candidates", lambda **k: [
+        critic_repair.candidate_from_google({"poi_name": "New Museum", "poi_type": "museum",
+                                             "lat": 37.5729, "lng": 126.9794, "area": "jongno"})])
+    revise_agent.STATS.clear()
+    itinerary = {"days": [
+        {"day": 1, "pois": [{"name": n} for n in POOL[0:5]]},
+        {"day": 2, "pois": [{"name": n} for n in POOL[5:10]]},
+    ]}
+
+    out = planner.revise_days(_state(days=2), itinerary, {2: ["X is closed on Tuesdays."]}, react=True)
+
+    day2 = _names(out["days"][1])
+    assert "New Museum" in day2 and POOL[0] not in day2
+    assert calls == []                                    # no one-shot fallback
+    assert revise_agent.STATS == {"ok": 1, "tool_calls": 1}
+
+
+# --- CRAG: correct days skip Google Places -----------------------------------
+
+def test_an_area_whose_every_day_is_correct_is_not_searched(llm, monkeypatch):
+    calls, answers = llm
+    answers.update({1: POOL[0:4], 2: POOL[5:9]})
+    monkeypatch.setattr(planner, "GOOGLE_PLACES_API_KEY", "test-key")
+    searched = []
+    monkeypatch.setattr(planner, "build_google_supplement_by_areas",
+                        lambda **kw: searched.append(kw["requested_areas"]) or [])
+    state = _state(days=2)
+    for seg in state["day_segments"]:
+        seg["skip_search"] = True
+    out = planner.plan_node(state)
+    assert out["current_step"] == "critic", out["messages"]
+    assert searched == []
+
+    state["day_segments"][1]["skip_search"] = False      # one day still needs help
+    planner.plan_node(state)
+    assert searched == [["jongno"]]
+
+
+# --- ReAct builds a null day -------------------------------------------------
+
+def _react_model(monkeypatch, day):
+    """The agent searches once, then answers with `day`."""
+    from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
+    from langchain_core.messages import AIMessage
+
+    import revise_agent
+
+    class Fake(FakeMessagesListChatModel):
+        def bind_tools(self, tools, **kw):
+            return self
+
+    monkeypatch.setattr(revise_agent, "_model", lambda: Fake(responses=[
+        AIMessage(content="", tool_calls=[{"name": "search_places", "id": "t1",
+                                           "args": {"area": "jongno", "category": "museum"}}]),
+        AIMessage(content=json.dumps(day)),
+    ]))
+    revise_agent.STATS.clear()
+    return revise_agent
+
+
+def _null_day_2(monkeypatch):
+    """Day 1 has its course; the judge turned day 2's down and Places found some."""
+    import critic_repair
+
+    state = _state(days=2)
+    seg = state["day_segments"][1]
+    seg["rejected_courses"], seg["anchor_courses"] = seg["anchor_courses"], []
+    monkeypatch.setattr(planner, "GOOGLE_PLACES_API_KEY", "test-key")
+    found = [{"poi_name": f"g {i}", "area": "jongno", "lat": 37.5729, "lng": 126.9794,
+              "poi_type": "tourist_spot", "source_kind": "google"} for i in range(3)]
+    monkeypatch.setattr(planner, "build_google_supplement_by_areas", lambda **kw: found)
+    monkeypatch.setattr(critic_repair, "google_fallback_candidates", lambda **k: [
+        critic_repair.candidate_from_google({"poi_name": "New Museum", "poi_type": "museum",
+                                             "lat": 37.5729, "lng": 126.9794, "area": "jongno"})])
+    return state
+
+
+def test_a_null_day_is_built_by_the_react_agent(llm, monkeypatch):
+    calls, answers = llm
+    answers.update({1: POOL[0:4]})
+    agent = _react_model(monkeypatch, {"theme": "t", "pois": [
+        {"name": n} for n in ["New Museum", "g 0", "g 1", "g 2"]]})
+
+    out = planner.plan_node(_null_day_2(monkeypatch))
+
+    assert out["current_step"] == "critic", out["messages"]
+    assert [int(re.search(r"=== DAY (\d+) ", c).group(1)) for c in calls] == [1]  # day 2 never one-shot
+    day2 = _names(out["itinerary"]["days"][1])
+    # Only a tool found it: the validator keeps it because it joined the
+    # supplement, and so does the critic's candidate pool.
+    assert "New Museum" in day2
+    assert "New Museum" in {r["poi_name"] for r in out["planning_context"]["google_supplement"]}
+    assert agent.STATS == {"ok": 1, "tool_calls": 1}
+
+
+def test_null_day_react_off_keeps_the_one_shot(llm, monkeypatch):
+    calls, answers = llm
+    answers.update({1: POOL[0:4], 2: ["g 0", "g 1", "g 2"]})
+    agent = _react_model(monkeypatch, {"pois": []})
+    monkeypatch.setenv("NULL_DAY_REACT", "0")
+
+    out = planner.plan_node(_null_day_2(monkeypatch))
+
+    assert out["current_step"] == "critic", out["messages"]
+    assert sorted(int(re.search(r"=== DAY (\d+) ", c).group(1)) for c in calls) == [1, 2]
+    assert agent.STATS == {}

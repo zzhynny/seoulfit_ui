@@ -44,7 +44,7 @@ def run(job):
     (n, name, purpose, region), rep = job
     seg = {"day_numbers": [1], "area": region,
            "anchor_courses": [C[cid] for cid, _ in ranked[n]["ranked"][:3]]}
-    picks, _ = planner.judge_anchors([seg], [purpose])
+    picks, _, _ = planner.judge_anchors([seg], [purpose])
     return n, rep, picks.get(1, "KEEP_ALL")
 
 jobs = [(p, rep) for p in data["personas"] for rep in range(3)]
