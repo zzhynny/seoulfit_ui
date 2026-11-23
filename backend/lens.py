@@ -9,12 +9,12 @@ Mounted into api.py via app.include_router(router).
 from __future__ import annotations
 
 import hashlib
-import os
 import json
+import os
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -51,6 +51,9 @@ def _normalize(s: str) -> str:
     return re.sub(r"[\W_]+", "", (s or "").lower(), flags=re.UNICODE)
 
 
+_PARENS_RE = re.compile(r"\([^)]*\)")
+
+
 def _join_keys(row: dict) -> list[tuple]:
     """Language-independent keys for pairing a Korean row with its English twin.
 
@@ -79,7 +82,7 @@ def _zip_of(row: dict) -> str:
 
 def _phone_of(row: dict) -> str:
     d = re.sub(r"\D", "", row.get("cmmn_telno") or "")
-    d = d[2:] if d.startswith("82") else d   # 영문 레코드는 국가번호를 붙인다
+    d = d.removeprefix("82")   # 영문 레코드는 국가번호를 붙인다
     d = d.lstrip("0")
     return d if len(d) >= 8 else ""
 
@@ -129,6 +132,8 @@ def _load_seoul_dataset() -> tuple[list[dict], int]:
         enriched["_slug"] = slug
         enriched["_slug_norm"] = _normalize(slug)
         enriched["_post_sj_norm"] = _normalize(r.get("post_sj") or "")
+        # "숭례문(남대문)" is 숭례문: the parenthetical is an alias, not part of the name.
+        enriched["_name_norm"] = _normalize(_PARENS_RE.sub("", r.get("post_sj") or ""))
         for k in _join_keys(r):
             twin = en_index.get(k)
             if twin and len(twin) == 1 and not _contradicts(r, twin[0]):
@@ -278,7 +283,7 @@ def _lookup_in_seoul_json(candidates: list[str]) -> tuple[dict | None, bool]:
 
     for _, key in norm_candidates:
         for r in _SEOUL_ROWS:
-            if r["_slug_norm"] == key or r["_post_sj_norm"] == key:
+            if key in (r["_slug_norm"], r["_post_sj_norm"], r["_name_norm"]):
                 return r, True
 
     # Candidate order is priority order: name_korean first, then aliases. The
@@ -289,21 +294,20 @@ def _lookup_in_seoul_json(candidates: list[str]) -> tuple[dict | None, bool]:
     # every candidate let that shorter, wrong-landmark match win. Instead,
     # score each candidate's own best match separately and take the first
     # candidate (highest priority) that matches anything at all.
+    #
+    # Only a row name *inside* the query counts ("경복궁 근정전" -> 경복궁), never
+    # the query inside a longer row name: that is a different, more specific
+    # place -- 낙산 matched 낙산 물품보관소, 청계천 matched 청계천박물관, and the
+    # guide narrated the park and the stream with their facts as "verified".
+    # A miss costs only the Tavily fallback; a wrong row costs wrong facts.
     for _, key in norm_candidates:
         best = None
-        best_diff = None
         for r in _SEOUL_ROWS:
-            for field_name in ("_slug_norm", "_post_sj_norm"):
-                fv = r[field_name]
-                if not fv:
-                    continue
-                if fv in key or key in fv:
-                    diff = abs(len(fv) - len(key))
-                    if best_diff is None or diff < best_diff:
-                        best_diff = diff
-                        best = r
+            for fv in (r["_slug_norm"], r["_name_norm"]):
+                if len(fv) >= 2 and fv in key and (best is None or len(fv) > len(best[0])):
+                    best = (fv, r)
         if best is not None:
-            return best, True
+            return best[1], True
 
     return None, False
 
@@ -445,6 +449,17 @@ def _web_public_data(landmark_info: dict) -> dict:
 # ══════════════════════════════════════════
 # STEP 3 — English narration
 # ══════════════════════════════════════════
+_FACT_LABELS = (
+    ("address", "Address"), ("hours", "Hours"), ("open_days", "Open"),
+    ("closed_days", "Closed"), ("subway", "Access"), ("tags", "Keywords"),
+)
+
+
+def _fact_lines(public_data: dict) -> list[str]:
+    """The fact lines the narrator is shown — also the retrieved context the evals score against."""
+    return [f"{label}: {public_data[k]}" for k, label in _FACT_LABELS if public_data.get(k)]
+
+
 def _generate_english_guide(
     landmark_info: dict,
     public_data: dict,
@@ -452,19 +467,7 @@ def _generate_english_guide(
 ) -> str:
     """source: "official" (seoul.json), "web" (Tavily) or "none"."""
     if public_data:
-        facts = []
-        if public_data.get("address"):
-            facts.append(f"Address: {public_data['address']}")
-        if public_data.get("hours"):
-            facts.append(f"Hours: {public_data['hours']}")
-        if public_data.get("open_days"):
-            facts.append(f"Open: {public_data['open_days']}")
-        if public_data.get("closed_days"):
-            facts.append(f"Closed: {public_data['closed_days']}")
-        if public_data.get("subway"):
-            facts.append(f"Access: {public_data['subway']}")
-        if public_data.get("tags"):
-            facts.append(f"Keywords: {public_data['tags']}")
+        facts = _fact_lines(public_data)
 
         label = (
             "Seoul Official Public Data — Verified Facts" if source == "official"
@@ -547,8 +550,14 @@ def analyze_landmark(file: UploadFile = File(...)):
     if len(image_bytes) > 10 * 1024 * 1024:
         raise HTTPException(400, "Image larger than 10 MB")
 
-    landmark_info = _identify_with_gemini(image_bytes, content_type)
+    return describe_landmark(_identify_with_gemini(image_bytes, content_type))
 
+
+def describe_landmark(landmark_info: dict) -> dict:
+    """Everything after vision: seoul.json lookup (Tavily fallback) → English narration.
+
+    Split out so evals/lens_ragchecker.py runs the same path the endpoint does.
+    """
     candidates = [landmark_info["name_korean"]] + list(
         landmark_info.get("aliases_korean") or []
     )

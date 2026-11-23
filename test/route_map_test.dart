@@ -173,6 +173,76 @@ void main() {
     expect(zoom(), closeTo(before, 0.001));
   });
 
+  testWidgets('a stop is no longer buried under a later one standing beside it',
+      (tester) async {
+    // Reported as "the first stop of the day isn't plotted". It was plotted:
+    // MarkerLayer paints in list order, so stop 1 sat under every later stop,
+    // and at the zoom a day fits into a phone-sized map a 28px marker spans
+    // ~185m. Two stops 60m apart drew 9px apart and stop 2 covered stop 1.
+    //
+    // Sized like a phone on purpose: under the test binding's tight 800x600 the
+    // SizedBox(height: 192) is ignored, the fit lands 2 zoom levels in, and the
+    // markers separate on their own.
+    const hongdae = LatLng(37.5524, 126.9226);
+    await tester.pumpWidget(MaterialApp(
+      home: Center(
+        child: SizedBox(
+          width: 360,
+          height: 192,
+          child: RouteMap(
+            height: 192,
+            itinerary: itineraryOf([
+              [
+                stop('Hongdae', lat: hongdae.latitude, lng: hongdae.longitude),
+                // ~60m north: a restaurant across the street from stop 1.
+                stop('Meal', lat: 37.55294, lng: 126.9226),
+                // Far enough off to set a neighbourhood-scale camera fit.
+                stop('Yeonnam', lat: 37.5600, lng: 126.9300),
+              ],
+            ]),
+          ),
+        ),
+      ),
+    ));
+    await tester.pump();
+    while (tester.takeException() != null) {}
+
+    Rect marker(String number) => tester.getRect(
+        find.ancestor(of: find.text(number), matching: find.byType(Container)).first);
+
+    expect(marker('1').overlaps(marker('2')), isFalse);
+
+    // Stop 1 is the one that keeps its true position; the later stop moves.
+    final markers = tester.widget<MarkerLayer>(find.byType(MarkerLayer)).markers;
+    expect(markers.first.point.latitude, closeTo(hongdae.latitude, 1e-9));
+    expect(markers.first.point.longitude, closeTo(hongdae.longitude, 1e-9));
+  });
+
+  group('spreadMarkers', () {
+    test('leaves markers that do not touch where they are', () {
+      const points = [Offset(0, 0), Offset(100, 0)];
+      expect(spreadMarkers(points), points);
+    });
+
+    test('moves a later marker off an earlier one, by as little as it can', () {
+      final spots = spreadMarkers(const [Offset(0, 0), Offset(0, 9)]);
+      expect(spots.first, Offset.zero);
+      expect((spots[1] - spots[0]).distance, greaterThanOrEqualTo(28));
+      // One ring out from its own point, not flung across the map.
+      expect((spots[1] - const Offset(0, 9)).distance, closeTo(28, 1e-9));
+    });
+
+    test('a pile of markers on one spot all end up clear of each other', () {
+      final spots = spreadMarkers(List.filled(12, Offset.zero));
+      for (var i = 0; i < spots.length; i++) {
+        for (var j = i + 1; j < spots.length; j++) {
+          expect((spots[i] - spots[j]).distance, greaterThanOrEqualTo(28 - 1e-9),
+              reason: 'markers $i and $j overlap');
+        }
+      }
+    });
+  });
+
   testWidgets('switching days recentres the map on that day', (tester) async {
     // The day tabs already filtered which markers were drawn, but the camera
     // stayed on the fit computed for whatever day was showing first, so

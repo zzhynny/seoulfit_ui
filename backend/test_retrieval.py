@@ -12,9 +12,9 @@ def spec(region, day=1):
 
 
 def test_region_filter_keeps_only_courses_touching_that_area():
-    # Hongdae · Sinchon · Mapo 구역. Sinchon 이 구역에 들어오며 24 -> 27.
+    # Hongdae · Sinchon · Mapo 구역. v6 27행 -> v7 12행 (얇은 코스·지하철역 정류장 정리).
     pool = retrieval.filter_pool("hongdae")
-    assert len(pool) == 27
+    assert len(pool) == 12
 
 
 def test_the_hongdae_zone_includes_sinchon_only_courses():
@@ -23,10 +23,10 @@ def test_the_hongdae_zone_includes_sinchon_only_courses():
 
 
 def test_anchors_are_deduped_by_base_course():
-    # VS_MVP_015 appears twice in the Hongdae pool.
+    # VS_MVP_038 (DAY3, DAY4) appears twice in the Hongdae pool.
     sel = retrieval.select_anchors(spec("hongdae"), k=100)
     bases = [retrieval.base_id(c["course_id"]) for c in sel.courses]
-    assert len(sel.courses) == 24 and len(set(bases)) == 24   # 27 rows, 24 courses
+    assert len(sel.courses) == 11 and len(set(bases)) == 11   # 12 rows, 11 courses
     assert sel.relaxed is None
 
 

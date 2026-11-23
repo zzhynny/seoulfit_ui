@@ -24,7 +24,7 @@ import place_facts
 from geo import area_matches_requested, infer_area_from_fields
 
 _HERE = Path(__file__).resolve().parent
-COURSE_DATA = _HERE / "dataset" / "course_data_v6.json"
+COURSE_DATA = _HERE / "dataset" / "course_data_v7.json"
 DESCRIPTIONS = _HERE / "dataset" / "course_descriptions.json"
 VECTORS = _HERE / "dataset" / "course_vectors.npz"
 
@@ -84,7 +84,7 @@ def load_courses() -> list[dict[str, Any]]:
 
 def _with_place_facts(sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Drop POIs Google lists as permanently closed, and give closed_weekday to
-    the ones course_data_v6 has none for. Done here, at the one place the course
+    the ones course_data_v7 has none for. Done here, at the one place the course
     data is read, so the prompt, both candidate pools and the critic all see it."""
     out = []
     for p in sequence:

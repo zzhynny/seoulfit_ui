@@ -86,11 +86,16 @@ def test_chip_filter_partitions_and_hides_internals():
 
 
 def test_date_range_formatting():
-    [row] = _fetch_with([_row("1", start="20261002", end="20261004")], [])
-    assert row["date"] == "Oct 02, 2026 - Oct 04, 2026"
+    # Relative to today: _fetch_events drops festivals that already ended.
+    d1 = datetime.date.today() + datetime.timedelta(days=1)
+    d3 = d1 + datetime.timedelta(days=2)
+    ymd, nice = (lambda d: d.strftime("%Y%m%d")), (lambda d: d.strftime("%b %d, %Y"))
 
-    [same] = _fetch_with([_row("1", start="20261002", end="20261002")], [])
-    assert same["date"] == "Oct 02, 2026", "하루짜리는 범위로 쓰지 않는다"
+    [row] = _fetch_with([_row("1", start=ymd(d1), end=ymd(d3))], [])
+    assert row["date"] == f"{nice(d1)} - {nice(d3)}"
+
+    [same] = _fetch_with([_row("1", start=ymd(d1), end=ymd(d1))], [])
+    assert same["date"] == nice(d1), "하루짜리는 범위로 쓰지 않는다"
 
     [undated] = _fetch_with([], [_row("1")])
     assert undated["date"] == "", "상설 항목은 날짜가 없다"

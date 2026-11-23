@@ -868,20 +868,13 @@ DAY_PROMPT = """Plan ONE day of a Seoul trip for a foreign tourist.
 # Candidate formatting
 # ---------------------------------------------------------------------------
 
-def _format_one_course(
+def _shown_stops(
     c: dict[str, Any],
-    idx: int,
     restrict_area: str | None = None,
     closed_on: str | None = None,
-) -> str:
-    title = c.get("course_title", "")
-    course_id = c.get("course_id", "")
-    source = c.get("source", "")
-    source_url = c.get("source_url", "")
-    themes = c.get("theme_category", [])
-    themes_str = ", ".join(themes) if isinstance(themes, list) else str(themes or "")
-
-    poi_lines: list[str] = []
+) -> list[tuple[dict[str, Any], str]]:
+    """(stop, inferred area) for each of a course's stops the day prompt shows."""
+    shown: list[tuple[dict[str, Any], str]] = []
     for p in c.get("sequence", []) or []:
         # Same exclusion as _build_candidate_pool -- don't even show the LLM an
         # activity-category label, a bare subway-station marker, or a venue
@@ -905,7 +898,29 @@ def _format_one_course(
         # inferred are kept (benefit of the doubt).
         if restrict_area and area and not _area_matches_requested(area, restrict_area):
             continue
+        shown.append((p, area))
+    return shown
 
+
+def _format_one_course(
+    c: dict[str, Any],
+    idx: int,
+    restrict_area: str | None = None,
+    closed_on: str | None = None,
+) -> str:
+    title = c.get("course_title", "")
+    course_id = c.get("course_id", "")
+    source = c.get("source", "")
+    source_url = c.get("source_url", "")
+    themes = c.get("theme_category", [])
+    themes_str = ", ".join(themes) if isinstance(themes, list) else str(themes or "")
+
+    poi_lines: list[str] = []
+    for p, area in _shown_stops(c, restrict_area, closed_on):
+        name = p.get("poi_name", "")
+        address = p.get("address_en") or p.get("address_ko", "")
+        lat = p.get("lat")
+        lng = p.get("lng")
         poi_lines.append(
             f"    - {name} "
             f"[{p.get('poi_type', '')}] "
@@ -2380,8 +2395,9 @@ def make_retrieve_node(api_key: str):
         # 맞는 코스가 없을 때(3명)의 top1 이 0.688~0.757, 맞을 때(17명)가 0.676~0.811;
         # evals/persona_ranked.json 의 1위 유사도를 evals/personas.json gold 로 나눈 값).
         # 그래서 LLM 이 날마다 후보 중 하나를 고르거나 아무것도 고르지 않는다.
-        picks, searches = judge_anchors(segments, queries)
+        picks, searches, verdicts = judge_anchors(segments, queries)
         trip_keywords = state.get("purpose_keywords") or []
+        min_stops = _pace_bounds(state)[0]
         for seg in segments:
             day = seg["day_numbers"][0]
             if day in picks:
@@ -2391,11 +2407,31 @@ def make_retrieve_node(api_key: str):
                                            if c["course_id"] != picks[day]]
                 seg["anchor_courses"] = [c for c in seg["anchor_courses"]
                                          if c["course_id"] == picks[day]]
-            # 코스가 있는 날도 검색어를 붙인다. 코스 하나만으로는 하루를 못
-            # 채우는 일이 흔하고(A/B 평가 18/18일), 보완은 키워드가 있어야만
-            # 검색해서, 검증기와 repair 가 구역 밖 코스 장소로 채우거나 아예
-            # 못 채웠다.
-            seg["keywords"] = [*seg["keywords"], *searches.get(day, [])]
+            # CRAG: the judge grades whether the course answers the request;
+            # code grades whether it can fill the day. One course rarely can
+            # (A/B eval: 18/18 days), so "correct" counts only when the stops
+            # the day prompt will show reach the pace's minimum.
+            verdict = verdicts.get(day) or ("ambiguous" if seg["anchor_courses"] else "incorrect")
+            if verdict == "correct":
+                shown = _shown_stops(seg["anchor_courses"][0], seg["area"], _weekday_of(state, day))
+                if len(shown) < min_stops:
+                    print(f"[judge] day {day}: correct but {len(shown)} stops < {min_stops} -- ambiguous")
+                    verdict = "ambiguous"
+            seg["retrieval_verdict"] = verdict
+            # CRAG_SKIP=0 (read per call, so an eval can flip it between arms)
+            # searches on correct days too, as every day did before.
+            if verdict == "correct" and os.getenv("CRAG_SKIP") != "0":
+                # The course answers the whole request: no live search for
+                # this day, its note's keywords included. plan_node skips an
+                # area altogether when every day in it is like this.
+                seg["keywords"] = []
+                seg["skip_search"] = True
+            else:
+                # Ambiguous or incorrect: the course needs help, or there is
+                # none. Google Places only searches with a keyword, so without
+                # these the validator and repair filled the day with off-area
+                # course stops or not at all.
+                seg["keywords"] = [*seg["keywords"], *searches.get(day, [])]
             # 코스가 없는 날은 Google 보완이 유일한 후보다. 키워드가 하나도
             # 없으면 날 LLM 은 빈 후보로 장소를 지어내고, 검증기가 그걸 다
             # 지운 뒤 아무 코스로 채웠다.
@@ -2431,6 +2467,14 @@ Return null only when no course serves any specific part of the request.
 Sharing the area, or a generic theme like "first visit" or "relaxing", does not
 count. Judge by the stops a course actually visits, not only its wording.
 
+Grade each day with a verdict:
+- "correct": the chosen course's stops serve everything this day's request
+  asks for. The day is built from the course alone, with no live search.
+- "ambiguous": the chosen course serves part of the request; the searches
+  below fill the rest.
+- "incorrect": no course serves the request (course_id null).
+When unsure between correct and ambiguous, say ambiguous.
+
 For every day, give 1-2 Google Maps searches, run in that day's area. For a day
 with a course, they find places for the parts of the request its stops don't
 cover (a K-pop fan's course of fan shops -> "k-pop cafe"). For a null day (or
@@ -2440,6 +2484,7 @@ Meals are handled separately, so no restaurants. poi_type is one of:
 tourist_spot, cafe, shopping, kpop_landmark.
 
 Return ONLY JSON: {"days": [{"day": <int>, "course_id": "<id>" or null,
+"verdict": "correct" | "ambiguous" | "incorrect",
 "search": [{"phrase": "<search phrase>", "poi_type": "<poi_type>"}],
 "reason": "<one short sentence>"}]}
 """
@@ -2463,23 +2508,25 @@ def _anchor_judge_prompt(segments: list[dict[str, Any]], queries: list[str]) -> 
 @traceable(run_type="chain", name="judge_anchors")
 def judge_anchors(
     segments: list[dict[str, Any]], queries: list[str],
-) -> tuple[dict[int, str | None], dict[int, list[dict[str, str]]]]:
-    """({day: chosen course_id or None}, {day: Google searches to fill that day}).
+) -> tuple[dict[int, str | None], dict[int, list[dict[str, str]]], dict[int, str]]:
+    """({day: chosen course_id or None}, {day: Google searches to fill that day},
+    {day: CRAG verdict -- "correct", "ambiguous" or "incorrect"}).
 
     One Gemini call for the whole trip. A day absent from the picks keeps every
     retrieved anchor, which is how it worked before the judge: the call failed,
     the day had no candidates, or the answer named a course that wasn't offered.
+    Such a day has no verdict either.
     """
     offered = {seg["day_numbers"][0]: {c["course_id"] for c in seg["anchor_courses"]}
                for seg in segments}
     if not any(offered.values()):
-        return {}, {}
+        return {}, {}, {}
     try:
         raw = json.loads(_gemini_text(_anchor_judge_prompt(segments, queries)))
         answers = {int(d["day"]): d for d in raw["days"]}
     except Exception as e:
         print(f"[judge] failed ({type(e).__name__}) -- keeping all anchors")
-        return {}, {}
+        return {}, {}, {}
 
     # A missing "course_id" key is no verdict, not null -- only an explicit
     # null turns a day's courses down.
@@ -2494,8 +2541,15 @@ def judge_anchors(
                  and s.get("poi_type") in _JUDGE_SEARCH_TYPES][:2]
         if found:
             searches[day] = found
-    print(f"[judge] picks={picks} searches={searches}")
-    return picks, searches
+    # The pick decides: a null pick is "incorrect" whatever the label says, and
+    # a picked course is never "incorrect". A missing or unknown label is the
+    # cautious "ambiguous" -- it still searches, as every day did before.
+    verdicts = {day: "incorrect" if pick is None
+                else "correct" if answers[day].get("verdict") == "correct"
+                else "ambiguous"
+                for day, pick in picks.items()}
+    print(f"[judge] picks={picks} verdicts={verdicts} searches={searches}")
+    return picks, searches, verdicts
 
 
 def _embed_texts(texts: list[str]):
@@ -2583,8 +2637,7 @@ def _meals_for_day(locked: dict[int, dict[str, Any]], day_num: int) -> dict[int,
     return {day_num: locked[day_num]} if day_num in locked else {}
 
 
-@traceable(run_type="chain", name="day_generation")
-def _generate_day(
+def _day_prompt(
     seg: dict[str, Any],
     *,
     trip_lines: str,
@@ -2592,20 +2645,24 @@ def _generate_day(
     locked_lines: str,
     weekday: str | None = None,
     extra: str = "",
-) -> dict[str, Any]:
-    """One Gemini call for one day. Raises on a failed call or unparseable JSON.
-
-    `extra` is appended after the candidates -- revise_days uses it to hand the
-    model its previous attempt and the critic's problems with it.
-    """
-    prompt = (
+) -> str:
+    """The one-day prompt. `extra` is appended after the candidates --
+    revise_days uses it to hand the model its previous attempt and the
+    critic's problems with it."""
+    return (
         f"{DAY_PROMPT}\n\n{trip_lines}{locked_lines}\n"
         + (f"This day is a {weekday}.\n" if weekday else "")
         + f"{_format_segment_block(seg, weekday)}"
         f"{_format_google_supplement(supplement)}\n"
         f"{extra}"
     )
-    day = _parse_itinerary_json(_gemini_text(prompt))
+
+
+@traceable(run_type="chain", name="day_generation")
+def _generate_day(seg: dict[str, Any], **kw: Any) -> dict[str, Any]:
+    """One Gemini call for one day. Raises on a failed call or unparseable JSON.
+    Takes _day_prompt's keyword arguments."""
+    day = _parse_itinerary_json(_gemini_text(_day_prompt(seg, **kw)))
     if not isinstance(day, dict):
         raise ValueError(f"day {_day_num(seg)}: expected a JSON object")
     day["day"] = _day_num(seg)
@@ -2615,8 +2672,9 @@ def _generate_day(
 def _generate_days(
     segments: list[dict[str, Any]],
     make_kwargs,
+    gen=_generate_day,
 ) -> list[dict[str, Any] | None]:
-    """_generate_day for every segment at once, results in segment order.
+    """`gen` (_generate_day) for every segment at once, results in segment order.
 
     A day whose call fails comes back as None -- the caller decides what that
     means. Same thread-boundary tracing fix as build_google_supplement_by_areas.
@@ -2626,7 +2684,7 @@ def _generate_days(
     def _one(seg: dict[str, Any], _parent=_parent_run) -> dict[str, Any] | None:
         with tracing_context(parent=_parent):
             try:
-                return _generate_day(seg, **make_kwargs(seg))
+                return gen(seg, **make_kwargs(seg))
             except Exception as e:
                 print(f"[planner] day {_day_num(seg)} generation failed: {type(e).__name__}: {e}")
                 return None
@@ -2729,10 +2787,15 @@ def plan_node(state: TravelState) -> TravelState:
         for meal in (*locked_meals.values(), *locked_lunch_meals.values()):
             meal.setdefault("warnings", []).append(warning)
 
+    # CRAG "correct": an area whose every day the judge (and retrieve_node's
+    # stop count) found fully served by its course isn't searched at all --
+    # not even for the trip-wide purpose keywords.
+    search_areas = [a for a in requested_areas
+                    if not all(s.get("skip_search") for s in day_segments if s.get("area") == a)]
     google_supplement: list[dict[str, Any]] = []
-    if GOOGLE_PLACES_API_KEY:
+    if GOOGLE_PLACES_API_KEY and search_areas:
         google_supplement = build_google_supplement_by_areas(
-            requested_areas=requested_areas,
+            requested_areas=search_areas,
             location=location,
             keywords=state.get("purpose_keywords") or [],
             api_key=GOOGLE_PLACES_API_KEY,
@@ -2740,8 +2803,10 @@ def plan_node(state: TravelState) -> TravelState:
             # A day's note keywords are searched only in that day's zone.
             keywords_by_area=_day_keywords_by_area(day_segments),
         )
-    else:
+    elif not GOOGLE_PLACES_API_KEY:
         print("[planner] GOOGLE_PLACES_API_KEY 없음 -- Google Places 보완 생략")
+    else:
+        print("[planner] every day's course was judged correct -- Google Places 보완 생략")
 
     # The judge turned a day's courses down on the promise that Google Places
     # would fill it. Where Places found nothing for that area (no key, quota,
@@ -2757,6 +2822,14 @@ def plan_node(state: TravelState) -> TravelState:
         return no_candidates
 
     trip_lines = _trip_lines(state)
+    # A null day -- the judge turned every course down and Places did find
+    # something, or it would have its rejected courses back by now -- is built
+    # by revise_agent's tool-using agent: it searches the area until the day is
+    # full instead of planning from one fixed Places sweep. NULL_DAY_REACT=0
+    # (read per call, so an eval can flip it between arms) keeps the one-shot.
+    react_null = os.getenv("NULL_DAY_REACT") != "0"
+    tool_state = {**state, "retrieved_courses": courses,
+                  "planning_context": {"google_supplement": google_supplement}}
 
     def day_inputs(seg: dict[str, Any]) -> dict[str, Any]:
         n = _day_num(seg)
@@ -2765,12 +2838,29 @@ def plan_node(state: TravelState) -> TravelState:
             "supplement": _supplement_for_area(google_supplement, seg.get("area")),
             "locked_lines": _meal_lines(n, locked_meals, locked_lunch_meals, diet),
             "weekday": _weekday_of(state, n),
+            # Other days are generated at the same time, so nothing is "used"
+            # yet; _merge_days drops a place two days both picked.
+            **({"state": tool_state, "used": set()}
+               if react_null and not seg.get("anchor_courses") else {}),
         }
 
+    def plan_day(seg: dict[str, Any], **kw: Any) -> dict[str, Any]:
+        if "state" not in kw:
+            return _generate_day(seg, **kw)
+        # local import: revise_agent imports critic_repair, which imports planner
+        import revise_agent
+        return revise_agent.react_day(seg, **kw)
+
     try:
-        generated = [d for d in _generate_days(day_segments, day_inputs) if d]
+        generated = [d for d in _generate_days(day_segments, day_inputs, plan_day) if d]
         if not generated:
             raise RuntimeError("every day's generation failed")
+
+        # Places the agent's tools found join the supplement, so the validator
+        # keeps them and the critic's candidate pool (planning_context) has them.
+        found = [row for d in generated for row in d.pop("_found", None) or []]
+        if found:
+            google_supplement = _dedupe_places([*google_supplement, *found])
 
         # A day that failed is simply absent here: the validator's step 0 adds
         # it back empty and step 4 fills it from that day's area candidates.
@@ -2856,6 +2946,7 @@ def revise_days(
     state: TravelState,
     itinerary: dict[str, Any],
     issues_by_day: dict[int, list[str]],
+    react: bool = False,
 ) -> dict[str, Any]:
     """Regenerate the flagged days once, with the critic's problems as feedback.
 
@@ -2863,7 +2954,15 @@ def revise_days(
     repairer. Mutates and returns `itinerary` -- the caller passes a copy, and
     keeps it only if the critic scores it no worse. A day whose revision call
     fails keeps its previous version.
+
+    `react` swaps the one-shot call for revise_agent's tool-using agent; the
+    places its tools found join the validator's candidates for that day.
     """
+    gen = _generate_day
+    if react:
+        # local import: revise_agent imports critic_repair, which imports planner
+        import revise_agent
+        gen = revise_agent.react_day
     ctx = state.get("planning_context") or {}
     supplement = ctx.get("google_supplement") or []
     locked = ctx.get("locked_meals") or {}
@@ -2888,9 +2987,10 @@ def revise_days(
             "locked_lines": _meal_lines(n, locked, locked_lunch, state.get("diet")),
             "weekday": _weekday_of(state, n),
             "extra": _revision_note(by_num.get(n, {}), issues_by_day[n], used),
+            **({"state": state, "used": used} if react else {}),
         }
 
-    for seg, day in zip(segments, _generate_days(segments, day_inputs)):
+    for seg, day in zip(segments, _generate_days(segments, day_inputs, gen)):
         n = _day_num(seg)
         if not day or n not in by_num:
             continue
@@ -2905,7 +3005,7 @@ def revise_days(
         fixed = _validate_and_repair_itinerary(
             _merge_days([day]),
             courses=courses,
-            google_supplement=[p for p in supplement
+            google_supplement=[p for p in supplement + day.pop("_found", [])
                                if _normalize_text(p.get("poi_name")) not in used],
             requested_areas=[seg["area"]] if seg.get("area") else [],
             day_segments=[seg],

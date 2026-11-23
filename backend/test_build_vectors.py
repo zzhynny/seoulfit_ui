@@ -30,8 +30,8 @@ def test_build_embeds_every_course_purpose():
         return np.tile(np.array([1.0, 0.0], dtype="float32"), (len(texts), 1))
 
     ids, matrix = build_vectors.build(fake_embed)
-    assert len(ids) == 125
-    assert matrix.shape == (125, 2)
+    assert len(ids) == 90
+    assert matrix.shape == (90, 2)
     assert all(t for t in seen), "빈 purpose 가 임베딩으로 넘어가면 안 된다"
 
 

@@ -21,6 +21,8 @@ import threading
 import time
 from pathlib import Path
 
+from langsmith import traceable
+
 CACHE_PATH = Path(__file__).resolve().parent / "_poi_text_cache.json"
 # Hours and fees drift; two weeks keeps "Before you go" reasonably fresh.
 CACHE_TTL = 14 * 24 * 3600
@@ -69,6 +71,7 @@ def _flush_cache_to_disk() -> None:
         print(f"[poi_text] cache write failed: {e}")
 
 
+@traceable(run_type="tool", name="poi_tavily")
 def _web_search(query: str) -> str:
     """Tavily basic search: its short answer plus the top result snippets."""
     from tavily import TavilyClient
@@ -85,6 +88,7 @@ def _web_search(query: str) -> str:
     return "\n\n".join(p.strip() for p in parts if p and p.strip())[:_WEB_CHARS]
 
 
+@traceable(run_type="llm", name="poi_rewrite")
 def _rewrite(prompt: str) -> str:
     from google import genai
     from google.genai import types
@@ -120,6 +124,7 @@ _KINDS = {
 }
 
 
+@traceable(run_type="chain", name="poi_text")
 def poi_text(kind: str, name: str, type_: str = "") -> str:
     """The web-grounded text of `kind` for one place, cached per place."""
     query_template, task = _KINDS[kind]

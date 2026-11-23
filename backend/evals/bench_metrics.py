@@ -54,6 +54,12 @@ BAD = {("cafe", "meal"), ("nightlife", "sight")}
 
 FG_WEIGHTS = {"LA": 0.40, "MB": 0.20, "CC": 0.15, "AB": 0.15, "CF": 0.10}
 
+# Score given when the fact behind a stop is unknown (table 5-6).
+UNKNOWN = {"OH": 0.5, "VD": 0.7, "LA": 0.5, "CC": 0.7}
+
+# TF: travel time a leg needs, max(floor, base + per_km * km) minutes.
+TF_NEED = (10.0, 8, 7)
+
 # Itinerary notes that address a barrier ("guided"). Keyword lists defined here.
 # Word-bounded: "discover" must not read as "cover", nor "bookstore" as "book".
 _BARRIER_RE = re.compile(
@@ -133,7 +139,8 @@ def mc(days):
 
 
 def tf_leg(gap, km):
-    need = max(10.0, 8 + 7 * km)
+    floor, base, per_km = TF_NEED
+    need = max(floor, base + per_km * km)
     if gap <= 0:
         return 0.0
     r = gap / need
@@ -202,7 +209,7 @@ def oh(days, facts):
             else:
                 conflict += 1
     n = ok + conflict + unknown
-    return (ok + 0.5 * unknown) / n if n else 1.0
+    return (ok + UNKNOWN["OH"] * unknown) / n if n else 1.0
 
 
 # ------------------------------------------------------------------- ECS(p)
@@ -226,7 +233,7 @@ def vd(days):
             else:
                 fail += 1
     n = ok + fail + unknown
-    return (ok + 0.7 * unknown) / n if n else 1.0
+    return (ok + UNKNOWN["VD"] * unknown) / n if n else 1.0
 
 
 def _path_km(pts):
@@ -307,7 +314,7 @@ def la(days, facts):
         else:
             unk += 1
     total = su + ns + unk
-    return (su + 0.5 * unk) / total if total else 1.0
+    return (su + UNKNOWN["LA"] * unk) / total if total else 1.0
 
 
 def mb_leg(km):
@@ -350,7 +357,7 @@ def cc(days, facts, diet):
             ok += 1
         elif v is None:
             sk += 1
-    return (ok + 0.7 * sk) / total if total else 1.0
+    return (ok + UNKNOWN["CC"] * sk) / total if total else 1.0
 
 
 def ab_stop(stop, fact):

@@ -1,3 +1,5 @@
+import 'dart:math' show Point;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -138,22 +140,35 @@ class _RouteMapState extends State<RouteMap> {
                     ),
               ],
             ),
-            MarkerLayer(
-              markers: [
-                for (var i = 0; i < days.length; i++)
-                  for (final stop in days[i])
+            // Stops a block apart share screen space at a day's fitted zoom,
+            // and MarkerLayer paints in list order, so the earlier stop was
+            // buried under the later one. Spread them in screen pixels at the
+            // current zoom; MapCamera.of rebuilds this on every zoom, so they
+            // close back up as the traveller zooms in. The polyline stays on
+            // the true points.
+            Builder(builder: (context) {
+              final camera = MapCamera.of(context);
+              final stops = [for (final day in days) ...day];
+              final spots = spreadMarkers([
+                for (final stop in stops)
+                  _toOffset(camera.project(stop.point)),
+              ]);
+              return MarkerLayer(
+                markers: [
+                  for (var i = 0; i < stops.length; i++)
                     Marker(
-                      width: 28,
-                      height: 28,
-                      point: stop.point,
+                      width: _markerSize,
+                      height: _markerSize,
+                      point: camera.unproject(Point(spots[i].dx, spots[i].dy)),
                       alignment: Alignment.center,
                       child: _NumberedMarker(
-                        number: stop.order,
-                        color: _dayColor(stop.dayNumber),
+                        number: stops[i].order,
+                        color: _dayColor(stops[i].dayNumber),
                       ),
                     ),
-              ],
-            ),
+                ],
+              );
+            }),
           ],
             ),
             Positioned(
@@ -266,6 +281,32 @@ class _ZoomButton extends StatelessWidget {
       ),
     );
   }
+}
+
+const double _markerSize = 28;
+
+Offset _toOffset(Point<double> p) => Offset(p.x, p.y);
+
+/// Screen positions for markers drawn at [points], moved just far enough that
+/// no two overlap. Earlier stops keep their true spot; a later one that would
+/// land on a placed marker takes the first free spot on a ring of eight around
+/// its own point, widening a ring at a time.
+@visibleForTesting
+List<Offset> spreadMarkers(List<Offset> points, {double gap = _markerSize}) {
+  final placed = <Offset>[];
+  bool free(Offset o) => placed.every((q) => (q - o).distance >= gap);
+
+  for (final p in points) {
+    var spot = p;
+    for (var ring = 1; !free(spot); ring++) {
+      spot = [
+        for (var k = 0; k < 8; k++)
+          p + Offset.fromDirection(k * pi / 4 - pi / 2, gap * ring),
+      ].firstWhere(free, orElse: () => spot);
+    }
+    placed.add(spot);
+  }
+  return placed;
 }
 
 /// Day 1 takes the first colour, day 2 the second, and so on — keyed off the
